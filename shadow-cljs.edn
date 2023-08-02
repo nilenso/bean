@@ -1,0 +1,11 @@
+;; shadow-cljs configuration
+{:source-paths
+ ["src/"]
+
+ :dependencies
+ [[instaparse "1.4.12"]]
+
+ :builds
+ {:engine {:target :node-library
+           :output-to "output.js"
+           :exports-var bean.core/engine}}}
