@@ -11,7 +11,11 @@
               CellAddress = #'[A-Z]+[1-9][0-9]*'
               UserExpression = '=' Expression
               Operation = '+'
-              Expression = Value | CellAddress | Expression Operation Expression
+              Expression = Value | CellAddress | Expression Operation Expression | FunctionInvocation
+              FunctionInvocation = FunctionName '(' FunctionArguments ')'
+              FunctionName = \"concat\"
+              FunctionArguments = Epsilon | Expression | Expression ',' FunctionArguments
+
               Value = Integer / QuotedString
               QuotedString = '\"' QuotedRawString '\"'
               QuotedRawString = #'[^\"]+'
@@ -19,26 +23,3 @@
 
 (defn parse [v]
   (insta/parse parser v))
-
-(comment :grammer
-  "Constant = Integer | LiterallyAnythingString"
-  "CellContents = Constant | '=' Expression"
-
-  "CellAddress = CapitalLetter+ Number+"
-  "Operation = '+'"
-  "Integer = Number+"
-  "String = '"' Anything '"'"
-  "Value = Integer | String"
-  "Expression = CellAddress | Value  | Expression Operation Expression | FunctionInvocation"
-  "FunctionInvocation = FunctionName '(' FunctionArguments ')'"
-  "FunctionArguments = NULL | Expression | Expression ',' FunctionArguments"
-  )
-
-(comment :samples
-         "4"
-         "=4 + 9"
-         "foo"
-         "=C8"
-         "=concat('foo', C98)")
-
-

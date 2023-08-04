@@ -20,4 +20,18 @@
                             [:Expression [:CellAddress "A8"]]
                             [:Operation "+"]
                             [:Expression [:CellAddress "B9"]]]]]
-           (parse "=A8+B9")))))
+           (parse "=A8+B9")))
+    (is (= [:CellContents [:UserExpression "="
+                           [:Expression
+                            [:FunctionInvocation
+                             [:FunctionName "concat"]
+                             "("
+                             [:FunctionArguments
+                              [:Expression [:Value [:QuotedString "\"" [:QuotedRawString "hello"] "\""]]]
+                              ","
+                              [:FunctionArguments
+                               [:Expression [:CellAddress "A3"]]
+                               ","
+                               [:FunctionArguments [:Expression [:CellAddress "A4"]]]]]
+                             ")"]]]]
+           (parse "=concat(\"hello\",A3,A4)")))))
