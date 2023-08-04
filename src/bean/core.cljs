@@ -10,7 +10,8 @@
 
               CellAddress = #'[A-Z]+[1-9][0-9]*'
               UserExpression = '=' Expression
-              Expression = Value | CellAddress
+              Operation = '+'
+              Expression = Value | CellAddress | Expression Operation Expression
               Value = Integer / QuotedString
               QuotedString = '\"' QuotedRawString '\"'
               QuotedRawString = #'[^\"]+'

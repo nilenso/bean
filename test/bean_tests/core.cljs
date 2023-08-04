@@ -14,4 +14,10 @@
     (is (= [:CellContents [:UserExpression "=" [:Expression [:Value [:QuotedString "\"" [:QuotedRawString "foo"] "\""]]]]]
            (parse "=\"foo\"")))
     (is (= [:CellContents [:UserExpression "=" [:Expression [:CellAddress "A8"]]]]
-           (parse "=A8")))))
+           (parse "=A8")))
+    (is (= [:CellContents [:UserExpression "="
+                           [:Expression
+                            [:Expression [:CellAddress "A8"]]
+                            [:Operation "+"]
+                            [:Expression [:CellAddress "B9"]]]]]
+           (parse "=A8+B9")))))
