@@ -1,7 +1,6 @@
 (ns bean-tests.core
   (:require [bean.core :refer [parse]]
-            [clojure.test :refer :all]
-            [instaparse.core :as insta]))
+            [clojure.test :refer [deftest testing is]]))
 
 (deftest parser-test
   (testing "Basic Parsing"
