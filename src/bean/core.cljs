@@ -8,8 +8,9 @@
               String = #'.+'
               Constant = Integer / String
 
+              CellAddress = #'[A-Z]+[1-9][0-9]*'
               UserExpression = '=' Expression
-              Expression = Value
+              Expression = Value | CellAddress
               Value = Integer / QuotedString
               QuotedString = '\"' QuotedRawString '\"'
               QuotedRawString = #'[^\"]+'
