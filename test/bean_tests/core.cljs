@@ -1,5 +1,5 @@
 (ns bean-tests.core
-  (:require [bean.core :refer [parse]]
+  (:require [bean.core :refer [parse evaluate-grid]]
             [clojure.test :refer [deftest testing is]]))
 
 (deftest parser-test
@@ -12,13 +12,13 @@
            (parse "=89")))
     (is (= [:CellContents [:UserExpression "=" [:Expression [:Value [:QuotedString "\"" [:QuotedRawString "foo"] "\""]]]]]
            (parse "=\"foo\"")))
-    (is (= [:CellContents [:UserExpression "=" [:Expression [:CellAddress "A8"]]]]
+    (is (= [:CellContents [:UserExpression "=" [:Expression [:Ref "A8"]]]]
            (parse "=A8")))
     (is (= [:CellContents [:UserExpression "="
                            [:Expression
-                            [:Expression [:CellAddress "A8"]]
+                            [:Expression [:Ref "A8"]]
                             [:Operation "+"]
-                            [:Expression [:CellAddress "B9"]]]]]
+                            [:Expression [:Ref "B9"]]]]]
            (parse "=A8+B9")))
     (is (= [:CellContents [:UserExpression "="
                            [:Expression
@@ -29,8 +29,17 @@
                               [:Expression [:Value [:QuotedString "\"" [:QuotedRawString "hello"] "\""]]]
                               ","
                               [:FunctionArguments
-                               [:Expression [:CellAddress "A3"]]
+                               [:Expression [:Ref "A3"]]
                                ","
-                               [:FunctionArguments [:Expression [:CellAddress "A4"]]]]]
+                               [:FunctionArguments [:Expression [:Ref "A4"]]]]]
                              ")"]]]]
            (parse "=concat(\"hello\",A3,A4)")))))
+
+(deftest evaluator-test
+  (testing "Basic evaluation"
+    (let [grid {"A1" "1"
+                "A2" "2"
+                "A3" "=A1+A2"
+                "A4" "=A3+1"}]
+      (evaluate-grid grid))))
+
