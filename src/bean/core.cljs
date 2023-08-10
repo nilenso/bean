@@ -46,13 +46,13 @@
         eval-sub #(eval-formula grid %)]
     (case node-type
       :CellContents (eval-sub arg1)
-      :Integer arg1
+      :Integer (js/parseInt arg1)
       :String arg1
       :Constant (eval-sub arg1)
       :Ref (eval-sub (get grid arg1))
-      :UserExpression (eval-sub arg2)
+      :UserExpression (str (eval-sub arg2))
       :Operation (case arg1
-                   "+" #(+ (js/parseInt %1) (js/parseInt %2)))
+                   "+" #(+ %1 %2))
       :Expression (if (has-subexpression? arg1)
                     (let [[_ left op right] ast-node]
                       (apply
