@@ -1,25 +1,26 @@
 (ns bean.core
   (:require [instaparse.core :as insta]))
 
-(def ^:private parser (insta/parser
-                       "
-              CellContents = UserExpression / Constant
-              Integer = #'[0-9]+'
-              String = #'.+'
-              Constant = Integer / String
+(def ^:private parser
+  (insta/parser
+    "
+    CellContents = UserExpression / Constant
+    Integer = #'[0-9]+'
+    String = #'.+'
+    Constant = Integer / String
 
-              Ref = #'[A-Z]+[1-9][0-9]*'
-              UserExpression = '=' Expression
-              Operation = '+'
-              Expression = Value | Ref | Expression Operation Expression | FunctionInvocation
-              FunctionInvocation = FunctionName '(' FunctionArguments ')'
-              FunctionName = \"concat\"
-              FunctionArguments = Epsilon | Expression | Expression ',' FunctionArguments
+    Ref = #'[A-Z]+[1-9][0-9]*'
+    UserExpression = '=' Expression
+    Operation = '+'
+    Expression = Value | Ref | Expression Operation Expression | FunctionInvocation
+    FunctionInvocation = FunctionName '(' FunctionArguments ')'
+    FunctionName = \"concat\"
+    FunctionArguments = Epsilon | Expression | Expression ',' FunctionArguments
 
-              Value = Integer / QuotedString
-              QuotedString = '\"' QuotedRawString '\"'
-              QuotedRawString = #'[^\"]+'
-              "))
+    Value = Integer / QuotedString
+    QuotedString = '\"' QuotedRawString '\"'
+    QuotedRawString = #'[^\"]+'
+    "))
 
 (defn parse [v]
   (insta/parse parser v))
