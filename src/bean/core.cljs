@@ -59,7 +59,8 @@
                         (eval-sub op)
                         [(eval-sub left)
                          (eval-sub right)]))
-                    (eval-sub arg1)))))
+                    (eval-sub arg1))
+      :Value (eval-sub arg1))))
 
 (defn evaluate-grid [grid]
   (let [parsed-grid (update-vals grid parse)]

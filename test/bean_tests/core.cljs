@@ -40,6 +40,7 @@
     (let [grid {"A1" "1"
                 "A2" "2"
                 "A3" "=A1+A2"
-                "A4" "=A3+1"}]
+                "A4" "=A3+1"
+                "A5" "=A1+A2+A3+A4+10"}]
       (evaluate-grid grid))))
 
