@@ -37,10 +37,15 @@
 
 (deftest evaluator-test
   (testing "Basic evaluation"
-    (let [grid {"A1" "1"
-                "A2" "2"
-                "A3" "=A1+A2"
-                "A4" "=A3+1"
-                "A5" "=A1+A2+A3+A4+10"}]
-      (evaluate-grid grid))))
+    (is (= {"A1" {:content "1", :value 1, :affected-cells #{"A1"}},
+            "A2" {:content "2", :value 2, :affected-cells #{"A2"}},
+            "A3" {:content "3", :value 3, :affected-cells #{"A3"}},
+            "A4" {:content "4", :value 4, :affected-cells #{"A4"}},
+            "A5" {:content "20", :value 20, :affected-cells #{"A5"}}}
+           (let [grid {"A1" "1"
+                       "A2" "2"
+                       "A3" "=A1+A2"
+                       "A4" "=A3+1"
+                       "A5" "=A1+A2+A3+A4+10"}]
+             (evaluate-grid grid))))))
 

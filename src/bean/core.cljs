@@ -1,5 +1,6 @@
 (ns bean.core
-  (:require [instaparse.core :as insta]))
+  (:require [clojure.set :refer [union]]
+            [instaparse.core :as insta]))
 
 (def ^:private parser
   (insta/parser
@@ -25,44 +26,53 @@
 (defn parse [v]
   (insta/parse parser v))
 
-
-(def grid
-  {"A1" "1"
-   "A2" "2"
-   "A3" "=A1+A2"
-   "A4" "=A3+1"})
-
-(def evaluated-grid
-  {"A1" "1"
-   "A2" "2"
-   "A3" "3"})
-
-(let [[x y z :as xyz] [1 23 848 84 47 9]] [x y z xyz])
-
 (defn- has-subexpression? [[node-type & _]]
   (= node-type :Expression))
 
-(defn eval-formula [grid formula]
-  (let [[node-type arg1 arg2 :as ast-node] formula
-        eval-sub #(eval-formula grid %)]
+(defn- formulas-map [cells f]
+  (assoc (apply f (map :value cells))
+         :affected-cells (->> cells 
+                              (map :affected-cells)
+                              (reduce union)
+                              (into (set [])))))
+
+(defn- eval-formula* [grid {:keys [ast affected-cells]}]
+  ; ast goes down, value comes up
+  (let [[node-type arg1 arg2] ast
+        with-value #(do {:value %
+                         :affected-cells affected-cells})
+        eval-sub-ast #(eval-formula* grid {:ast %
+                                           :affected-cells affected-cells})]
     (case node-type
-      :CellContents (eval-sub arg1)
-      :Integer (js/parseInt arg1)
-      :String arg1
-      :Constant (eval-sub arg1)
-      :Ref (eval-sub (get grid arg1))
-      :UserExpression (str (eval-sub arg2))
-      :Operation (case arg1
-                   "+" #(+ %1 %2))
-      :Expression (if (has-subexpression? arg1)
-                    (let [[_ left op right] ast-node]
-                      (apply
-                        (eval-sub op)
-                        [(eval-sub left)
-                         (eval-sub right)]))
-                    (eval-sub arg1))
-      :Value (eval-sub arg1))))
+      :CellContents  (let [{:keys [value affected-cells]} (eval-sub-ast arg1)]
+                       {:content (str value)
+                        :value value
+                        :affected-cells affected-cells})
+      :Integer (with-value (js/parseInt arg1))
+      :String (with-value arg1)
+      :Constant (eval-sub-ast arg1)
+      :Ref (eval-sub-ast (get grid arg1))
+      :UserExpression (eval-sub-ast arg2)
+      :Operation (with-value (case arg1
+                   "+" #(+ %1 %2)))
+      :Expression (if-not (has-subexpression? arg1)
+                    (eval-sub-ast arg1)
+                    (let [[_ left op right] ast]
+                      (formulas-map [(eval-sub-ast op)
+                                     (eval-sub-ast left)
+                                     (eval-sub-ast right)]
+                                    #(do {:value (apply %1 [%2 %3])}))))
+      :Value (eval-sub-ast arg1))))
+
+(defn- eval-formula [grid [address ast]]
+  [address
+  (eval-formula* grid
+                 {:affected-cells (set [address])
+                  :ast ast
+                  :value nil})])
 
 (defn evaluate-grid [grid]
   (let [parsed-grid (update-vals grid parse)]
-    (update-vals parsed-grid #(eval-formula parsed-grid %))))
+    (->> parsed-grid
+        (map #(eval-formula parsed-grid %))
+        (into {}))))
