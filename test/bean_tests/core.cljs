@@ -8,31 +8,27 @@
            (parse "4")))
     (is (= [:CellContents [:Constant [:String "foo"]]]
            (parse "foo")))
-    (is (= [:CellContents [:UserExpression "=" [:Expression [:Value [:Integer "89"]]]]]
+    (is (= [:CellContents [:UserExpression [:Expression [:Value [:Integer "89"]]]]]
            (parse "=89")))
-    (is (= [:CellContents [:UserExpression "=" [:Expression [:Value [:QuotedString "\"" [:QuotedRawString "foo"] "\""]]]]]
+    (is (= [:CellContents [:UserExpression [:Expression [:Value [:QuotedString [:QuotedRawString "foo"]]]]]]
            (parse "=\"foo\"")))
-    (is (= [:CellContents [:UserExpression "=" [:Expression [:Ref "A8"]]]]
+    (is (= [:CellContents [:UserExpression [:Expression [:Ref "A8"]]]]
            (parse "=A8")))
-    (is (= [:CellContents [:UserExpression "="
+    (is (= [:CellContents [:UserExpression
                            [:Expression
                             [:Expression [:Ref "A8"]]
                             [:Operation "+"]
                             [:Expression [:Ref "B9"]]]]]
            (parse "=A8+B9")))
-    (is (= [:CellContents [:UserExpression "="
+    (is (= [:CellContents [:UserExpression
                            [:Expression
                             [:FunctionInvocation
                              [:FunctionName "concat"]
-                             "("
                              [:FunctionArguments
-                              [:Expression [:Value [:QuotedString "\"" [:QuotedRawString "hello"] "\""]]]
-                              ","
+                              [:Expression [:Value [:QuotedString [:QuotedRawString "hello"]]]]
                               [:FunctionArguments
                                [:Expression [:Ref "A3"]]
-                               ","
-                               [:FunctionArguments [:Expression [:Ref "A4"]]]]]
-                             ")"]]]]
+                               [:FunctionArguments [:Expression [:Ref "A4"]]]]]]]]]
            (parse "=concat(\"hello\",A3,A4)")))))
 
 (deftest evaluator-test

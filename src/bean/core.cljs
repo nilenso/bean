@@ -11,15 +11,15 @@
     Constant = Integer / String
 
     Ref = #'[A-Z]+[1-9][0-9]*'
-    UserExpression = '=' Expression
+    UserExpression = <'='> Expression
     Operation = '+'
     Expression = Value | Ref | Expression Operation Expression | FunctionInvocation
-    FunctionInvocation = FunctionName '(' FunctionArguments ')'
+    FunctionInvocation = FunctionName <'('> FunctionArguments <')'>
     FunctionName = \"concat\"
-    FunctionArguments = Epsilon | Expression | Expression ',' FunctionArguments
+    FunctionArguments = Epsilon | Expression | Expression <','> FunctionArguments
 
     Value = Integer / QuotedString
-    QuotedString = '\"' QuotedRawString '\"'
+    QuotedString = <'\"'> QuotedRawString <'\"'>
     QuotedRawString = #'[^\"]+'
     "))
 
@@ -38,31 +38,31 @@
 
 (defn- eval-formula* [grid {:keys [ast affected-cells]}]
   ; ast goes down, value comes up
-  (let [[node-type arg1 arg2] ast
+  (let [[node-type arg] ast
         with-value #(do {:value %
                          :affected-cells affected-cells})
         eval-sub-ast #(eval-formula* grid {:ast %
                                            :affected-cells affected-cells})]
     (case node-type
-      :CellContents  (let [{:keys [value affected-cells]} (eval-sub-ast arg1)]
+      :CellContents  (let [{:keys [value affected-cells]} (eval-sub-ast arg)]
                        {:content (str value)
                         :value value
                         :affected-cells affected-cells})
-      :Integer (with-value (js/parseInt arg1))
-      :String (with-value arg1)
-      :Constant (eval-sub-ast arg1)
-      :Ref (eval-sub-ast (get grid arg1))
-      :UserExpression (eval-sub-ast arg2)
-      :Operation (with-value (case arg1
+      :Integer (with-value (js/parseInt arg))
+      :String (with-value arg)
+      :Constant (eval-sub-ast arg)
+      :Ref (eval-sub-ast (get grid arg))
+      :UserExpression (eval-sub-ast arg)
+      :Operation (with-value (case arg
                    "+" #(+ %1 %2)))
-      :Expression (if-not (has-subexpression? arg1)
-                    (eval-sub-ast arg1)
+      :Expression (if-not (has-subexpression? arg)
+                    (eval-sub-ast arg)
                     (let [[_ left op right] ast]
                       (formulas-map [(eval-sub-ast op)
                                      (eval-sub-ast left)
                                      (eval-sub-ast right)]
                                     #(do {:value (apply %1 [%2 %3])}))))
-      :Value (eval-sub-ast arg1))))
+      :Value (eval-sub-ast arg))))
 
 (defn- eval-formula [grid [address ast]]
   [address
