@@ -1,5 +1,5 @@
 (ns bean-tests.core
-  (:require [bean.core :refer [parse evaluate-grid]]
+  (:require [bean.core :refer [parse evaluate-grid map-on-matrix map-on-matrix-addressed]]
             [clojure.test :refer [deftest testing is]]))
 
 (deftest parser-test
@@ -33,15 +33,39 @@
 
 (deftest evaluator-test
   (testing "Basic evaluation"
-    (is (= {[0 0] {:content "1", :value 1, :affected-cells #{[0 0]}},
-            [1 0] {:content "2", :value 2, :affected-cells #{[1 0]}},
-            [2 0] {:content "3", :value 3, :affected-cells #{[2 0]}},
-            [3 0] {:content "4", :value 4, :affected-cells #{[3 0]}},
-            [4 0] {:content "20", :value 20, :affected-cells #{[4 0]}}}
-           (let [grid {[0 0] "1"
-                       [1 0] "2"
-                       [2 0] "=A1+A2"
-                       [3 0] "=A3+1"
-                       [4 0] "=A1+A2+A3+A4+10"}]
+    (is (= [[{:content "1", :value 1, :affected-cells #{[0 0]}}
+              {:content "0", :value 0, :affected-cells #{[0 1]}}
+              {:content "0", :value 0, :affected-cells #{[0 2]}}]
+            [{:content "2", :value 2, :affected-cells #{[1 0]}}
+             {:content "0", :value 0, :affected-cells #{[1 1]}}
+             {:content "0", :value 0, :affected-cells #{[1 2]}}]
+            [{:content "3", :value 3, :affected-cells #{[2 0]}}
+             {:content "0", :value 0, :affected-cells #{[2 1]}}
+             {:content "0", :value 0, :affected-cells #{[2 2]}}]
+            [{:content "4", :value 4, :affected-cells #{[3 0]}}
+             {:content "0", :value 0, :affected-cells #{[3 1]}}
+             {:content "0", :value 0, :affected-cells #{[3 2]}}]
+            [{:content "20", :value 20, :affected-cells #{[4 0]}}
+             {:content "0", :value 0, :affected-cells #{[4 1]}}
+             {:content "0", :value 0, :affected-cells #{[4 2]}}]]
+           (let [grid [["1" "0" "0"]
+                       ["2" "0" "0"]
+                       ["=A1+A2" "0" "0"]
+                       ["=A3+1" "0" "0"]
+                       ["=A1+A2+A3+A4+10" "0" "0"]]]
              (evaluate-grid grid))))))
 
+(deftest map-on-matrix-test
+  (testing "Row order map of f over the grid"
+    (let [grid [[10 20 30]
+                [40 50 60]]]
+      (is (= (map-on-matrix identity grid) grid)))))
+
+(deftest map-on-matrix-addressed-test
+  (testing "Row order map over the grid with the address of each cell passed to f"
+    (let [grid [[10 20 30]
+                [40 50 60]]]
+      (is (= (map-on-matrix-addressed
+              (fn [address contents] [address contents]) grid)
+             [[[[0 0] 10] [[0 1] 20] [[0 2] 30]]
+              [[[1 0] 40] [[1 1] 50] [[1 2] 60]]])))))

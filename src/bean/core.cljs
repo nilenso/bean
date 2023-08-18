@@ -38,7 +38,7 @@
                               (reduce union)
                               (into (set [])))))
 
-(def ^:private get-cell get)
+(def ^:private get-cell get-in)
 
 (def ^:private num-alphabets 26)
 
@@ -82,15 +82,26 @@
                                     #(do {:value (apply %1 [%2 %3])}))))
       :Value (eval-sub-ast arg))))
 
-(defn- eval-formula [grid [address ast]]
-  [address
+(defn- eval-formula [grid address ast]
   (eval-formula* grid
                  {:affected-cells (set [address])
                   :ast ast
-                  :value nil})])
+                  :value nil}))
+
+;; TODO: Is there a better way to return vectors instead of lists
+;; for O(1) lookups later.
+(defn map-on-matrix [f matrix]
+  (vec (map #(vec (map (fn [contents] (f contents)) %)) matrix)))
+
+(defn map-on-matrix-addressed [f matrix]
+  (vec (map-indexed (fn [row-idx row]
+                      (vec (map-indexed
+                            (fn [col-idx contents]
+                              (f [row-idx col-idx] contents))
+                            row)))
+                    matrix)))
 
 (defn evaluate-grid [grid]
-  (let [parsed-grid (update-vals grid parse)]
+  (let [parsed-grid (map-on-matrix parse grid)]
     (->> parsed-grid
-        (map #(eval-formula parsed-grid %))
-        (into {}))))
+        (map-on-matrix-addressed #(eval-formula parsed-grid %1 %2)))))
