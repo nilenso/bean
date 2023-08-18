@@ -1,5 +1,6 @@
 (ns bean.core
   (:require [clojure.set :refer [union]]
+            [cljs.math :refer [pow]]
             [instaparse.core :as insta]))
 
 (def ^:private parser
@@ -10,10 +11,11 @@
     String = #'.+'
     Constant = Integer / String
 
-    Ref = #'[A-Z]+[1-9][0-9]*'
+    CellRef = #'[A-Z]+' #'[1-9][0-9]*'
+
     UserExpression = <'='> Expression
     Operation = '+'
-    Expression = Value | Ref | Expression Operation Expression | FunctionInvocation
+    Expression = Value | CellRef | Expression Operation Expression | FunctionInvocation
     FunctionInvocation = FunctionName <'('> FunctionArguments <')'>
     FunctionName = \"concat\"
     FunctionArguments = Epsilon | Expression | Expression <','> FunctionArguments
@@ -36,6 +38,21 @@
                               (reduce union)
                               (into (set [])))))
 
+(def ^:private get-cell get)
+
+(def ^:private num-alphabets 26)
+
+(defn- a1->rc [a n]
+  (let [indexed-a (map vector (reverse a) (range))
+        c (reduce (fn [total [alphabet i]]
+                    (+ total
+                       (* (pow num-alphabets i)
+                          (- (.charCodeAt alphabet 0)
+                             (dec (.charCodeAt "A" 0))))))
+                  0
+                  indexed-a)]
+    [(dec n) (dec c)]))
+
 (defn- eval-formula* [grid {:keys [ast affected-cells]}]
   ; ast goes down, value comes up
   (let [[node-type arg] ast
@@ -51,7 +68,8 @@
       :Integer (with-value (js/parseInt arg))
       :String (with-value arg)
       :Constant (eval-sub-ast arg)
-      :Ref (eval-sub-ast (get grid arg))
+      :CellRef (let [[_ a n] ast]
+                  (eval-sub-ast (get-cell grid (a1->rc a (js/parseInt n)))))
       :UserExpression (eval-sub-ast arg)
       :Operation (with-value (case arg
                    "+" #(+ %1 %2)))
