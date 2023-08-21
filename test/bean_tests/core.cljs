@@ -34,25 +34,25 @@
 (deftest evaluator-test
   (testing "Basic evaluation"
     (is (= [[{:content "1", :value 1, :affected-cells #{[0 0]}}
-              {:content "0", :value 0, :affected-cells #{[0 1]}}
-              {:content "0", :value 0, :affected-cells #{[0 2]}}]
+              {:content "", :value nil, :affected-cells #{[0 1]}}
+              {:content "", :value nil, :affected-cells #{[0 2]}}]
             [{:content "2", :value 2, :affected-cells #{[1 0]}}
-             {:content "0", :value 0, :affected-cells #{[1 1]}}
-             {:content "0", :value 0, :affected-cells #{[1 2]}}]
+             {:content "", :value nil, :affected-cells #{[1 1]}}
+             {:content "", :value nil, :affected-cells #{[1 2]}}]
             [{:content "3", :value 3, :affected-cells #{[2 0]}}
-             {:content "0", :value 0, :affected-cells #{[2 1]}}
-             {:content "0", :value 0, :affected-cells #{[2 2]}}]
+             {:content "", :value nil, :affected-cells #{[2 1]}}
+             {:content "", :value nil, :affected-cells #{[2 2]}}]
             [{:content "4", :value 4, :affected-cells #{[3 0]}}
-             {:content "0", :value 0, :affected-cells #{[3 1]}}
-             {:content "0", :value 0, :affected-cells #{[3 2]}}]
+             {:content "", :value nil, :affected-cells #{[3 1]}}
+             {:content "", :value nil, :affected-cells #{[3 2]}}]
             [{:content "20", :value 20, :affected-cells #{[4 0]}}
-             {:content "0", :value 0, :affected-cells #{[4 1]}}
-             {:content "0", :value 0, :affected-cells #{[4 2]}}]]
-           (let [grid [["1" "0" "0"]
-                       ["2" "0" "0"]
-                       ["=A1+A2" "0" "0"]
-                       ["=A3+1" "0" "0"]
-                       ["=A1+A2+A3+A4+10" "0" "0"]]]
+             {:content "", :value nil, :affected-cells #{[4 1]}}
+             {:content "", :value nil, :affected-cells #{[4 2]}}]]
+           (let [grid [["1" "" ""]
+                       ["2" "" ""]
+                       ["=A1+A2" "" ""]
+                       ["=A3+1" "" ""]
+                       ["=A1+A2+A3+A4+10" "" ""]]]
              (evaluate-grid grid))))))
 
 (deftest map-on-matrix-test

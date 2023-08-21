@@ -6,7 +6,7 @@
 (def ^:private parser
   (insta/parser
     "
-    CellContents = UserExpression / Constant
+    CellContents = UserExpression / Constant / Epsilon
     Integer = #'[0-9]+'
     String = #'.+'
     Constant = Integer / String
@@ -61,9 +61,13 @@
         eval-sub-ast #(eval-formula* grid {:ast %
                                            :affected-cells affected-cells})]
     (case node-type
-      :CellContents  (let [{:keys [value affected-cells]} (eval-sub-ast arg)]
-                       {:content (str value)
-                        :value value
+      :CellContents  (if arg
+                       (let [{:keys [value affected-cells]} (eval-sub-ast arg)]
+                         {:content (str value)
+                          :value value
+                          :affected-cells affected-cells})
+                       {:content ""
+                        :value nil
                         :affected-cells affected-cells})
       :Integer (with-value (js/parseInt arg))
       :String (with-value arg)
