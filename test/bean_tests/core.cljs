@@ -60,18 +60,18 @@
 
   (testing "Returns errors"
     (let [grid [["=1" "" ""]
-                ["ABC" "" ""]
-                ["=A1+A2" "" ""]
+                ["ABC" "=A1000" ""]
+                ["=A1+A2" "=B2" ""]
                 ["=A3+1" "" ""]]]
       (is (= (evaluate-grid grid)
              [[{:content "1" :value 1 :affected-cells #{[0 0]}}
                {:content "" :value nil :affected-cells #{[0 1]}}
                {:content "" :value nil :affected-cells #{[0 2]}}]
               [{:content "ABC" :value "ABC" :affected-cells #{[1 0]}}
-               {:content "" :value nil :affected-cells #{[1 1]}}
+               {:content "" :value nil :error "Invalid address [999 0]" :affected-cells #{[1 1]}}
                {:content "" :value nil :affected-cells #{[1 2]}}]
               [{:content "" :value nil :error "Addition only works for Integers" :affected-cells #{[2 0]}}
-               {:content "" :value nil :affected-cells #{[2 1]}}
+               {:content "" :value nil :error "Invalid address [999 0]" :affected-cells #{[2 1]}}
                {:content "" :value nil :affected-cells #{[2 2]}}]
               [{:content "" :value nil :error "Addition only works for Integers" :affected-cells #{[3 0]}}
                {:content "" :value nil :affected-cells #{[3 1]}}

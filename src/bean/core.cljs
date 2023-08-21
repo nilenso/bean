@@ -49,6 +49,11 @@
                          (reduce union)
                          (into (set [])))}))
 
+(defn- get-cell [grid address]
+  (if-let [contents (get-in grid address)]
+    contents
+    {:error (str "Invalid address " address)}))
+
 (def ^:private num-alphabets 26)
 
 (defn- a1->rc [a n]
@@ -83,8 +88,14 @@
       :Integer (with-value (js/parseInt arg))
       :String (with-value arg)
       :Constant (eval-sub-ast arg)
-      :CellRef (let [[_ a n] ast]
-                  (eval-sub-ast (get-cell grid (a1->rc a (js/parseInt n)))))
+      :CellRef (let [[_ a n] ast
+                     cellref-ast (get-cell grid (a1->rc a (js/parseInt n)))
+                     error (:error cellref-ast)]
+                 (if error
+                   {:value nil
+                    :error error
+                    :affected-cells affected-cells}
+                   (eval-sub-ast cellref-ast)))
       :UserExpression (eval-sub-ast arg)
       :Operation (with-value (case arg
                                "+" bean-op-+))
