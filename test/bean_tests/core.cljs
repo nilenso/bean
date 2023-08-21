@@ -1,6 +1,9 @@
 (ns bean-tests.core
-  (:require [bean.core :refer [parse evaluate-grid map-on-matrix map-on-matrix-addressed]]
-            [clojure.test :refer [deftest testing is]]))
+  (:require [bean.core :refer [parse evaluate-grid
+                               bean-op-+
+                               map-on-matrix
+                               map-on-matrix-addressed]]
+            [clojure.test :refer [deftest testing is run-all-tests]]))
 
 (deftest parser-test
   (testing "Basic Parsing"
@@ -33,27 +36,52 @@
 
 (deftest evaluator-test
   (testing "Basic evaluation"
-    (is (= [[{:content "1", :value 1, :affected-cells #{[0 0]}}
-              {:content "", :value nil, :affected-cells #{[0 1]}}
-              {:content "", :value nil, :affected-cells #{[0 2]}}]
-            [{:content "2", :value 2, :affected-cells #{[1 0]}}
-             {:content "", :value nil, :affected-cells #{[1 1]}}
-             {:content "", :value nil, :affected-cells #{[1 2]}}]
-            [{:content "3", :value 3, :affected-cells #{[2 0]}}
-             {:content "", :value nil, :affected-cells #{[2 1]}}
-             {:content "", :value nil, :affected-cells #{[2 2]}}]
-            [{:content "4", :value 4, :affected-cells #{[3 0]}}
-             {:content "", :value nil, :affected-cells #{[3 1]}}
-             {:content "", :value nil, :affected-cells #{[3 2]}}]
-            [{:content "20", :value 20, :affected-cells #{[4 0]}}
-             {:content "", :value nil, :affected-cells #{[4 1]}}
-             {:content "", :value nil, :affected-cells #{[4 2]}}]]
-           (let [grid [["1" "" ""]
-                       ["2" "" ""]
-                       ["=A1+A2" "" ""]
-                       ["=A3+1" "" ""]
-                       ["=A1+A2+A3+A4+10" "" ""]]]
-             (evaluate-grid grid))))))
+    (let [grid [["1" "" ""]
+                ["2" "" ""]
+                ["=A1+A2" "" ""]
+                ["=A3+1" "" ""]
+                ["=A1+A2+A3+A4+10" "" ""]]]
+      (is (= (evaluate-grid grid)
+             [[{:content "1" :value 1, :affected-cells #{[0 0]}}
+               {:content "" :value nil, :affected-cells #{[0 1]}}
+               {:content "" :value nil, :affected-cells #{[0 2]}}]
+              [{:content "2" :value 2, :affected-cells #{[1 0]}}
+               {:content "" :value nil, :affected-cells #{[1 1]}}
+               {:content "" :value nil, :affected-cells #{[1 2]}}]
+              [{:content "3" :value 3, :affected-cells #{[2 0]}}
+               {:content "" :value nil, :affected-cells #{[2 1]}}
+               {:content "" :value nil, :affected-cells #{[2 2]}}]
+              [{:content "4" :value 4, :affected-cells #{[3 0]}}
+               {:content "" :value nil, :affected-cells #{[3 1]}}
+               {:content "" :value nil, :affected-cells #{[3 2]}}]
+              [{:content "20" :value 20, :affected-cells #{[4 0]}}
+               {:content "" :value nil, :affected-cells #{[4 1]}}
+               {:content "" :value nil, :affected-cells #{[4 2]}}]]))))
+
+  (testing "Returns errors"
+    (let [grid [["=1" "" ""]
+                ["ABC" "" ""]
+                ["=A1+A2" "" ""]
+                ["=A3+1" "" ""]]]
+      (is (= (evaluate-grid grid)
+             [[{:content "1" :value 1 :affected-cells #{[0 0]}}
+               {:content "" :value nil :affected-cells #{[0 1]}}
+               {:content "" :value nil :affected-cells #{[0 2]}}]
+              [{:content "ABC" :value "ABC" :affected-cells #{[1 0]}}
+               {:content "" :value nil :affected-cells #{[1 1]}}
+               {:content "" :value nil :affected-cells #{[1 2]}}]
+              [{:content "" :value nil :error "Addition only works for Integers" :affected-cells #{[2 0]}}
+               {:content "" :value nil :affected-cells #{[2 1]}}
+               {:content "" :value nil :affected-cells #{[2 2]}}]
+              [{:content "" :value nil :error "Addition only works for Integers" :affected-cells #{[3 0]}}
+               {:content "" :value nil :affected-cells #{[3 1]}}
+               {:content "" :value nil :affected-cells #{[3 2]}}]])))))
+
+(deftest bean-op-+-test
+  (testing "Adds two numbers"
+    (is (= (bean-op-+ 2 3) 5)))
+  (testing "Returns an error if an operand is an invalid data type"
+    (is (= (bean-op-+ "1" 2) {:error "Addition only works for Integers"}))))
 
 (deftest map-on-matrix-test
   (testing "Row order map of f over the grid"
