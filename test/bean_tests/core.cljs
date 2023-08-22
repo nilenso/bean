@@ -82,16 +82,16 @@
     (is (= (bean-op-+ "1" 2) {:error "Addition only works for Integers"}))))
 
 (deftest map-on-matrix-test
-  (testing "Row order map of f over the grid"
-    (let [grid [[10 20 30]
-                [40 50 60]]]
-      (is (= (map-on-matrix identity grid) grid)))))
+  (testing "Row order map of f over a 2D matrix"
+    (let [matrix [[10 20 30]
+                  [40 50 60]]]
+      (is (= (map-on-matrix identity matrix) matrix)))))
 
 (deftest map-on-matrix-addressed-test
-  (testing "Row order map over the grid with the address of each cell passed to f"
-    (let [grid [[10 20 30]
+  (testing "Row order map of f over a 2D matrix with address also supplied to f"
+    (let [matrix [[10 20 30]
                 [40 50 60]]]
       (is (= (map-on-matrix-addressed
-              (fn [address contents] [address contents]) grid)
+              (fn [address item] [address item]) matrix)
              [[[[0 0] 10] [[0 1] 20] [[0 2] 30]]
               [[[1 0] 40] [[1 1] 50] [[1 2] 60]]])))))
