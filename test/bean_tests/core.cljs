@@ -74,6 +74,13 @@
               [{:content "" :value nil :error "Addition only works for Integers" :affected-cells #{[3 0]}}
                {:content "" :value nil :affected-cells #{[3 1]}}
                {:content "" :value nil :affected-cells #{[3 2]}}]])))))
+  ;; TODO: fix this test
+  (testing "Errors are not operated upon further"
+     (let [grid [["=A1000+1" "" ""]]]
+       (is (= (map-on-matrix
+               #(select-keys % [:error])
+               (evaluate-grid grid))
+              "Invalid address [999 0]"))))
 
 (deftest bean-op-+-test
   (testing "Adds two numbers"
