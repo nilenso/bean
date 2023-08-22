@@ -7,31 +7,29 @@
 
 (deftest parser-test
   (testing "Basic Parsing"
-    (is (= [:CellContents [:Constant [:Integer "4"]]]
+    (is (= [:CellContents [:Integer "4"]]
            (parse "4")))
-    (is (= [:CellContents [:Constant [:String "foo"]]]
+    (is (= [:CellContents [:String "foo"]]
            (parse "foo")))
-    (is (= [:CellContents [:UserExpression [:Expression [:Value [:Integer "89"]]]]]
+    (is (= [:CellContents [:Expression [:Value [:Integer "89"]]]]
            (parse "=89")))
-    (is (= [:CellContents [:UserExpression [:Expression [:Value [:QuotedString [:QuotedRawString "foo"]]]]]]
+    (is (= [:CellContents [:Expression [:Value [:QuotedString "foo"]]]]
            (parse "=\"foo\"")))
-    (is (= [:CellContents [:UserExpression [:Expression [:CellRef "A" "8"]]]]
+    (is (= [:CellContents [:Expression [:CellRef "A" "8"]]]
            (parse "=A8")))
-    (is (= [:CellContents [:UserExpression
-                           [:Expression
-                            [:Expression [:CellRef "A" "8"]]
-                            [:Operation "+"]
-                            [:Expression [:CellRef "B" "9"]]]]]
+    (is (= [:CellContents [:Expression
+                           [:Expression [:CellRef "A" "8"]]
+                           [:Operation "+"]
+                           [:Expression [:CellRef "B" "9"]]]]
            (parse "=A8+B9")))
-    (is (= [:CellContents [:UserExpression
-                           [:Expression
-                            [:FunctionInvocation
-                             [:FunctionName "concat"]
+    (is (= [:CellContents [:Expression
+                           [:FunctionInvocation
+                            [:FunctionName "concat"]
+                            [:FunctionArguments
+                             [:Expression [:Value [:QuotedString "hello"]]]
                              [:FunctionArguments
-                              [:Expression [:Value [:QuotedString [:QuotedRawString "hello"]]]]
-                              [:FunctionArguments
-                               [:Expression [:CellRef "A" "3"]]
-                               [:FunctionArguments [:Expression [:CellRef "A" "4"]]]]]]]]]
+                              [:Expression [:CellRef "A" "3"]]
+                              [:FunctionArguments [:Expression [:CellRef "A" "4"]]]]]]]]
            (parse "=concat(\"hello\",A3,A4)")))))
 
 (deftest evaluator-test

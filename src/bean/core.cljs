@@ -5,24 +5,22 @@
 
 (def ^:private parser
   (insta/parser
-    "
-    CellContents = UserExpression / Constant / Epsilon
+  ;; TODO: Integers are currently just natural numbers
+   "
+    CellContents = <'='> Expression / Integer / String / Epsilon
     Integer = #'[0-9]+'
     String = #'.+'
-    Constant = Integer / String
 
     CellRef = #'[A-Z]+' #'[1-9][0-9]*'
 
-    UserExpression = <'='> Expression
     Operation = '+'
     Expression = Value | CellRef | Expression Operation Expression | FunctionInvocation
     FunctionInvocation = FunctionName <'('> FunctionArguments <')'>
     FunctionName = \"concat\"
     FunctionArguments = Epsilon | Expression | Expression <','> FunctionArguments
 
-    Value = Integer / QuotedString
-    QuotedString = <'\"'> QuotedRawString <'\"'>
-    QuotedRawString = #'[^\"]+'
+    Value = Integer / <'\"'> QuotedString <'\"'>
+    QuotedString = #'[^\"]+'
     "))
 
 (defn bean-op-+ [left right]
@@ -87,7 +85,6 @@
                        :affected-cells affected-cells})
       :Integer (with-value (js/parseInt arg))
       :String (with-value arg)
-      :Constant (eval-sub-ast arg)
       :CellRef (let [[_ a n] ast
                      cellref-ast (get-cell grid (a1->rc a (js/parseInt n)))
                      error (:error cellref-ast)]
@@ -96,7 +93,6 @@
                     :error error
                     :affected-cells affected-cells}
                    (eval-sub-ast cellref-ast)))
-      :UserExpression (eval-sub-ast arg)
       :Operation (with-value (case arg
                                "+" bean-op-+))
       :Expression (if-not (has-subexpression? arg)
