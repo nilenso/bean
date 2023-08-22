@@ -1,6 +1,5 @@
 (ns bean.core
-  (:require [clojure.set :refer [union]]
-            [cljs.math :refer [pow]]
+  (:require [cljs.math :refer [pow]]
             [instaparse.core :as insta]))
 
 (def ^:private parser
@@ -31,21 +30,16 @@
 (defn parse [v]
   (insta/parse parser v))
 
-(defn- has-subexpression? [[node-type & _]]
+(defn- is-expression? [[node-type & _]]
   (= node-type :Expression))
 
 (defn- error-or-value [result]
   (if (:error result)
     result
-    {:value result}))
+    {:value result :representation (str result)}))
 
 (defn- formulas-map [cells f]
-  (merge
-   (error-or-value (apply f (map :value cells)))
-   {:affected-cells (->> cells
-                         (map :affected-cells)
-                         (reduce union)
-                         (into (set [])))}))
+  (apply f (map :value cells)))
 
 (defn- get-cell [grid address]
   (if-let [contents (get-in grid address)]
@@ -65,49 +59,33 @@
                   indexed-a)]
     [(dec n) (dec c)]))
 
-(defn- eval-formula* [grid {:keys [ast affected-cells]}]
+(defn eval-ast [ast cell address grid]
   ; ast goes down, value or an error comes up
-  (let [[node-type arg] ast
-        with-value #(do {:value %
-                         :affected-cells affected-cells})
-        eval-sub-ast #(eval-formula* grid {:ast %
-                                           :affected-cells affected-cells})]
+  (let [eval-sub-ast #(eval-ast % cell address grid)
+        [node-type & [arg :as args]] ast
+        with-value #(do {:value % :representation (str %)})]
     (case node-type
-      :CellContents (if arg
-                      (let [{:keys [value affected-cells error]} (eval-sub-ast arg)]
-                        (merge
-                         {:content (str value)
-                          :value value
-                          :affected-cells affected-cells}
-                         (when error {:error error})))
-                      {:content ""
-                       :value nil
-                       :affected-cells affected-cells})
+      :CellContents (merge cell (if arg
+                                  (eval-sub-ast arg)
+                                  (with-value nil)))
       :Integer (with-value (js/parseInt arg))
       :String (with-value arg)
       :CellRef (let [[_ a n] ast
-                     cellref-ast (get-cell grid (a1->rc a (js/parseInt n)))
-                     error (:error cellref-ast)]
-                 (if error
-                   {:value nil
-                    :error error
-                    :affected-cells affected-cells}
-                   (eval-sub-ast cellref-ast)))
+                     referred-cell (get-cell grid (a1->rc a (js/parseInt n)))]
+                 (if (:error referred-cell)
+                   referred-cell
+                   (eval-sub-ast (:ast referred-cell))))
       :Operation (with-value (case arg
                                "+" bean-op-+))
-      :Expression (if-not (has-subexpression? arg)
-                    (eval-sub-ast arg)
-                    (let [[_ left op right] ast]
-                      (formulas-map [(eval-sub-ast op)
-                                     (eval-sub-ast left)
-                                     (eval-sub-ast right)]
-                                    #(apply %1 [%2 %3]))))
+      :Expression (if (is-expression? arg)
+                    (let [[left op right] args]
+                      (error-or-value
+                       (formulas-map [(eval-sub-ast op)
+                                      (eval-sub-ast left)
+                                      (eval-sub-ast right)]
+                                     #(apply %1 [%2 %3]))))
+                    (eval-sub-ast arg))
       :Value (eval-sub-ast arg))))
-
-(defn- eval-formula [grid address ast]
-  (eval-formula* grid
-                 {:affected-cells (set [address])
-                  :ast ast}))
 
 ;; TODO: Is there a better way to return vectors instead of lists
 ;; for O(1) lookups later.
@@ -122,7 +100,17 @@
                             row)))
                     matrix)))
 
+(defn- content->cell [content]
+  {:content content
+   :ast (parse content)
+   :value nil
+;; :error nil
+   :representation ""})
+
+(defn eval-cell [cell address grid]
+  (eval-ast (:ast cell) cell address grid))
+
 (defn evaluate-grid [grid]
-  (let [parsed-grid (map-on-matrix parse grid)]
+  (let [parsed-grid (map-on-matrix content->cell grid)]
     (->> parsed-grid
-        (map-on-matrix-addressed #(eval-formula parsed-grid %1 %2)))))
+         (map-on-matrix-addressed #(eval-cell %2 %1 parsed-grid)))))

@@ -39,48 +39,53 @@
                 ["=A1+A2" "" ""]
                 ["=A3+1" "" ""]
                 ["=A1+A2+A3+A4+10" "" ""]]]
-      (is (= (evaluate-grid grid)
-             [[{:content "1" :value 1, :affected-cells #{[0 0]}}
-               {:content "" :value nil, :affected-cells #{[0 1]}}
-               {:content "" :value nil, :affected-cells #{[0 2]}}]
-              [{:content "2" :value 2, :affected-cells #{[1 0]}}
-               {:content "" :value nil, :affected-cells #{[1 1]}}
-               {:content "" :value nil, :affected-cells #{[1 2]}}]
-              [{:content "3" :value 3, :affected-cells #{[2 0]}}
-               {:content "" :value nil, :affected-cells #{[2 1]}}
-               {:content "" :value nil, :affected-cells #{[2 2]}}]
-              [{:content "4" :value 4, :affected-cells #{[3 0]}}
-               {:content "" :value nil, :affected-cells #{[3 1]}}
-               {:content "" :value nil, :affected-cells #{[3 2]}}]
-              [{:content "20" :value 20, :affected-cells #{[4 0]}}
-               {:content "" :value nil, :affected-cells #{[4 1]}}
-               {:content "" :value nil, :affected-cells #{[4 2]}}]]))))
+      (is (= (map-on-matrix
+              #(select-keys % [:value :content :error :representation])
+              (evaluate-grid grid))
+             [[{:content "1" :value 1 :representation "1"}
+               {:content "" :value nil :representation ""}
+               {:content "" :value nil :representation ""}]
+              [{:content "2" :value 2 :representation "2"}
+               {:content "" :value nil :representation ""}
+               {:content "" :value nil :representation ""}]
+              [{:content "=A1+A2" :value 3 :representation "3"}
+               {:content "" :value nil :representation ""}
+               {:content "" :value nil :representation ""}]
+              [{:content "=A3+1" :value 4 :representation "4"}
+               {:content "" :value nil :representation ""}
+               {:content "" :value nil :representation ""}]
+              [{:content "=A1+A2+A3+A4+10" :value 20 :representation "20"}
+               {:content "" :value nil :representation ""}
+               {:content "" :value nil :representation ""}]]))))
 
   (testing "Returns errors"
     (let [grid [["=1" "" ""]
                 ["ABC" "=A1000" ""]
                 ["=A1+A2" "=B2" ""]
                 ["=A3+1" "" ""]]]
-      (is (= (evaluate-grid grid)
-             [[{:content "1" :value 1 :affected-cells #{[0 0]}}
-               {:content "" :value nil :affected-cells #{[0 1]}}
-               {:content "" :value nil :affected-cells #{[0 2]}}]
-              [{:content "ABC" :value "ABC" :affected-cells #{[1 0]}}
-               {:content "" :value nil :error "Invalid address [999 0]" :affected-cells #{[1 1]}}
-               {:content "" :value nil :affected-cells #{[1 2]}}]
-              [{:content "" :value nil :error "Addition only works for Integers" :affected-cells #{[2 0]}}
-               {:content "" :value nil :error "Invalid address [999 0]" :affected-cells #{[2 1]}}
-               {:content "" :value nil :affected-cells #{[2 2]}}]
-              [{:content "" :value nil :error "Addition only works for Integers" :affected-cells #{[3 0]}}
-               {:content "" :value nil :affected-cells #{[3 1]}}
-               {:content "" :value nil :affected-cells #{[3 2]}}]])))))
+      (is (= (map-on-matrix
+              #(select-keys % [:value :content :error :representation])
+              (evaluate-grid grid))
+             [[{:content "=1" :value 1 :representation "1"}
+               {:content "" :value nil :representation ""}
+               {:content "" :value nil :representation ""}]
+              [{:content "ABC" :value "ABC" :representation "ABC"}
+               {:content "=A1000" :value nil :error "Invalid address [999 0]" :representation ""}
+               {:content "" :value nil :representation ""}]
+              [{:content "=A1+A2" :value nil :error "Addition only works for Integers" :representation ""}
+               {:content "=B2" :value nil :error "Invalid address [999 0]" :representation ""}
+               {:content "" :value nil :representation ""}]
+              [{:content "=A3+1" :value nil :error "Addition only works for Integers" :representation ""}
+               {:content "" :value nil :representation ""}
+               {:content "" :value nil :representation ""}]]))))
+
   ;; TODO: fix this test
   (testing "Errors are not operated upon further"
      (let [grid [["=A1000+1" "" ""]]]
        (is (= (map-on-matrix
                #(select-keys % [:error])
                (evaluate-grid grid))
-              "Invalid address [999 0]"))))
+              "Invalid address [999 0]")))))
 
 (deftest bean-op-+-test
   (testing "Adds two numbers"
