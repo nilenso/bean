@@ -39,7 +39,9 @@
     {:value result :representation (str result)}))
 
 (defn- formulas-map [cells f]
-  (apply f (map :value cells)))
+  (if-let [error (some #(when (not (nil? %)) %) (map :error cells))]
+    {:error error}
+    (error-or-value (apply f (map :value cells)))))
 
 (defn- get-cell [grid address]
   (if-let [contents (get-in grid address)]
@@ -59,33 +61,39 @@
                   indexed-a)]
     [(dec n) (dec c)]))
 
+(declare eval-cell)
+
 (defn eval-ast [ast cell address grid]
   ; ast goes down, value or an error comes up
   (let [eval-sub-ast #(eval-ast % cell address grid)
         [node-type & [arg :as args]] ast
-        with-value #(do {:value % :representation (str %)})]
+        return-value #(do {:value % :representation (str %)})
+        return-error #(do {:error %})]
     (case node-type
       :CellContents (merge cell (if arg
                                   (eval-sub-ast arg)
-                                  (with-value nil)))
-      :Integer (with-value (js/parseInt arg))
-      :String (with-value arg)
+                                  (return-value nil)))
       :CellRef (let [[_ a n] ast
-                     referred-cell (get-cell grid (a1->rc a (js/parseInt n)))]
-                 (if (:error referred-cell)
-                   referred-cell
-                   (eval-sub-ast (:ast referred-cell))))
-      :Operation (with-value (case arg
-                               "+" bean-op-+))
+                     rc (a1->rc a (js/parseInt n))
+                     referred-cell (get-cell grid rc)
+                     error (:error referred-cell)]
+                 (if error
+                   (return-error error)
+                   (select-keys
+                    (eval-cell referred-cell rc grid)
+                    [:value :error])))
       :Expression (if (is-expression? arg)
                     (let [[left op right] args]
-                      (error-or-value
-                       (formulas-map [(eval-sub-ast op)
-                                      (eval-sub-ast left)
-                                      (eval-sub-ast right)]
-                                     #(apply %1 [%2 %3]))))
+                      (formulas-map [(eval-sub-ast op)
+                                     (eval-sub-ast left)
+                                     (eval-sub-ast right)]
+                                    #(apply %1 [%2 %3])))
                     (eval-sub-ast arg))
-      :Value (eval-sub-ast arg))))
+      :Value (eval-sub-ast arg)
+      :Integer (return-value (js/parseInt arg))
+      :String (return-value arg)
+      :Operation (return-value (case arg
+                                 "+" bean-op-+)))))
 
 ;; TODO: Is there a better way to return vectors instead of lists
 ;; for O(1) lookups later.

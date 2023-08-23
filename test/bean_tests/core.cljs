@@ -79,13 +79,23 @@
                {:content "" :value nil :representation ""}
                {:content "" :value nil :representation ""}]]))))
 
-  ;; TODO: fix this test
   (testing "Errors are not operated upon further"
-     (let [grid [["=A1000+1" "" ""]]]
-       (is (= (map-on-matrix
-               #(select-keys % [:error])
-               (evaluate-grid grid))
-              "Invalid address [999 0]")))))
+    (let [grid [["=A1000+1" "=A1+100" ""]]]
+      (is (= (map-on-matrix
+              #(select-keys % [:error])
+              (evaluate-grid grid))
+             [[{:error "Invalid address [999 0]"}
+               {:error "Invalid address [999 0]"}
+               {}]]))))
+
+  (testing "If a cell has an error, all dependent cells become errors"
+    (let [grid [["=A1000" "=A1" "=B1"]]]
+      (is (= (map-on-matrix
+              #(select-keys % [:error])
+              (evaluate-grid grid))
+             [[{:error "Invalid address [999 0]"}
+               {:error "Invalid address [999 0]"}
+               {:error "Invalid address [999 0]"}]])))))
 
 (deftest bean-op-+-test
   (testing "Adds two numbers"
@@ -102,7 +112,7 @@
 (deftest map-on-matrix-addressed-test
   (testing "Row order map of f over a 2D matrix with address also supplied to f"
     (let [matrix [[10 20 30]
-                [40 50 60]]]
+                  [40 50 60]]]
       (is (= (map-on-matrix-addressed
               (fn [address item] [address item]) matrix)
              [[[[0 0] 10] [[0 1] 20] [[0 2] 30]]
