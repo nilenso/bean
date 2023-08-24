@@ -70,12 +70,12 @@
                {:content "" :value nil :representation ""}
                {:content "" :value nil :representation ""}]
               [{:content "ABC" :value "ABC" :representation "ABC"}
-               {:content "=A1000" :value nil :error "Invalid address [999 0]" :representation ""}
+               {:content "=A1000" :value nil :error "Invalid address [999 0]" :representation "Invalid address [999 0]"}
                {:content "" :value nil :representation ""}]
-              [{:content "=A1+A2" :value nil :error "Addition only works for Integers" :representation ""}
-               {:content "=B2" :value nil :error "Invalid address [999 0]" :representation ""}
+              [{:content "=A1+A2" :value nil :error "Addition only works for Integers" :representation "Addition only works for Integers"}
+               {:content "=B2" :value nil :error "Invalid address [999 0]" :representation "Invalid address [999 0]"}
                {:content "" :value nil :representation ""}]
-              [{:content "=A3+1" :value nil :error "Addition only works for Integers" :representation ""}
+              [{:content "=A3+1" :value nil :error "Addition only works for Integers" :representation "Addition only works for Integers"}
                {:content "" :value nil :representation ""}
                {:content "" :value nil :representation ""}]]))))
 

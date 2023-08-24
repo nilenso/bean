@@ -33,20 +33,41 @@
 (defn- is-expression? [[node-type & _]]
   (= node-type :Expression))
 
-(defn- error-or-value [result]
-  (if (:error result)
-    result
-    {:value result :representation (str result)}))
+(defn- ast-result [error-or-val]
+  (if-let [error (:error error-or-val)]
+    {:error error :representation (str error)}
+    {:value error-or-val :representation (str error-or-val)}))
 
-(defn- formulas-map [cells f]
-  (if-let [error (some #(when (not (nil? %)) %) (map :error cells))]
-    {:error error}
-    (error-or-value (apply f (map :value cells)))))
+(defn- first-error [ast-results]
+  (->> ast-results (filter :error) first))
+
+(defn- formulas-map [ast-results f]
+  (if-let [referenced-error (first-error ast-results)]
+    referenced-error
+    (ast-result (apply f (map :value ast-results)))))
 
 (defn- get-cell [grid address]
   (if-let [contents (get-in grid address)]
     contents
     {:error (str "Invalid address " address)}))
+
+(defn- cell->ast-result [cell]
+  (select-keys cell [:value :error :representation]))
+
+(defn- ast-result->cell [{:keys [error] :as ast-result} cell]
+  (merge
+   {:content (:content cell)
+    :ast (:ast cell)
+    :value (:value ast-result)
+    :representation (:representation ast-result)
+   (when error {:error error})))
+
+(defn- content->cell
+  ([content]
+   {:content content
+    :ast (parse content)
+    :value nil})
+  ([content cell] (merge cell (content->cell content))))
 
 (def ^:private num-alphabets 26)
 
@@ -65,23 +86,19 @@
 
 (defn eval-ast [ast cell address grid]
   ; ast goes down, value or an error comes up
-  (let [eval-sub-ast #(eval-ast % cell address grid)
-        [node-type & [arg :as args]] ast
-        return-value #(do {:value % :representation (str %)})
-        return-error #(do {:error %})]
+  (let [[node-type & [arg :as args]] ast
+        eval-sub-ast #(eval-ast % cell address grid)]
     (case node-type
-      :CellContents (merge cell (if arg
-                                  (eval-sub-ast arg)
-                                  (return-value nil)))
+      :CellContents (if arg
+                      (eval-sub-ast arg)
+                      (ast-result nil))
       :CellRef (let [[_ a n] ast
                      rc (a1->rc a (js/parseInt n))
-                     referred-cell (get-cell grid rc)
-                     error (:error referred-cell)]
-                 (if error
-                   (return-error error)
-                   (select-keys
-                    (eval-cell referred-cell rc grid)
-                    [:value :error])))
+                     referred-cell (get-cell grid rc)]
+                 (if (:error referred-cell)
+                   (ast-result referred-cell)
+                   (-> (eval-cell referred-cell rc grid)
+                       cell->ast-result)))
       :Expression (if (is-expression? arg)
                     (let [[left op right] args]
                       (formulas-map [(eval-sub-ast op)
@@ -90,10 +107,10 @@
                                     #(apply %1 [%2 %3])))
                     (eval-sub-ast arg))
       :Value (eval-sub-ast arg)
-      :Integer (return-value (js/parseInt arg))
-      :String (return-value arg)
-      :Operation (return-value (case arg
-                                 "+" bean-op-+)))))
+      :Integer (ast-result (js/parseInt arg))
+      :String (ast-result arg)
+      :Operation (ast-result (case arg
+                               "+" bean-op-+)))))
 
 ;; TODO: Is there a better way to return vectors instead of lists
 ;; for O(1) lookups later.
@@ -108,15 +125,9 @@
                             row)))
                     matrix)))
 
-(defn- content->cell [content]
-  {:content content
-   :ast (parse content)
-   :value nil
-;; :error nil
-   :representation ""})
-
-(defn eval-cell [cell address grid]
-  (eval-ast (:ast cell) cell address grid))
+(defn- eval-cell [cell address grid]
+  (-> (eval-ast (:ast cell) cell address grid)
+      (ast-result->cell cell)))
 
 (defn evaluate-grid [grid]
   (let [parsed-grid (map-on-matrix content->cell grid)]
