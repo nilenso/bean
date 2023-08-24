@@ -33,10 +33,10 @@
 (defn- is-expression? [[node-type & _]]
   (= node-type :Expression))
 
-(defn- ast-result [error-or-val]
+(defn- ast-result [error-or-val & dependencies]
   (if-let [error (:error error-or-val)]
     {:error error :representation (str error)}
-    {:value error-or-val :representation (str error-or-val)}))
+    {:value error-or-val :representation (str error-or-val) :dependencies dependencies}))
 
 (defn- first-error [ast-results]
   (->> ast-results (filter :error) first))
@@ -44,7 +44,8 @@
 (defn- formulas-map [ast-results f]
   (if-let [referenced-error (first-error ast-results)]
     referenced-error
-    (ast-result (apply f (map :value ast-results)))))
+    (ast-result (apply f (map :value ast-results))
+                (map :dependencies ast-results))))
 
 (defn- get-cell [grid address]
   (if-let [contents (get-in grid address)]
@@ -52,14 +53,15 @@
     {:error (str "Invalid address " address)}))
 
 (defn- cell->ast-result [cell]
-  (select-keys cell [:value :error :representation]))
+  (select-keys cell [:value :error :representation :dependencies]))
 
-(defn- ast-result->cell [{:keys [error] :as ast-result} cell]
+(defn- ast-result->cell [{:keys [error dependencies] :as ast-result} cell]
   (merge
    {:content (:content cell)
     :ast (:ast cell)
     :value (:value ast-result)
-    :representation (:representation ast-result)
+    :representation (:representation ast-result)}
+   (when dependencies {:dependencies dependencies})
    (when error {:error error})))
 
 (defn- content->cell
@@ -98,6 +100,8 @@
                  (if (:error referred-cell)
                    (ast-result referred-cell)
                    (-> (eval-cell referred-cell rc grid)
+                       (merge {:dependencies [{:dependent address
+                                               :support rc}]})
                        cell->ast-result)))
       :Expression (if (is-expression? arg)
                     (let [[left op right] args]
@@ -128,6 +132,19 @@
 (defn- eval-cell [cell address grid]
   (-> (eval-ast (:ast cell) cell address grid)
       (ast-result->cell cell)))
+
+(defn depgraph [grid]
+  (let [dependencies (->> grid
+                          (map-on-matrix :dependencies)
+                          flatten
+                          (remove nil?))
+        add-node (fn [graph parent node]
+                   (let [children (get graph parent #{})]
+                     (assoc graph parent (conj children node))))
+        make-graph (fn [parent-f child-f coll]
+                     (reduce #(add-node %1 (parent-f %2) (child-f %2)) {} coll))]
+    {:depends-on (make-graph :dependent :support dependencies)
+     :supports (make-graph :support :dependent dependencies)}))
 
 (defn evaluate-grid [grid]
   (let [parsed-grid (map-on-matrix content->cell grid)]

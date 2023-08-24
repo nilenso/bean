@@ -2,7 +2,8 @@
   (:require [bean.core :refer [parse evaluate-grid
                                bean-op-+
                                map-on-matrix
-                               map-on-matrix-addressed]]
+                               map-on-matrix-addressed
+                               depgraph]]
             [clojure.test :refer [deftest testing is run-all-tests]]))
 
 (deftest parser-test
@@ -96,6 +97,16 @@
              [[{:error "Invalid address [999 0]"}
                {:error "Invalid address [999 0]"}
                {:error "Invalid address [999 0]"}]])))))
+
+(deftest depgraph-test
+  (testing "Returns a dependency graph for an evaluated grid"
+    (is (= (depgraph (evaluate-grid [["10" "=A1" "=A1+B1" "=C1"]]))
+           {:depends-on {[0 1] #{[0 0]}
+                         [0 2] #{[0 0] [0 1]}
+                         [0 3] #{[0 2]}}
+            :supports {[0 0] #{[0 2] [0 1]}
+                       [0 1] #{[0 2]}
+                       [0 2] #{[0 3]}}}))))
 
 (deftest bean-op-+-test
   (testing "Adds two numbers"
