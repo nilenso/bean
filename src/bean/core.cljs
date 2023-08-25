@@ -1,5 +1,6 @@
 (ns bean.core
   (:require [cljs.math :refer [pow]]
+            [clojure.set :as set]
             [instaparse.core :as insta]))
 
 (def ^:private parser
@@ -33,10 +34,12 @@
 (defn- is-expression? [[node-type & _]]
   (= node-type :Expression))
 
-(defn- ast-result [error-or-val & dependencies]
+(defn- ast-result [error-or-val & [dependencies]]
   (if-let [error (:error error-or-val)]
     {:error error :representation (str error)}
-    {:value error-or-val :representation (str error-or-val) :dependencies dependencies}))
+    {:value error-or-val
+     :representation (str error-or-val)
+     :dependencies dependencies}))
 
 (defn- first-error [ast-results]
   (->> ast-results (filter :error) first))
@@ -45,9 +48,9 @@
   (if-let [referenced-error (first-error ast-results)]
     referenced-error
     (ast-result (apply f (map :value ast-results))
-                (map :dependencies ast-results))))
+                (apply set/union (keep :dependencies ast-results)))))
 
-(defn- get-cell [grid address]
+(defn get-cell [grid address]
   (if-let [contents (get-in grid address)]
     contents
     {:error (str "Invalid address " address)}))
@@ -67,9 +70,7 @@
 (defn- content->cell
   ([content]
    {:content content
-    :ast (parse content)
-    :value nil})
-  ([content cell] (merge cell (content->cell content))))
+    :ast (parse content)}))
 
 (def ^:private num-alphabets 26)
 
@@ -100,8 +101,7 @@
                  (if (:error referred-cell)
                    (ast-result referred-cell)
                    (-> (eval-cell referred-cell rc grid)
-                       (merge {:dependencies [{:dependent address
-                                               :support rc}]})
+                       (merge {:dependencies #{rc}})
                        cell->ast-result)))
       :Expression (if (is-expression? arg)
                     (let [[left op right] args]
@@ -133,20 +133,59 @@
   (-> (eval-ast (:ast cell) cell address grid)
       (ast-result->cell cell)))
 
-(defn depgraph [grid]
-  (let [dependencies (->> grid
-                          (map-on-matrix :dependencies)
-                          flatten
-                          (remove nil?))
-        add-node (fn [graph parent node]
-                   (let [children (get graph parent #{})]
-                     (assoc graph parent (conj children node))))
-        make-graph (fn [parent-f child-f coll]
-                     (reduce #(add-node %1 (parent-f %2) (child-f %2)) {} coll))]
-    {:depends-on (make-graph :dependent :support dependencies)
-     :supports (make-graph :support :dependent dependencies)}))
+(defn- depgraph-add-edge [depgraph parent child]
+  (assoc depgraph parent (conj (get depgraph parent #{}) child)))
 
-(defn evaluate-grid [grid]
-  (let [parsed-grid (map-on-matrix content->cell grid)]
-    (->> parsed-grid
-         (map-on-matrix-addressed #(eval-cell %2 %1 parsed-grid)))))
+(defn- depgraph-remove-edge [depgraph parent child]
+  (assoc depgraph parent (disj (get depgraph parent) child)))
+
+(defn depgraph [grid]
+  (let [edges (->> grid
+                   (map-on-matrix-addressed
+                    #(for [dependency (:dependencies %2)]
+                       {:parent dependency :child %1}))
+                   flatten)]
+    (reduce
+     #(depgraph-add-edge %1 (:parent %2) (:child %2))
+     {}
+     edges)))
+
+(defn- update-depgraph [depgraph address old-dependencies new-dependencies]
+  (as-> depgraph g
+    (reduce #(depgraph-remove-edge %1 %2 address) g old-dependencies)
+    (reduce #(depgraph-add-edge %1 %2 address) g new-dependencies)))
+
+(defn- evaluate-partial-grid [grid address]
+  (assoc-in grid
+            address
+            (eval-cell (get-cell grid address)
+                       address
+                       grid)))
+
+(defn evaluate-grid
+  ([grid]
+   (let [parsed-grid (map-on-matrix content->cell grid)
+         evaluated-grid (map-on-matrix-addressed #(eval-cell %2 %1 parsed-grid) parsed-grid)
+         depgraph (depgraph evaluated-grid)]
+     {:grid evaluated-grid
+      :depgraph depgraph}))
+
+  ([address grid depgraph]
+   (let [dependents (get depgraph address #{})
+         evaluated-grid (evaluate-partial-grid grid address)
+         old-dependencies (:dependencies (get-cell grid address))
+         new-dependencies (:dependencies (get-cell evaluated-grid address))
+         updated-depgraph (update-depgraph depgraph address old-dependencies new-dependencies)]
+     ;; Need to re-look at how the depgraph recomposition works.
+     (if dependents
+       (reduce #(evaluate-grid %2 (:grid %1) (:depgraph %1))
+               {:grid evaluated-grid
+                :depgraph updated-depgraph}
+               dependents)
+       {:grid evaluated-grid
+        :depgraph updated-depgraph})))
+
+  ([address new-content grid depgraph]
+   (evaluate-grid address
+                  (assoc-in grid address (content->cell new-content))
+                  depgraph)))

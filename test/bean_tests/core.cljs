@@ -3,7 +3,8 @@
                                bean-op-+
                                map-on-matrix
                                map-on-matrix-addressed
-                               depgraph]]
+                               depgraph
+                               get-cell]]
             [clojure.test :refer [deftest testing is run-all-tests]]))
 
 (deftest parser-test
@@ -39,10 +40,11 @@
                 ["2" "" ""]
                 ["=A1+A2" "" ""]
                 ["=A3+1" "" ""]
-                ["=A1+A2+A3+A4+10" "" ""]]]
+                ["=A1+A2+A3+A4+10" "" ""]]
+          evaluated-grid (evaluate-grid grid)]
       (is (= (map-on-matrix
               #(select-keys % [:value :content :error :representation])
-              (evaluate-grid grid))
+              (:grid evaluated-grid))
              [[{:content "1" :value 1 :representation "1"}
                {:content "" :value nil :representation ""}
                {:content "" :value nil :representation ""}]
@@ -57,7 +59,12 @@
                {:content "" :value nil :representation ""}]
               [{:content "=A1+A2+A3+A4+10" :value 20 :representation "20"}
                {:content "" :value nil :representation ""}
-               {:content "" :value nil :representation ""}]]))))
+               {:content "" :value nil :representation ""}]]))
+      (is (= (:depgraph (evaluate-grid grid))
+             {[0 0] #{[2 0] [4 0]}
+              [1 0] #{[2 0] [4 0]}
+              [2 0] #{[3 0] [4 0]}
+              [3 0] #{[4 0]}}))))
 
   (testing "Returns errors"
     (let [grid [["=1" "" ""]
@@ -66,7 +73,7 @@
                 ["=A3+1" "" ""]]]
       (is (= (map-on-matrix
               #(select-keys % [:value :content :error :representation])
-              (evaluate-grid grid))
+              (:grid (evaluate-grid grid)))
              [[{:content "=1" :value 1 :representation "1"}
                {:content "" :value nil :representation ""}
                {:content "" :value nil :representation ""}]
@@ -84,7 +91,7 @@
     (let [grid [["=A1000+1" "=A1+100" ""]]]
       (is (= (map-on-matrix
               #(select-keys % [:error])
-              (evaluate-grid grid))
+              (:grid (evaluate-grid grid)))
              [[{:error "Invalid address [999 0]"}
                {:error "Invalid address [999 0]"}
                {}]]))))
@@ -93,20 +100,35 @@
     (let [grid [["=A1000" "=A1" "=B1"]]]
       (is (= (map-on-matrix
               #(select-keys % [:error])
-              (evaluate-grid grid))
+              (:grid (evaluate-grid grid)))
              [[{:error "Invalid address [999 0]"}
                {:error "Invalid address [999 0]"}
                {:error "Invalid address [999 0]"}]])))))
 
+(deftest incremental-evaluate-grid
+  (testing "Basic incremental evaluation given a pre-evaluated grid and a depgraph"
+    (let [grid (evaluate-grid [["10" "=A1" "=A1+B1" "100" "=C1" "=A1"]])
+          {evaluated-grid :grid depgraph :depgraph} (evaluate-grid [0 1] "=A1+D1" (:grid grid) (:depgraph grid))]
+      (is (= 10 (:value (get-cell evaluated-grid [0 0]))))
+      (is (= 110 (:value (get-cell evaluated-grid [0 1]))))
+      (is (= 120 (:value (get-cell evaluated-grid [0 2]))))
+      (is (= 100 (:value (get-cell evaluated-grid [0 3]))))
+      (is (= 120 (:value (get-cell evaluated-grid [0 4]))))
+      (is (= (get depgraph [0 0]) #{[0 1] [0 2] [0 5]}))
+      (is (= (get depgraph [0 3]) #{[0 1]}))))
+
+  (testing "Older dependencies are removed in an incremental evaluation"
+    (let [grid (evaluate-grid [["10" "=A1" "=A1+B1" "100"]])
+          {depgraph :depgraph} (evaluate-grid [0 1] "=D1" (:grid grid) (:depgraph grid))]
+      (is (= (get depgraph [0 0]) #{[0 1] [0 2]}))
+      (is (= (get depgraph [0 3]) #{[0 1]})))))
+
 (deftest depgraph-test
-  (testing "Returns a dependency graph for an evaluated grid"
-    (is (= (depgraph (evaluate-grid [["10" "=A1" "=A1+B1" "=C1"]]))
-           {:depends-on {[0 1] #{[0 0]}
-                         [0 2] #{[0 0] [0 1]}
-                         [0 3] #{[0 2]}}
-            :supports {[0 0] #{[0 2] [0 1]}
-                       [0 1] #{[0 2]}
-                       [0 2] #{[0 3]}}}))))
+  (testing "Returns a reverse dependency graph for an evaluated grid"
+    (is (= (depgraph (:grid (evaluate-grid [["10" "=A1" "=A1+B1" "=C1"]])))
+           {[0 0] #{[0 2] [0 1]}
+            [0 1] #{[0 2]}
+            [0 2] #{[0 3]}}))))
 
 (deftest bean-op-+-test
   (testing "Adds two numbers"
