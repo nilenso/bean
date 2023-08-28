@@ -3,9 +3,15 @@
  ["src/"]
 
  :dependencies
- [[instaparse "1.4.12"]]
+ [[instaparse "1.4.12"]
+  [reagent "1.2.0"]]
 
+ :dev-http {8090 "public"}
  :builds
  {:engine {:target :node-library
            :output-to "output.js"
-           :exports {:parse bean.parser/parse}}}}
+           :exports {:parse bean.parser/parse}}
+  :ui {:target :browser
+       :output-dir "public/js"
+       :asset-path "/js"
+       :modules {:main {:entries [bean.ui.main]}}}}}

@@ -1,0 +1,45 @@
+
+body {
+    margin: 0;
+    background: #fcf8f4;
+}
+
+.bean-sheet {
+    display: grid;
+    grid-template-columns: 1fr;
+    font-family: monospace;
+    font-size: 1.3em;
+}
+
+.bean-row {
+    display: grid;
+    grid-template-rows: 30px;
+    grid-auto-flow: column;
+}
+.bean-cell {
+    padding: 5px;
+    width: 100px;
+    overflow: hidden;
+}
+
+.bean-label-row {
+    display: grid;
+    grid-template-rows: 30px;
+    grid-auto-flow: column;
+    background-color: #dedbd7;
+}
+
+.bean-label-left {
+    text-align: end;
+    background-color: #dedbd7;
+}
+
+.bean-label {
+    padding: 5px;
+    width: 100px;
+}
+
+.bean-corner {
+    text-align: end;
+    background-color: rgb(147, 196, 125);
+}
