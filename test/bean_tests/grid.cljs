@@ -86,14 +86,19 @@
       (is (= 120 (:value (util/get-cell evaluated-grid [0 2]))))
       (is (= 100 (:value (util/get-cell evaluated-grid [0 3]))))
       (is (= 120 (:value (util/get-cell evaluated-grid [0 4]))))
-      (is (= (get depgraph [0 0]) #{[0 1] [0 2] [0 5]}))
-      (is (= (get depgraph [0 3]) #{[0 1]}))))
+      (is (= depgraph
+             {[0 0] #{[0 1] [0 2] [0 5]}
+              [0 1] #{[0 2]}
+              [0 2] #{[0 4]}
+              [0 3] #{[0 1]}}))))
 
   (testing "Older dependencies are removed in an incremental evaluation"
     (let [grid (evaluate-grid [["10" "=A1" "=A1+B1" "100"]])
           {depgraph :depgraph} (evaluate-grid [0 1] "=D1" (:grid grid) (:depgraph grid))]
-      (is (= (get depgraph [0 0]) #{[0 1] [0 2]}))
-      (is (= (get depgraph [0 3]) #{[0 1]})))))
+      (is (= depgraph
+             {[0 0] #{[0 1] [0 2]}
+              [0 1] #{[0 2]}
+              [0 3] #{[0 1]}})))))
 
 (deftest depgraph-test
   (testing "Returns a reverse dependency graph for an evaluated grid"
