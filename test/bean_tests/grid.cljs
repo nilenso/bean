@@ -1,7 +1,5 @@
 (ns bean-tests.grid
   (:require [bean.grid :refer [evaluate-grid
-                               map-on-matrix
-                               map-on-matrix-addressed
                                depgraph]]
             [bean.util :as util]
             [clojure.test :refer [deftest testing is]]))
@@ -14,7 +12,7 @@
                 ["=A3+1" "" ""]
                 ["=A1+A2+A3+A4+10" "" ""]]
           evaluated-grid (evaluate-grid grid)]
-      (is (= (map-on-matrix
+      (is (= (util/map-on-matrix
               #(select-keys % [:value :content :error :representation])
               (:grid evaluated-grid))
              [[{:content "1" :value 1 :representation "1"}
@@ -43,7 +41,7 @@
                 ["ABC" "=A1000" ""]
                 ["=A1+A2" "=B2" ""]
                 ["=A3+1" "" ""]]]
-      (is (= (map-on-matrix
+      (is (= (util/map-on-matrix
               #(select-keys % [:value :content :error :representation])
               (:grid (evaluate-grid grid)))
              [[{:content "=1" :value 1 :representation "1"}
@@ -61,7 +59,7 @@
 
   (testing "Errors are not operated upon further"
     (let [grid [["=A1000+1" "=A1+100" ""]]]
-      (is (= (map-on-matrix
+      (is (= (util/map-on-matrix
               #(select-keys % [:error])
               (:grid (evaluate-grid grid)))
              [[{:error "Invalid address [999 0]"}
@@ -70,7 +68,7 @@
 
   (testing "If a cell has an error, all dependent cells become errors"
     (let [grid [["=A1000" "=A1" "=B1"]]]
-      (is (= (map-on-matrix
+      (is (= (util/map-on-matrix
               #(select-keys % [:error])
               (:grid (evaluate-grid grid)))
              [[{:error "Invalid address [999 0]"}
@@ -111,13 +109,13 @@
   (testing "Row order map of f over a 2D matrix"
     (let [matrix [[10 20 30]
                   [40 50 60]]]
-      (is (= (map-on-matrix identity matrix) matrix)))))
+      (is (= (util/map-on-matrix identity matrix) matrix)))))
 
 (deftest map-on-matrix-addressed-test
   (testing "Row order map of f over a 2D matrix with address also supplied to f"
     (let [matrix [[10 20 30]
                   [40 50 60]]]
-      (is (= (map-on-matrix-addressed
+      (is (= (util/map-on-matrix-addressed
               (fn [address item] [address item]) matrix)
              [[[[0 0] 10] [[0 1] 20] [[0 2] 30]]
               [[[1 0] 40] [[1 1] 50] [[1 2] 60]]])))))

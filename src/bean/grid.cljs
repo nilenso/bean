@@ -8,19 +8,6 @@
    {:content content
     :ast (parser/parse content)}))
 
-;; TODO: Is there a better way to return vectors instead of lists
-;; for O(1) lookups later.
-(defn map-on-matrix [f matrix]
-  (vec (map #(vec (map (fn [element] (f element)) %)) matrix)))
-
-(defn map-on-matrix-addressed [f matrix]
-  (vec (map-indexed (fn [row-idx row]
-                      (vec (map-indexed
-                            (fn [col-idx element]
-                              (f [row-idx col-idx] element))
-                            row)))
-                    matrix)))
-
 (defn- depgraph-add-edge [depgraph parent child]
   (assoc depgraph parent (conj (get depgraph parent #{}) child)))
 
@@ -29,7 +16,7 @@
 
 (defn depgraph [grid]
   (let [edges (->> grid
-                   (map-on-matrix-addressed
+                   (util/map-on-matrix-addressed
                     #(for [dependency (:dependencies %2)]
                        {:parent dependency :child %1}))
                    flatten)]
@@ -52,8 +39,8 @@
 
 (defn evaluate-grid
   ([grid]
-   (let [parsed-grid (map-on-matrix content->cell grid)
-         evaluated-grid (map-on-matrix-addressed #(interpreter/eval-cell %2 %1 parsed-grid) parsed-grid)
+   (let [parsed-grid (util/map-on-matrix content->cell grid)
+         evaluated-grid (util/map-on-matrix-addressed #(interpreter/eval-cell %2 %1 parsed-grid) parsed-grid)
          depgraph (depgraph evaluated-grid)]
      {:grid evaluated-grid
       :depgraph depgraph}))
