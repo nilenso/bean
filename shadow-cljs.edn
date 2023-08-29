@@ -8,4 +8,4 @@
  :builds
  {:engine {:target :node-library
            :output-to "output.js"
-           :exports {:parse bean.core/parse}}}}
+           :exports {:parse bean.parser/parse}}}}
