@@ -10,9 +10,10 @@
     String = #'.+'
 
     CellRef = #'[A-Z]+' #'[1-9][0-9]*'
+    MatrixRef = CellRef <':'> CellRef
 
     Operation = '+'
-    Expression = Value | CellRef | Expression Operation Expression | FunctionInvocation
+    Expression = Value | CellRef | MatrixRef | Expression Operation Expression | FunctionInvocation
     FunctionInvocation = FunctionName <'('> FunctionArguments <')'>
     FunctionName = \"concat\"
     FunctionArguments = Epsilon | Expression | Expression <','> FunctionArguments

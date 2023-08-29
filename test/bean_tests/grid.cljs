@@ -73,7 +73,20 @@
               (:grid (evaluate-grid grid)))
              [[{:error "Invalid address [999 0]"}
                {:error "Invalid address [999 0]"}
-               {:error "Invalid address [999 0]"}]])))))
+               {:error "Invalid address [999 0]"}]]))))
+
+  (testing "Matrix evaluation"
+    (let [grid [["1" ""]
+                ["2" "=A1:A2"]]
+          matrix (get-in (evaluate-grid grid) [:grid 1 1 :matrix])]
+      (is (= matrix [[{:content "1"
+                       :ast [:CellContents [:Integer "1"]]
+                       :value 1
+                       :representation "1"}]
+                     [{:content "2"
+                       :ast [:CellContents [:Integer "2"]]
+                       :value 2
+                       :representation "2"}]])))))
 
 (deftest incremental-evaluate-grid
   (testing "Basic incremental evaluation given a pre-evaluated grid and a depgraph"
