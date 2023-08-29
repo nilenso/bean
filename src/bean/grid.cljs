@@ -34,13 +34,50 @@
   (assoc-in grid
             address
             (interpreter/eval-cell (util/get-cell grid address)
-                       address
-                       grid)))
+                                   address
+                                   grid)))
+
+(defn- spillage [cell address]
+  {:origin-address [0 0]
+   :spillage [{:address [0 1]
+               :value 5}]})
+
+(defn- spill-matrices [unspilled-grid]
+  (comment
+    collect spilled matrix dimensions
+    check for spillage intersections
+    Mark origin cells as error for intersecting spills
+    Update values for non intersecting spillage)
+  (->> unspilled-grid
+       (util/map-on-matrix-addressed #(do [%2  %1]))
+       (concat)
+       (filter #(get-in % [0 :matrix]))
+       (map spillage)
+       (reduce (fn [grid1 {:keys [origin-address spillage]}]
+                 (loop [grid2 grid1
+                        spillage spillage]
+                   (if-let [{:keys [address value]} (first spillage)]
+                     (if (empty-cell? (get-cell grid2 address))
+                       (recur (set-spilled-value grid2 address value)
+                              (rest spillage))
+                       grid1) ;; TODO: Should set the spill error on the origin cell
+                     grid2))
+                 spillage)
+               unspilled-grid))
+
+  (map (fn [[address origin-cell]]
+         (spillage origin-cell address))
+       (->> unspilled-grid
+            (util/map-on-matrix-addressed #(do [%1  %2]))
+            (concat)
+            (filter #(get-in % [1 :matrix])))))
 
 (defn evaluate-grid
   ([grid]
    (let [parsed-grid (util/map-on-matrix content->cell grid)
-         evaluated-grid (util/map-on-matrix-addressed #(interpreter/eval-cell %2 %1 parsed-grid) parsed-grid)
+         evaluated-grid (->> parsed-grid
+                             (util/map-on-matrix-addressed #(interpreter/eval-cell %2 %1 parsed-grid))
+                             spill-matrices)
          depgraph (depgraph evaluated-grid)]
      {:grid evaluated-grid
       :depgraph depgraph}))
@@ -54,9 +91,9 @@
      ;; Need to re-look at how the depgraph recomposition works.
      (if dependents
        (reduce #(evaluate-grid %2 (:grid %1) (:depgraph %1))
-                      {:grid evaluated-grid
-                       :depgraph updated-depgraph}
-                      dependents)
+               {:grid evaluated-grid
+                :depgraph updated-depgraph}
+               dependents)
        {:grid evaluated-grid
         :depgraph updated-depgraph})))
 

@@ -2,8 +2,6 @@
   (:require [clojure.set :as set]
             [bean.util :as util]))
 
-(defn debug [x] (prn x) x)
-
 (defn- matrix-ast-result [error-or-val & [dependencies]]
   {:matrix error-or-val
    :dependencies dependencies})
@@ -71,7 +69,7 @@
         eval-sub-ast #(eval-ast % cell address grid)]
     (case node-type
       :CellContents (if arg
-                      (debug (eval-sub-ast arg))
+                      (eval-sub-ast arg)
                       (ast-result nil))
       :CellRef (let [[_ a n] ast
                      rc (util/a1->rc a (js/parseInt n))
