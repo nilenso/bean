@@ -77,8 +77,10 @@
 
   (testing "Matrix evaluation"
     (let [grid [["1" ""]
-                ["2" "=A1:A2"]]
-          matrix (get-in (evaluate-grid grid) [:grid 1 1 :matrix])]
+                ["2" "=A1:A2"]
+                ["" ""]]
+          evaluated-grid (evaluate-grid grid)
+          matrix (get-in evaluated-grid [:grid 1 1 :matrix])]
       (is (= matrix [[{:content "1"
                        :ast [:CellContents [:Integer "1"]]
                        :value 1
@@ -86,7 +88,33 @@
                      [{:content "2"
                        :ast [:CellContents [:Integer "2"]]
                        :value 2
-                       :representation "2"}]])))))
+                       :representation "2"}]]))
+      (is (= (get-in evaluated-grid [:grid 1 1 :value]) 1))
+      (is (= (get-in evaluated-grid [:grid 2 1 :value]) 2))))
+
+  (testing "Matrix spill errors if a cell has some content"
+    (let [grid [["1" ""]
+                ["2" "=A1:A2"]
+                ["" "A string"]]
+          evaluated-grid (evaluate-grid grid)]
+      (is (get-in evaluated-grid [:grid 1 1 :matrix]))
+      (is (= (get-in evaluated-grid [:grid 1 1 :error]) "Spill error"))
+      (is (= (get-in evaluated-grid [:grid 2 1 :value]) "A string"))))
+
+  (testing "Matrix spill errors if there's a conflict"
+    (let [grid [["1" "3"]
+                ["2" "=A1:A2"]
+                ["=A1:B1" ""]]
+          evaluated-grid (evaluate-grid grid)]
+      (is (= (get-in evaluated-grid [:grid 1 1 :value]) 1))
+      (is (= (get-in evaluated-grid [:grid 2 1 :value]) 2))
+      (is (= (get-in evaluated-grid [:grid 2 0 :error]) "Spill error"))
+      (is (= (get-in evaluated-grid [:grid 2 0 :representation]) "Spill error"))
+      (is (= (get-in evaluated-grid [:grid 2 0 :value]) nil))
+      (is (= (util/map-on-matrix :representation (:grid evaluated-grid))
+             [["1" "3"]
+              ["2" "1"]
+              ["Spill error" "2"]])))))
 
 (deftest incremental-evaluate-grid
   (testing "Basic incremental evaluation given a pre-evaluated grid and a depgraph"
