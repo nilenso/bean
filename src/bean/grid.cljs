@@ -41,23 +41,11 @@
 (defn- offset [[start-row start-col] [offset-rows offset-cols]]
   [(+ start-row offset-rows) (+ start-col offset-cols)])
 
-(defn- spillage [{:keys [matrix content]} address]
-  {:origin-address address
-   :spillage (->> (util/map-on-matrix-addressed
-                   #(do
-                      {:relative-address %1
-                       :cell (merge
-                              {:error (:error %2)
-                               :representation (:representation %2)
-                               :value (:value %2)}
-                              (when (= %1 [0 0])
-                                {:matrix matrix
-                                 :content content}))})
-                   matrix)
-                  flatten)})
-
 (defn- set-spilled-cell [grid address cell]
   (assoc-in grid address cell))
+
+(defn- disaddress [cell]
+  (dissoc cell :address :relative-address))
 
 (defn- set-spill-error [grid address]
   (-> grid
@@ -66,28 +54,40 @@
       (assoc-in (conj address :representation) "Spill error")))
 
 (defn- spill-matrices [unspilled-grid]
-  (let [spillages (->> unspilled-grid
-                       (util/map-on-matrix-addressed #(do [%2 %1]))
-                       (mapcat identity)
-                       (filter #(get-in % [0 :matrix]))
-                       (map #(apply spillage %1))
-                       flatten)]
-    (reduce
-     (fn [grid1 {:keys [origin-address spillage]}]
-       (loop [grid2 grid1
-              spillage spillage]
-         (if (first spillage)
-           (let [{:keys [relative-address cell]} (first spillage)
-                 address (offset origin-address relative-address)
-                 value-blank? (not (:value (util/get-cell grid2 address)))
-                 is-origin? (= [0 0] relative-address)]
-             (if (or value-blank? is-origin?)
-               (recur (set-spilled-cell grid2 address cell)
-                      (rest spillage))
-               (set-spill-error grid1 origin-address)))
-           grid2)))
-     unspilled-grid
-     spillages)))
+  (letfn [(cells-with-matrix-refs [grid] (->> grid
+                                              (util/map-on-matrix-addressed #(assoc %2 :address %1))
+                                              flatten
+                                              (filter :matrix)))
+          (desired-spillage [{:keys [matrix content address]}]
+            {:origin-address address
+             :spillage (->> (util/map-on-matrix-addressed
+                             #(cond-> {:relative-address %1
+                                       :error (:error %2)
+                                       :representation (:representation %2)
+                                       :value (:value %2)}
+                                (= %1 [0 0]) (merge {:matrix matrix
+                                                     :content content}))
+                             matrix)
+                            flatten)})
+          (apply-spillage [grid {:keys [origin-address spillage]}]
+            (loop [initial-grid grid
+                   spilled-grid grid
+                   spillage spillage]
+              (if (first spillage)
+                (let [{:keys [relative-address] :as cell} (first spillage)
+                      address (offset origin-address relative-address)
+                           ;; TODO: could have error or value
+                      value-blank? (not (:value (util/get-cell spilled-grid address)))
+                      is-origin? (= [0 0] relative-address)]
+                  (if (or value-blank? is-origin?)
+                    (recur initial-grid
+                           (set-spilled-cell spilled-grid address (disaddress cell))
+                           (rest spillage))
+                    (set-spill-error initial-grid origin-address)))
+                spilled-grid)))]
+    (->> (cells-with-matrix-refs unspilled-grid)
+         (map desired-spillage)
+         (reduce apply-spillage unspilled-grid))))
 
 (defn evaluate-grid
   ([grid]
@@ -118,3 +118,14 @@
    (evaluate-grid address
                   (assoc-in grid address (content->cell new-content))
                   depgraph)))
+(comment
+  {:content nil
+   :ast nil
+   :value nil
+   :representation nil
+   :error nil
+   :dependencies nil
+   :matrix nil
+   :address nil
+   :relative-address nil})
+
