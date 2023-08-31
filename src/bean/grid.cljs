@@ -93,6 +93,18 @@
 (defn- address-matrix [matrix]
   (util/map-on-matrix-addressed #(assoc %2 :address %1) matrix))
 
+(defn- clear-matrix [grid address]
+  (->> (:matrix (util/get-cell grid address)) ; error should be handled here
+       (util/map-on-matrix-addressed (fn [a _] (offset address a)))
+       (mapcat identity)
+       (reduce (fn [grid* addr]
+                 (update-cell grid*
+                              addr
+                              #(-> %
+                                   (dissoc :value :error)
+                                   (assoc :representation ""))))
+               grid)))
+
 (defn evaluate-grid
   ([grid]
    (let [parsed-grid (util/map-on-matrix content->cell grid)
@@ -127,14 +139,18 @@
         :depgraph updated-depgraph})))
 
   ([address new-content grid depgraph]
-   (let [dependents (get depgraph address #{})
-         updated-grid (update-cell grid address #(merge % {:content new-content
-                                                           :ast (parser/parse new-content)}))
+   (let [old-unspilled-cell (util/get-cell grid address)
+         dependents (cond-> (get depgraph address #{})
+                      (:spilled-from old-unspilled-cell) (conj (:spilled-from old-unspilled-cell)))
+         updated-grid (cond-> (update-cell grid address
+                                           #(merge % {:content new-content
+                                                      :ast (parser/parse new-content)}))
+                        ;; clear intersecting matrices to prepare for a redraw
+                        (:spilled-from old-unspilled-cell) (clear-matrix (:spilled-from old-unspilled-cell)))
          unspilled-grid (evaluate-grid-cell updated-grid address)
          unspilled-cell (util/get-cell unspilled-grid address)
          evaluated-grid (cond-> unspilled-grid
-                          (:matrix unspilled-cell)
-                          (spill-matrices [(assoc unspilled-cell :address address)]))
+                          (:matrix unspilled-cell) (spill-matrices [(assoc unspilled-cell :address address)]))
          old-dependencies (:dependencies (util/get-cell grid address))
          new-dependencies (:dependencies (util/get-cell evaluated-grid address))
          updated-depgraph (update-depgraph depgraph address old-dependencies new-dependencies)]

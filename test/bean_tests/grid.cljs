@@ -170,7 +170,7 @@
           {evaluated-grid :grid} (evaluate-grid [1 1] "A string" (:grid grid) (:depgraph depgraph))]
       (is (= (util/map-on-matrix :representation evaluated-grid)
              [["10" "Spill error"]
-              ["" "A string"]
+              ["20" "A string"]
               ["" ""]])))))
 
 (deftest depgraph-test
