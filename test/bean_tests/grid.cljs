@@ -135,7 +135,7 @@
     (let [grid (evaluate-grid [["10" "=A1" "=A1+B1" "100"]])
           {depgraph :depgraph} (evaluate-grid [0 1] "=D1" (:grid grid) (:depgraph grid))]
       (is (= depgraph
-             {[0 0] #{[0 1] [0 2]}
+             {[0 0] #{[0 2]}
               [0 1] #{[0 2]}
               [0 3] #{[0 1]}}))))
 
