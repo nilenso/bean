@@ -53,12 +53,8 @@
       (assoc-in (conj address :error) "Spill error")
       (assoc-in (conj address :representation) "Spill error")))
 
-(defn- spill-matrices [unspilled-grid]
-  (letfn [(cells-with-matrix-refs [grid] (->> grid
-                                              (util/map-on-matrix-addressed #(assoc %2 :address %1))
-                                              flatten
-                                              (filter :matrix)))
-          (desired-spillage [{:keys [matrix content address]}]
+(defn- spill-matrices [grid unspilled-cells]
+  (letfn [(desired-spillage [{:keys [matrix address] :as cell}]
             {:origin-address address
              :spillage (->> (util/map-on-matrix-addressed
                              #(cond-> {:relative-address %1
@@ -66,7 +62,9 @@
                                        :representation (:representation %2)
                                        :value (:value %2)}
                                 (= %1 [0 0]) (merge {:matrix matrix
-                                                     :content content}))
+                                                     :content (:content cell)
+                                                     :ast (:ast cell)
+                                                     :dependencies (:dependencies cell)}))
                              matrix)
                             flatten)})
           (apply-spillage [grid {:keys [origin-address spillage]}]
@@ -85,23 +83,34 @@
                            (rest spillage))
                     (set-spill-error initial-grid origin-address)))
                 spilled-grid)))]
-    (->> (cells-with-matrix-refs unspilled-grid)
+    (->> unspilled-cells
          (map desired-spillage)
-         (reduce apply-spillage unspilled-grid))))
+         (reduce apply-spillage grid))))
+
+(defn- address-matrix [matrix]
+  (util/map-on-matrix-addressed #(assoc %2 :address %1) matrix))
 
 (defn evaluate-grid
   ([grid]
    (let [parsed-grid (util/map-on-matrix content->cell grid)
-         evaluated-grid (->> parsed-grid
-                             (util/map-on-matrix-addressed #(interpreter/eval-cell %2 %1 parsed-grid))
-                             spill-matrices)
+         unspilled-grid (util/map-on-matrix-addressed #(interpreter/eval-cell %2 %1 parsed-grid)
+                                                      parsed-grid)
+         evaluated-grid (->> unspilled-grid
+                             address-matrix
+                             flatten
+                             (filter :matrix)
+                             (spill-matrices unspilled-grid))
          depgraph (depgraph evaluated-grid)]
      {:grid evaluated-grid
       :depgraph depgraph}))
 
   ([address grid depgraph]
    (let [dependents (get depgraph address #{})
-         evaluated-grid (evaluate-partial-grid grid address)
+         unspilled-grid (evaluate-partial-grid grid address)
+         unspilled-cell (util/get-cell unspilled-grid address)
+         evaluated-grid (cond-> unspilled-grid
+                          (:matrix unspilled-cell)
+                          (spill-matrices [(assoc unspilled-cell :address address)]))
          old-dependencies (:dependencies (util/get-cell grid address))
          new-dependencies (:dependencies (util/get-cell evaluated-grid address))
          updated-depgraph (update-depgraph depgraph address old-dependencies new-dependencies)]

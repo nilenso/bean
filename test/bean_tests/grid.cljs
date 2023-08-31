@@ -137,7 +137,36 @@
       (is (= depgraph
              {[0 0] #{[0 1] [0 2]}
               [0 1] #{[0 2]}
-              [0 3] #{[0 1]}})))))
+              [0 3] #{[0 1]}}))))
+
+  (testing "Cells containing matrix references are spilled"
+    (let [grid (evaluate-grid [["10" ""]
+                               ["20" ""]
+                               ["30" ""]])
+          {evaluated-grid :grid depgraph :depgraph} (evaluate-grid [0 1] "=A1:A3" (:grid grid) (:depgraph grid))]
+      (is (= (util/map-on-matrix :representation evaluated-grid)
+             [["10" "10"]
+              ["20" "20"]
+              ["30" "30"]]))
+      (is (get-in evaluated-grid [0 1 :matrix]))
+      (is (= depgraph {[0 0] #{[0 1]}
+                       [1 0] #{[0 1]}
+                       [2 0] #{[0 1]}}))))
+
+  (testing "If the address is referred somewhere in a matrix reference, the matrix reference is re-evaluated and spilled"
+    (let [grid (evaluate-grid [["10" "=A1:A3"]
+                               ["" ""]
+                               ["" ""]])
+          {evaluated-grid :grid depgraph :depgraph} (evaluate-grid [1 0] "20" (:grid grid) (:depgraph grid))]
+      (is (= (util/map-on-matrix :representation evaluated-grid)
+             [["10" "10"]
+              ["20" "20"]
+              ["" ""]]))))
+
+  (testing "If content is added to a spilled cell, the origin results in a spill error"
+    (= (evaluate-grid [["10" "=A1:A3"]
+                       ["" ""]
+                       ["" ""]]))))
 
 (deftest depgraph-test
   (testing "Returns a reverse dependency graph for an evaluated grid"
