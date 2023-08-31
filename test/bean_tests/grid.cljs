@@ -164,9 +164,14 @@
               ["" ""]]))))
 
   (testing "If content is added to a spilled cell, the origin results in a spill error"
-    (= (evaluate-grid [["10" "=A1:A3"]
-                       ["" ""]
-                       ["" ""]]))))
+    (let [grid (evaluate-grid [["10" "=A1:A3"]
+                               ["20" ""]
+                               ["" ""]])
+          {evaluated-grid :grid} (evaluate-grid [1 1] "A string" (:grid grid) (:depgraph depgraph))]
+      (is (= (util/map-on-matrix :representation evaluated-grid)
+             [["10" "Spill error"]
+              ["" "A string"]
+              ["" ""]])))))
 
 (deftest depgraph-test
   (testing "Returns a reverse dependency graph for an evaluated grid"
