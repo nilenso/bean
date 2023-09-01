@@ -6,20 +6,25 @@ body {
 
 .bean-sheet {
     display: grid;
+    background-color: #dedbd7;
+    grid-gap: 1px;
     grid-template-columns: 1fr;
     font-family: monospace;
     font-size: 1.3em;
 }
 
 .bean-row {
+    grid-gap: 1px;
     display: grid;
     grid-template-rows: 30px;
     grid-auto-flow: column;
 }
 .bean-cell {
+    background: #fcf8f4;
     padding: 5px;
     width: 100px;
     overflow: hidden;
+    cursor: cell;
 }
 
 .bean-label-row {
@@ -42,4 +47,9 @@ body {
 .bean-corner {
     text-align: end;
     background-color: rgb(147, 196, 125);
+}
+
+.edit-mode {
+    box-shadow: inset 0 0 3px black;
+    outline: none;
 }

@@ -1,22 +1,30 @@
 (ns bean.ui.main
   (:require [reagent.dom :as r]
             [reagent.core :as rc]
+            [bean.grid :as grid]
             [bean.ui.sheet :as sheet]))
 
 (def sheet (rc/atom nil))
 
-(defn cell [val]
-  {:value val
-   :error (> (rand) 0.9)
-   :representation (str val)
-   :ast [:CellContents [:Constant [:String (str val)]]]
-   :content (str val)})
-
 (defn- start-sheet []
-  (for [row-num (range 50)]
-    (vec (map #(cell (str "Cell " %)) (range 26)))))
+  (vec
+   (for [row-num (range 20)]
+     (vec (map (fn [_] "") (range 12))))))
+
+(defn update-cell [address content]
+  (swap! sheet
+         #(grid/evaluate-grid address content (:grid %) (:depgraph %))))
+
+(defn set-mode [[r c] mode]
+  (swap! sheet #(update-in % [:grid r c :mode] (constantly mode))))
+
+(defn active-sheet []
+  [sheet/sheet1 @sheet {:update-cell update-cell
+                        :set-mode set-mode
+                        :edit-mode #(set-mode % :edit)}])
 
 (defn ^:export main []
-  (reset! sheet (start-sheet))
-  (r/render [sheet/sheet1 @sheet]
-            (.getElementById js/document "app")))
+  (reset! sheet (grid/evaluate-grid (start-sheet)))
+  (r/render
+   [active-sheet]
+   (.getElementById js/document "app")))

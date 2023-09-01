@@ -1,6 +1,5 @@
 (ns bean.ui.sheet
   (:require [clojure.string :as str]
-            [reagent.dom :as r]
             [cljs.core :refer [char]]))
 
 (defn cs [& classes]
@@ -9,13 +8,20 @@
        (map name)
        (str/join " ")))
 
-(defn cell [row col {:keys [error representation] :as cell}]
+(defn cell [{:keys [set-mode edit-mode update-cell]} row col {:keys [mode error content representation] :as cell}]
   [:div {:content-editable "true"
          :data-row row
          :data-col col
+         :on-focus (fn [_] (edit-mode [row col])) ; Relies on edit mode getting reset on grid evaluation
+         :on-blur (fn [e]
+                    (set-mode [row col] :view)
+                    (update-cell [row col] (.-textContent (.-currentTarget e))))
          :class (cs :bean-cell
+                    (when (= mode :edit) :edit-mode)
                     (when error :cell-error))}
-   representation])
+   (case mode
+     :edit content
+     representation)])
 
 (defn i->a [i]
   (loop [a '()
@@ -39,21 +45,21 @@
 (defn label-row [rows]
   [:div {:class (cs :bean-label-row)}
    [label-cell :bean :bean]
-        (map-indexed
-         (fn [i _] ^{:key i}
-           [label-cell i :alpha])
-         (first rows))])
+   (map-indexed
+    (fn [i _] ^{:key i}
+      [label-cell i :alpha])
+    (first rows))])
 
-(defn row [i cells]
+(defn row [state-fns i cells]
   [:div {:class (cs :bean-row)}
    [label-cell i]
    (map-indexed #(do ^{:key %1}
-                  [cell i %1 %2])
+                  [cell state-fns i %1 %2])
                 cells)])
 
-(defn sheet1 [rows]
+(defn sheet1 [{:keys [grid depgraph]} state-fns]
   [:div {:class "bean-sheet"}
-   [label-row rows]
+   [label-row grid]
    (map-indexed #(do ^{:key %1}
-                  [row %1 %2])
-                rows)])
+                  [row state-fns %1 %2])
+                grid)])
