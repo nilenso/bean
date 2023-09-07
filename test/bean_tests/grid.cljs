@@ -114,7 +114,19 @@
       (is (= (util/map-on-matrix :representation (:grid evaluated-grid))
              [["1" "3"]
               ["2" "1"]
-              ["Spill error" "2"]])))))
+              ["Spill error" "2"]]))))
+
+  (testing "Cells depending on spillages are evaluated"
+    (let [grid (evaluate-grid [["1" "" "=A1:A3"]
+                               ["2" "" ""]
+                               ["3" "=C2" ""]
+                               ["=B3" "=A3:A5" ""]
+                               ["1" "" ""]
+                               ["" "" ""]])]
+      (is (= (get-in grid [:grid 2 1 :value]) 2))
+      (is (= (get-in grid [:grid 3 0 :value]) 2))
+      (is (= (get-in grid [:grid 3 1 :value]) 3))
+      (is (= (get-in grid [:grid 4 1 :value]) 2)))))
 
 (deftest incremental-evaluate-grid
   (testing "Basic incremental evaluation given a pre-evaluated grid and a depgraph"
@@ -156,12 +168,14 @@
   (testing "If the address is referred somewhere in a matrix reference, the matrix reference is re-evaluated and spilled"
     (let [grid (evaluate-grid [["10" "=A1:A3"]
                                ["" ""]
-                               ["" ""]])
+                               ["" ""]
+                               ["=B2" ""]])
           {evaluated-grid :grid depgraph :depgraph} (evaluate-grid [1 0] "20" (:grid grid) (:depgraph grid))]
       (is (= (util/map-on-matrix :representation evaluated-grid)
              [["10" "10"]
               ["20" "20"]
-              ["" ""]]))))
+              ["" ""]
+              ["20" ""]]))))
 
   (testing "If content is added to a spilled cell, the origin results in a spill error"
     (let [grid (evaluate-grid [["10" "=A1:A3"]
