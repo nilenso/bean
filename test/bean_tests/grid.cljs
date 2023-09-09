@@ -186,7 +186,24 @@
       (is (= (util/map-on-matrix :representation evaluated-grid)
              [["10" "Spill error"]
               ["20" "A string"]
-              ["" ""]])))))
+              ["" ""]]))))
+
+  (testing "Unorderly references"
+    (let [sheet (eval-sheet [["=B1:B4" "8"      "=D3" "19"]
+                             [""       "1"      "2"  "4"]
+                             [""       "=C1:D2" ""   "=C2+D2"]
+                             [""       "" ""   ""]])
+          {evaluated-grid :grid} (eval-sheet sheet [1 2] "202")]
+      (is (= (util/map-on-matrix :representation (:grid sheet))
+             [["8" "8" "6" "19"]
+              ["1" "1" "2" "4"]
+              ["6" "6" "19" "6"]
+              ["2" "2" "4" ""]]))
+      (is (= (util/map-on-matrix :representation evaluated-grid)
+             [["8" "8" "206" "19"]
+              ["1" "1" "202" "4"]
+              ["206" "206" "19" "206"]
+              ["202" "202" "4" ""]])))))
 
 (deftest depgraph-test
   (testing "Returns a reverse dependency graph for an evaluated grid"
