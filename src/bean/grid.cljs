@@ -117,6 +117,12 @@
 (defn parse-grid [grid]
   (util/map-on-matrix content->cell grid))
 
+(defn- eval-cell [cell grid]
+  (if (or (not (:spilled-from cell))
+          (:matrix cell))
+    (interpreter/eval-cell cell grid)
+    cell))
+
 (defn eval-sheet
   ([content-grid]
    (let [parsed-grid (parse-grid content-grid)
@@ -138,7 +144,7 @@
    (let [existing-cell (util/get-cell grid address)
          was-spilled-from (:spilled-from existing-cell)
          was-spilled-into? (and was-spilled-from (not= was-spilled-from address))
-         cell* (interpreter/eval-cell cell grid)
+         cell* (eval-cell cell grid)
          unspilled-grid (assoc-in grid address cell*)
          [grid* evaled-addresses] (if (:matrix cell*)
                                     (spill-matrix unspilled-grid address)

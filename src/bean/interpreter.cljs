@@ -103,8 +103,5 @@
                                "+" bean-op-+)))))
 
 (defn eval-cell [cell grid]
-  (if (or (not (:spilled-from cell))
-          (:matrix cell))
-    (-> (eval-ast (:ast cell) cell grid)
-        (ast-result->cell cell))
-    cell))
+  (-> (eval-ast (:ast cell) cell grid)
+      (ast-result->cell cell)))
