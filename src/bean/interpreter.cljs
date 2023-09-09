@@ -47,20 +47,23 @@
    #(util/get-cell grid %)
    (addresses-matrix start-address end-address)))
 
+(defn matrix-bounds [start-ref end-ref]
+  (let [[_ start-a start-n] start-ref
+        [_ end-a end-n] end-ref
+        start-address (util/a1->rc start-a (js/parseInt start-n))
+        end-address (util/a1->rc end-a (js/parseInt end-n))]
+    [start-address end-address]))
+
 (defn ast->deps [ast]
   (let [[node-type & [arg :as args]] ast]
     (case node-type
       :CellContents (if arg (ast->deps arg) #{})
       :CellRef (let [[_ a n] ast]
                  #{(util/a1->rc a (js/parseInt n))})
-      :MatrixRef (let [[start-cell end-cell] args
-                       [_ start-a start-n] start-cell
-                       [_ end-a end-n] end-cell
-                       start-address (util/a1->rc start-a (js/parseInt start-n))
-                       end-address (util/a1->rc end-a (js/parseInt end-n))]
-                   (->> (addresses-matrix start-address end-address)
-                        (mapcat identity)
-                        set))
+      :MatrixRef (->> (apply matrix-bounds args)
+                      (apply addresses-matrix)
+                      (mapcat identity)
+                      set)
       :Expression (if (is-expression? arg)
                     (let [[left _ right] args]
                       (set/union
@@ -72,23 +75,22 @@
 (defn eval-ast [ast cell grid]
   ; ast goes down, value or an error comes up
   (let [[node-type & [arg :as args]] ast
-        eval-sub-ast #(eval-ast % cell grid)]
+        eval-sub-ast #(eval-ast % cell grid)
+        eval-matrix* #(eval-matrix %1 %2 grid)]
     (case node-type
       :CellContents (if arg
                       (eval-sub-ast arg)
                       (ast-result nil))
       :CellRef (let [[_ a n] ast
                      address (util/a1->rc a (js/parseInt n))
-                     referred-cell (util/get-cell grid address)]
-                 (if (:error referred-cell)
-                   (ast-result referred-cell)
-                   (cell->ast-result referred-cell)))
-      :MatrixRef (let [[start-cell end-cell] args
-                       [_ start-a start-n] start-cell
-                       [_ end-a end-n] end-cell
-                       [start-r start-c] (util/a1->rc start-a (js/parseInt start-n))
-                       [end-r end-c] (util/a1->rc end-a (js/parseInt end-n))]
-                   {:matrix (eval-matrix [start-r start-c] [end-r end-c] grid)})
+                     referred-cell (util/get-cell grid address)
+                     cell-exists? (not (:error referred-cell))]
+                 (cond-> referred-cell
+                   cell-exists? cell->ast-result
+                   (not cell-exists?) ast-result))
+      :MatrixRef {:matrix (->> args
+                               (apply matrix-bounds)
+                               (apply eval-matrix*))}
       :Expression (if (is-expression? arg)
                     (let [[left op right] args]
                       (formulas-map [(eval-sub-ast op)
