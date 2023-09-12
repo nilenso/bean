@@ -2,47 +2,34 @@
   (:require [clojure.set :as set]
             [bean.util :as util]))
 
-(defn- matrix-ast-result [error-or-val & [dependencies]]
-  {:matrix error-or-val
-   :dependencies dependencies})
-
-(defn- ast-result [error-or-val & [dependencies]]
-  (if-let [error (:error error-or-val)]
-    {:error error :representation (str error)}
-    {:value error-or-val
-     :representation (str error-or-val)
-     :dependencies dependencies}))
-
 (defn- is-expression? [[node-type & _]]
   (= node-type :Expression))
 
-(defn- first-error [ast-results]
-  (->> ast-results (filter :error) first))
+(defn- ast-result [error-or-val]
+  (if-let [error (:error error-or-val)]
+    {:error error :representation (str error)}
+    {:value error-or-val
+     :representation (str error-or-val)}))
 
 (defn- cell->ast-result [cell]
-  (select-keys cell [:value :error :representation :dependencies]))
+  (select-keys cell [:value :error :representation]))
 
-(defn- ast-result->cell [{:keys [error dependencies matrix] :as ast-result} cell]
+(defn- ast-result->cell [{:keys [error matrix] :as ast-result} cell]
   (merge
    {:content (:content cell)
     :ast (:ast cell)
     :value (:value ast-result)
     :representation (:representation ast-result)}
-   (when dependencies {:dependencies dependencies})
    (when matrix {:matrix matrix})
    (when error {:error error})))
+
+(defn- first-error [ast-results]
+  (->> ast-results (filter :error) first))
 
 (defn- formulas-map [ast-results f]
   (if-let [referenced-error (first-error ast-results)]
     referenced-error
-    (ast-result (apply f (map :value ast-results))
-                (apply set/union (keep :dependencies ast-results)))))
-
-(declare eval-ast)
-
-(defn eval-cell [cell address grid]
-  (-> (eval-ast (:ast cell) cell address grid)
-      (ast-result->cell cell)))
+    (ast-result (apply f (map :value ast-results)))))
 
 (defn bean-op-+ [left right]
   (if (and (int? left) (int? right))
@@ -55,36 +42,53 @@
     (for [c (range start-col (inc end-col))]
       [r c])))
 
-(defn eval-matrix
-  [start-address end-address grid]
-  (let [addresses-to-eval (addresses-matrix start-address end-address)
-        matrix-value (util/map-on-matrix
-                      #(eval-cell (util/get-cell grid %1) %1 grid)
-                      addresses-to-eval)]
-    (matrix-ast-result matrix-value (set (mapcat identity addresses-to-eval)))))
+(defn- eval-matrix [start-address end-address grid]
+  (util/map-on-matrix
+   #(util/get-cell grid %)
+   (addresses-matrix start-address end-address)))
 
-(defn eval-ast [ast cell address grid]
+(defn ast->deps [ast]
+  (let [[node-type & [arg :as args]] ast]
+    (case node-type
+      :CellContents (if arg (ast->deps arg) #{})
+      :CellRef (let [[_ a n] ast]
+                 #{(util/a1->rc a (js/parseInt n))})
+      :MatrixRef (let [[start-cell end-cell] args
+                       [_ start-a start-n] start-cell
+                       [_ end-a end-n] end-cell
+                       start-address (util/a1->rc start-a (js/parseInt start-n))
+                       end-address (util/a1->rc end-a (js/parseInt end-n))]
+                   (->> (addresses-matrix start-address end-address)
+                        (mapcat identity)
+                        set))
+      :Expression (if (is-expression? arg)
+                    (let [[left _ right] args]
+                      (set/union
+                       (ast->deps left)
+                       (ast->deps right)))
+                    (ast->deps arg))
+      #{})))
+
+(defn eval-ast [ast cell grid]
   ; ast goes down, value or an error comes up
   (let [[node-type & [arg :as args]] ast
-        eval-sub-ast #(eval-ast % cell address grid)]
+        eval-sub-ast #(eval-ast % cell grid)]
     (case node-type
       :CellContents (if arg
                       (eval-sub-ast arg)
                       (ast-result nil))
       :CellRef (let [[_ a n] ast
-                     rc (util/a1->rc a (js/parseInt n))
-                     referred-cell (util/get-cell grid rc)]
+                     address (util/a1->rc a (js/parseInt n))
+                     referred-cell (util/get-cell grid address)]
                  (if (:error referred-cell)
                    (ast-result referred-cell)
-                   (-> (eval-cell referred-cell rc grid)
-                       (merge {:dependencies #{rc}})
-                       cell->ast-result)))
+                   (cell->ast-result referred-cell)))
       :MatrixRef (let [[start-cell end-cell] args
                        [_ start-a start-n] start-cell
                        [_ end-a end-n] end-cell
                        [start-r start-c] (util/a1->rc start-a (js/parseInt start-n))
                        [end-r end-c] (util/a1->rc end-a (js/parseInt end-n))]
-                   (eval-matrix [start-r start-c] [end-r end-c] grid))
+                   {:matrix (eval-matrix [start-r start-c] [end-r end-c] grid)})
       :Expression (if (is-expression? arg)
                     (let [[left op right] args]
                       (formulas-map [(eval-sub-ast op)
@@ -97,3 +101,10 @@
       :String (ast-result arg)
       :Operation (ast-result (case arg
                                "+" bean-op-+)))))
+
+(defn eval-cell [cell grid]
+  (if (or (not (:spilled-from cell))
+          (:matrix cell))
+    (-> (eval-ast (:ast cell) cell grid)
+        (ast-result->cell cell))
+    cell))

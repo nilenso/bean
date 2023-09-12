@@ -15,37 +15,26 @@
 (defn- depgraph-remove-edge [depgraph parent child]
   (assoc depgraph parent (disj (get depgraph parent) child)))
 
-(defn depgraph [grid]
-  (let [edges (->> grid
-                   (util/map-on-matrix-addressed
-                    #(for [dependency (:dependencies %2)]
-                       {:parent dependency :child %1}))
-                   flatten)]
-    (reduce
-     #(depgraph-add-edge %1 (:parent %2) (:child %2))
-     {}
-     edges)))
+(defn make-depgraph [grid]
+  (->> grid
+       (util/map-on-matrix-addressed
+        #(for [dependency (interpreter/ast->deps (:ast %2))]
+           {:parent dependency :child %1}))
+       flatten
+       (reduce #(depgraph-add-edge %1 (:parent %2) (:child %2)) {})))
 
-(defn- update-depgraph [depgraph address old-dependencies new-dependencies]
-  (as-> depgraph g
-    (reduce #(depgraph-remove-edge %1 %2 address) g old-dependencies)
-    (reduce #(depgraph-add-edge %1 %2 address) g new-dependencies)))
-
-(defn- evaluate-grid-cell [grid address]
-  (assoc-in grid
-            address
-            (interpreter/eval-cell (util/get-cell grid address)
-                                   address
-                                   grid)))
+(defn- update-depgraph [depgraph address old-cell new-cell]
+  (let [old-dependencies (interpreter/ast->deps (:ast old-cell))
+        new-dependencies (interpreter/ast->deps (:ast new-cell))]
+    (as-> depgraph g
+      (reduce #(depgraph-remove-edge %1 %2 address) g old-dependencies)
+      (reduce #(depgraph-add-edge %1 %2 address) g new-dependencies))))
 
 (defn- offset [[start-row start-col] [offset-rows offset-cols]]
   [(+ start-row offset-rows) (+ start-col offset-cols)])
 
 (defn- set-spilled-cell [grid address cell]
   (assoc-in grid address cell))
-
-(defn- update-cell [grid address f]
-  (update-in grid address f))
 
 (defn- disaddress [cell]
   (dissoc cell :address :relative-address))
@@ -56,115 +45,121 @@
       (assoc-in (conj address :error) "Spill error")
       (assoc-in (conj address :representation) "Spill error")))
 
-(defn- spill-matrices [grid unspilled-cells]
-  (letfn [(desired-spillage [{:keys [matrix address] :as cell}]
-                            (->> (util/map-on-matrix-addressed
-                                  #(cond-> {:relative-address %1
-                                            :spilled-from address
-                                            :error (:error %2)
-                                            :representation (:representation %2)
-                                            :value (:value %2)}
-                                     (= %1 [0 0]) (merge {:matrix matrix
-                                                          :content (:content cell)
-                                                          :ast (:ast cell)
-                                                          :dependencies (:dependencies cell)}))
-                                  matrix)
-                                 flatten))
-          (apply-spillage [grid spillage]
-            (loop [initial-grid grid
-                   spilled-grid grid
-                   spillage spillage]
-              (if (first spillage)
-                (let [{:keys [spilled-from relative-address] :as cell} (first spillage)
-                      address (offset spilled-from relative-address)
-                           ;; TODO: could have error or value
-                      value-blank? (not (:value (util/get-cell spilled-grid address)))
-                      is-origin? (= [0 0] relative-address)]
-                  (if (or value-blank? is-origin?)
-                    (recur initial-grid
-                           (set-spilled-cell spilled-grid address (disaddress cell))
-                           (rest spillage))
-                    (set-spill-error initial-grid spilled-from)))
-                spilled-grid)))]
-    (->> unspilled-cells
-         (map desired-spillage)
-         (reduce apply-spillage grid))))
+(defn- clear-spilled-cell [cell]
+  (-> cell
+      (dissoc :value :error)
+      (assoc :representation "")))
 
-(defn- address-matrix [matrix]
-  (util/map-on-matrix-addressed #(assoc %2 :address %1) matrix))
+(defn- spill-matrix [grid address]
+  (letfn
+   [(clearable-addresses
+      [address matrix]
+      (->> matrix
+           (util/map-on-matrix-addressed (fn [a _] (offset address a)))
+           (mapcat identity)))
 
-(defn- clear-matrix [grid address]
-  (->> (:matrix (util/get-cell grid address)) ; error should be handled here
-       (util/map-on-matrix-addressed (fn [a _] (offset address a)))
-       (mapcat identity)
-       (reduce (fn [grid* addr]
-                 (update-cell grid*
-                              addr
-                              #(-> %
-                                   (dissoc :value :error)
-                                   (assoc :representation ""))))
-               grid)))
+    (clear-matrix
+      [grid address {:keys [matrix]}]
+      (->> matrix
+           (clearable-addresses address)
+           (reduce
+            (fn [grid* addr]
+              (if (and
+                   (or (empty? (get-in grid (conj addr :content)))
+                       (= addr address))
+                   (= (get-in grid (conj addr :spilled-from)) address))
+                (update-in grid* addr clear-spilled-cell)
+                grid*))
+            grid)))
 
-(defn evaluate-grid
-  ([grid]
-   (let [parsed-grid (util/map-on-matrix content->cell grid)
-         unspilled-grid (util/map-on-matrix-addressed #(interpreter/eval-cell %2 %1 parsed-grid)
-                                                      parsed-grid)
-         evaluated-grid (->> unspilled-grid
-                             address-matrix
-                             flatten
-                             (filter :matrix)
-                             (spill-matrices unspilled-grid))
-         depgraph (depgraph evaluated-grid)]
-     {:grid evaluated-grid
-      :depgraph depgraph}))
+    (desired-spillage
+      [{:keys [matrix] :as cell}]
+      (->> matrix
+           (util/map-on-matrix-addressed
+            #(cond-> {:relative-address %1
+                      :spilled-from address
+                      :error (:error %2)
+                      :representation (:representation %2)
+                      :value (:value %2)}
+               (= %1 [0 0]) (merge {:matrix matrix
+                                    :content (:content cell)
+                                    :ast (:ast cell)})))
+           flatten))
 
-  ([address grid depgraph]
-   (let [dependents (get depgraph address #{})
-         unspilled-grid (evaluate-grid-cell grid address)
-         unspilled-cell (util/get-cell unspilled-grid address)
-         evaluated-grid (cond-> unspilled-grid
-                          (:matrix unspilled-cell)
-                          (spill-matrices [(assoc unspilled-cell :address address)]))
-         old-dependencies (:dependencies (util/get-cell grid address))
-         new-dependencies (:dependencies (util/get-cell evaluated-grid address))
-         updated-depgraph (update-depgraph depgraph address old-dependencies new-dependencies)]
-     ;; Need to re-look at how the depgraph recomposition works.
-     (if dependents
-       (reduce #(evaluate-grid %2 (:grid %1) (:depgraph %1))
-               {:grid evaluated-grid
-                :depgraph updated-depgraph}
-               dependents)
-       {:grid evaluated-grid
-        :depgraph updated-depgraph})))
+    (apply-spillage
+      [grid spillage]
+      (loop [initial-grid grid
+             spilled-grid grid
+             updated-addresses #{}
+             spillage spillage]
+        (if (first spillage)
+          (let [{:keys [spilled-from relative-address] :as spilled-cell} (first spillage)
+                address (offset spilled-from relative-address)
+                cell (util/get-cell spilled-grid address)
+                blank? (and (empty? (:content cell))
+                            (not (or (:value cell) (:error cell))))
+                already-spilled-from (:spilled-from cell)
+                spillable? (or (= already-spilled-from spilled-from)
+                               (nil? already-spilled-from))
+                is-origin? (= [0 0] relative-address)]
+            (if (and spillable? (or blank? is-origin?))
+              (recur initial-grid
+                     (set-spilled-cell spilled-grid address (disaddress spilled-cell))
+                     (conj updated-addresses address)
+                     (rest spillage))
+              [(set-spill-error initial-grid spilled-from) #{}]))
+          [spilled-grid updated-addresses])))]
+    (let [unspilled-cell (util/get-cell grid address)]
+      (->> unspilled-cell
+           desired-spillage
+           (apply-spillage (clear-matrix grid address unspilled-cell))))))
 
-  ([address new-content grid depgraph]
-   (let [old-unspilled-cell (util/get-cell grid address)
-         dependents (cond-> (get depgraph address #{})
-                      (:spilled-from old-unspilled-cell) (conj (:spilled-from old-unspilled-cell)))
-         updated-grid (cond-> (update-cell grid address
-                                           #(merge % {:content new-content
-                                                      :ast (parser/parse new-content)}))
-                        ;; clear intersecting matrices to prepare for a redraw
-                        (:spilled-from old-unspilled-cell) (clear-matrix (:spilled-from old-unspilled-cell)))
-         unspilled-grid (evaluate-grid-cell updated-grid address)
-         unspilled-cell (util/get-cell unspilled-grid address)
-         evaluated-grid (cond-> unspilled-grid
-                          (:matrix unspilled-cell) (spill-matrices [(assoc unspilled-cell :address address)]))
-         old-dependencies (:dependencies (util/get-cell grid address))
-         new-dependencies (:dependencies (util/get-cell evaluated-grid address))
-         updated-depgraph (update-depgraph depgraph address old-dependencies new-dependencies)]
-     ;; Need to re-look at how the depgraph recomposition works.
-     (if dependents
-       (reduce #(evaluate-grid %2 (:grid %1) (:depgraph %1))
-               {:grid evaluated-grid
-                :depgraph updated-depgraph}
-               dependents)
-       {:grid evaluated-grid
-        :depgraph updated-depgraph}))))
+(defn parse-grid [grid]
+  (util/map-on-matrix content->cell grid))
+
+(defn eval-sheet
+  ([content-grid]
+   (let [parsed-grid (parse-grid content-grid)
+         sheet {:grid parsed-grid
+                :depgraph (make-depgraph parsed-grid)}]
+     (util/reduce-on-sheet-addressed
+      (fn [sheet address _]
+        (eval-sheet sheet address))
+      sheet)))
+
+  ([{:keys [grid] :as sheet} address]
+   (eval-sheet sheet address (util/get-cell grid address) false))
+
+  ([sheet address new-content]
+   (eval-sheet sheet address (content->cell new-content) true))
+
+  ([{:keys [grid depgraph]} address cell update-depgraph?]
+   ; todo: if cyclic dependency break with error
+   (let [existing-cell (util/get-cell grid address)
+         was-spilled-from (:spilled-from existing-cell)
+         was-spilled-into? (and was-spilled-from (not= was-spilled-from address))
+         cell* (interpreter/eval-cell cell grid)
+         unspilled-grid (assoc-in grid address cell*)
+         [grid* evaled-addresses] (if (:matrix cell*)
+                                    (spill-matrix unspilled-grid address)
+                                    [unspilled-grid #{address}])
+         dependents (->> evaled-addresses
+                         (map depgraph)
+                         (mapcat identity))
+         cells-to-reval (cond-> dependents
+                          was-spilled-into? (conj was-spilled-from))]
+     (reduce
+      eval-sheet
+      {:grid grid*
+       :depgraph (cond-> depgraph
+                   update-depgraph? (update-depgraph
+                                     address
+                                     existing-cell
+                                     cell*))}
+      cells-to-reval))))
+
 (comment
-  {
-   ;; User input
+  {;; User input
    :content nil
 
    ;; Internal representation of user input
@@ -178,9 +173,7 @@
 
    ;; Evaluation metadata
    :spilled-from nil
-   :dependencies nil
 
    ;; Addressing information
    :address nil
    :relative-address nil})
-

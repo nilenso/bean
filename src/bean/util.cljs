@@ -31,3 +31,9 @@
                               (f [row-idx col-idx] element))
                             row)))
                     matrix)))
+
+(defn reduce-on-sheet-addressed [f {:keys [grid] :as sheet}]
+  (reduce (fn [sheet [addr cell]]
+            (f sheet addr cell))
+          sheet
+          (mapcat identity (map-on-matrix-addressed vector grid))))
