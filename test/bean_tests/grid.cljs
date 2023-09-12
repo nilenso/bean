@@ -91,6 +91,7 @@
                        :value 2
                        :representation "2"}]]))
       (is (= (get-in evaluated-sheet [:grid 1 1 :value]) 1))
+      (is (= (get-in evaluated-sheet [:grid 1 1 :spilled-into]) #{[1 1] [2 1]}))
       (is (= (get-in evaluated-sheet [:grid 2 1 :value]) 2))))
 
   (testing "Matrix spill errors if a cell has some content"

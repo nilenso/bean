@@ -2,6 +2,7 @@
   (:require [bean.interpreter :as interpreter]
             [bean.parser :as parser]
             [bean.util :as util]
+            [clojure.set :as set]
             [clojure.string]))
 
 (defn- content->cell
@@ -47,32 +48,25 @@
 
 (defn- clear-spilled-cell [cell]
   (-> cell
-      (dissoc :value :error)
+      (dissoc :value :error :spilled-from)
       (assoc :representation "")))
+
+(defn- clear-matrix
+  [grid address {:keys [spilled-into]}]
+  (->> spilled-into
+       (reduce
+        (fn [grid* addr]
+          (if (and
+               (or (empty? (get-in grid (conj addr :content)))
+                   (= addr address))
+               (= (get-in grid (conj addr :spilled-from)) address))
+            (update-in grid* addr clear-spilled-cell)
+            grid*))
+        grid)))
 
 (defn- spill-matrix [grid address]
   (letfn
-   [(clearable-addresses
-      [address matrix]
-      (->> matrix
-           (util/map-on-matrix-addressed (fn [a _] (offset address a)))
-           (mapcat identity)))
-
-    (clear-matrix
-      [grid address {:keys [matrix]}]
-      (->> matrix
-           (clearable-addresses address)
-           (reduce
-            (fn [grid* addr]
-              (if (and
-                   (or (empty? (get-in grid (conj addr :content)))
-                       (= addr address))
-                   (= (get-in grid (conj addr :spilled-from)) address))
-                (update-in grid* addr clear-spilled-cell)
-                grid*))
-            grid)))
-
-    (desired-spillage
+   [(desired-spillage
       [{:keys [matrix] :as cell}]
       (->> matrix
            (util/map-on-matrix-addressed
@@ -108,11 +102,11 @@
                      (conj updated-addresses address)
                      (rest spillage))
               [(set-spill-error initial-grid spilled-from) #{}]))
-          [spilled-grid updated-addresses])))]
-    (let [unspilled-cell (util/get-cell grid address)]
-      (->> unspilled-cell
-           desired-spillage
-           (apply-spillage (clear-matrix grid address unspilled-cell))))))
+          [(assoc-in spilled-grid (conj address :spilled-into) updated-addresses)
+           updated-addresses])))]
+    (->> (util/get-cell grid address)
+         desired-spillage
+         (apply-spillage grid))))
 
 (defn parse-grid [grid]
   (util/map-on-matrix content->cell grid))
@@ -143,17 +137,22 @@
    ; todo: if cyclic dependency break with error
    (let [existing-cell (util/get-cell grid address)
          was-spilled-from (:spilled-from existing-cell)
-         was-spilled-into? (and was-spilled-from (not= was-spilled-from address))
+         was-spilled-into? (and was-spilled-from
+                                (not= was-spilled-from address))
          cell* (eval-cell cell grid)
-         unspilled-grid (assoc-in grid address cell*)
+         unspilled-grid (-> grid
+                            (clear-matrix address existing-cell)
+                            (assoc-in address cell*))
+         cleared-addresses (:spilled-into existing-cell)
          [grid* evaled-addresses] (if (:matrix cell*)
                                     (spill-matrix unspilled-grid address)
                                     [unspilled-grid #{address}])
          dependents (->> evaled-addresses
+                         (set/union cleared-addresses)
                          (map depgraph)
                          (mapcat identity))
-         cells-to-reval (cond-> dependents
-                          was-spilled-into? (conj was-spilled-from))]
+         addresses-to-reval (cond-> dependents
+                              was-spilled-into? (conj was-spilled-from))]
      (reduce
       eval-sheet
       {:grid grid*
@@ -162,7 +161,7 @@
                                      address
                                      existing-cell
                                      cell*))}
-      cells-to-reval))))
+      addresses-to-reval))))
 
 (comment
   {;; User input
@@ -179,6 +178,7 @@
 
    ;; Evaluation metadata
    :spilled-from nil
+   :spilled-into nil
 
    ;; Addressing information
    :address nil
