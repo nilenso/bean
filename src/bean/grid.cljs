@@ -46,9 +46,10 @@
       (assoc-in (conj address :error) "Spill error")
       (assoc-in (conj address :representation) "Spill error")))
 
-(defn- clear-spilled-cell [cell]
+(defn- clear-spilled-cell [cell address]
   (-> cell
       (dissoc :value :error :spilled-from)
+      (update :interested-spillers disj address)
       (assoc :representation "")))
 
 (defn- clear-matrix
@@ -60,7 +61,7 @@
                (or (empty? (get-in grid (conj addr :content)))
                    (= addr address))
                (= (get-in grid (conj addr :spilled-from)) address))
-            (update-in grid* addr clear-spilled-cell)
+            (update-in grid* addr #(clear-spilled-cell % address))
             grid*))
         grid)))
 
@@ -80,33 +81,48 @@
                                     :ast (:ast cell)})))
            flatten))
 
-    (apply-spillage
+    (express-interests
       [grid spillage]
-      (loop [initial-grid grid
-             spilled-grid grid
-             updated-addresses #{}
-             spillage spillage]
-        (if (first spillage)
-          (let [{:keys [spilled-from relative-address] :as spilled-cell} (first spillage)
-                address (offset spilled-from relative-address)
-                cell (util/get-cell spilled-grid address)
-                blank? (and (empty? (:content cell))
-                            (not (or (:value cell) (:error cell))))
-                already-spilled-from (:spilled-from cell)
-                spillable? (or (= already-spilled-from spilled-from)
-                               (nil? already-spilled-from))
-                is-origin? (= [0 0] relative-address)]
-            (if (and spillable? (or blank? is-origin?))
-              (recur initial-grid
-                     (set-spilled-cell spilled-grid address (disaddress spilled-cell))
-                     (conj updated-addresses address)
-                     (rest spillage))
-              [(set-spill-error initial-grid spilled-from) #{}]))
-          [(assoc-in spilled-grid (conj address :spilled-into) updated-addresses)
-           updated-addresses])))]
-    (->> (util/get-cell grid address)
-         desired-spillage
-         (apply-spillage grid))))
+      (reduce
+       #(let [{:keys [spilled-from relative-address]} %2
+              address (offset spilled-from relative-address)
+              cell (util/get-cell %1 address)
+              existing-spillers (get cell :interested-spillers #{})]
+          (assoc-in %1
+                    (conj address :interested-spillers)
+                    (conj existing-spillers spilled-from)))
+       grid
+       spillage))
+
+    (spill
+      [grid spillage]
+      (let [grid1 (express-interests grid spillage)]
+        (loop [initial-grid grid1
+               spilled-grid grid1
+               updated-addresses #{}
+               spillage spillage]
+          (if (first spillage)
+            (let [{:keys [spilled-from relative-address] :as spilled-cell} (first spillage)
+                  address* (offset spilled-from relative-address)
+                  cell (util/get-cell spilled-grid address*)
+                  blank? (empty? (:content cell))
+                  spilled? (:spilled-from cell)
+                  is-spiller? (= relative-address [0 0])]
+              (if (or is-spiller? (and (not spilled?) blank?))
+                (recur initial-grid
+                       (set-spilled-cell
+                        spilled-grid
+                        address*
+                        (-> spilled-cell
+                            disaddress
+                            (assoc :interested-spillers (:interested-spillers cell))))
+                       (conj updated-addresses address*)
+                       (rest spillage))
+                [(set-spill-error initial-grid spilled-from) #{address}]))
+            [(assoc-in spilled-grid (conj address :spilled-into) updated-addresses)
+             updated-addresses]))))]
+    (->> (desired-spillage (util/get-cell grid address))
+         (spill grid))))
 
 (defn parse-grid [grid]
   (util/map-on-matrix content->cell grid))
@@ -116,6 +132,17 @@
           (:matrix cell))
     (interpreter/eval-cell cell grid)
     cell))
+
+(defn- dependents [addrs depgraph]
+  (->> addrs
+       (map depgraph)
+       (mapcat identity)
+       set))
+
+(defn- interested-spillers [addrs grid]
+  (->> addrs
+       (mapcat #(get-in grid (conj % :interested-spillers)))
+       set))
 
 (defn eval-sheet
   ([content-grid]
@@ -133,35 +160,31 @@
   ([sheet address new-content]
    (eval-sheet sheet address (content->cell new-content) true))
 
-  ([{:keys [grid depgraph]} address cell update-depgraph?]
+  ([{:keys [grid depgraph]} address cell content-changed?]
    ; todo: if cyclic dependency break with error
    (let [existing-cell (util/get-cell grid address)
-         was-spilled-from (:spilled-from existing-cell)
-         was-spilled-into? (and was-spilled-from
-                                (not= was-spilled-from address))
          cell* (eval-cell cell grid)
          unspilled-grid (-> grid
                             (clear-matrix address existing-cell)
                             (assoc-in address cell*))
-         cleared-addresses (:spilled-into existing-cell)
-         [grid* evaled-addresses] (if (:matrix cell*)
-                                    (spill-matrix unspilled-grid address)
-                                    [unspilled-grid #{address}])
-         dependents (->> evaled-addresses
-                         (set/union cleared-addresses)
-                         (map depgraph)
-                         (mapcat identity))
-         addresses-to-reval (cond-> dependents
-                              was-spilled-into? (conj was-spilled-from))]
+         cleared-addrs (:spilled-into existing-cell)
+         [grid* evaled-addrs] (if (:matrix cell*)
+                                (spill-matrix unspilled-grid address)
+                                [unspilled-grid #{address}])
+         updated-addrs (set/union evaled-addrs cleared-addrs)
+         addrs-to-reval (-> (set/union
+                             (dependents updated-addrs depgraph)
+                             (interested-spillers updated-addrs grid))
+                            (disj address))]
      (reduce
       eval-sheet
       {:grid grid*
        :depgraph (cond-> depgraph
-                   update-depgraph? (update-depgraph
+                   content-changed? (update-depgraph
                                      address
                                      existing-cell
                                      cell*))}
-      addresses-to-reval))))
+      addrs-to-reval))))
 
 (comment
   {;; User input
