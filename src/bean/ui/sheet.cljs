@@ -8,11 +8,25 @@
        (map name)
        (str/join " ")))
 
+(defn- cell-dom
+  [[row col]]
+  (.querySelector
+   js/document
+   (str "[data-row=\"" row "\"][data-col=\"" col "\"]")))
+
 (defn cell [{:keys [set-mode edit-mode update-cell]} row col {:keys [mode error content representation] :as cell}]
-  [:div {:content-editable "true"
+  [:div {:content-editable true
+         :suppressContentEditableWarning true
          :data-row row
          :data-col col
          :on-focus (fn [_] (edit-mode [row col])) ; Relies on edit mode getting reset on grid evaluation
+         :on-key-down #(when (= (.-keyCode %) 13)
+                         (.preventDefault %)
+                         (-> % .-target .blur)
+                         (set-mode [row col] :view)
+                         (let [below [(inc row) col]]
+                           (-> below cell-dom .focus)
+                           (set-mode below :edit)))
          :on-blur (fn [e]
                     (set-mode [row col] :view)
                     (update-cell [row col] (.-textContent (.-currentTarget e))))
@@ -40,7 +54,7 @@
    (case kind
      :alpha (i->a i)
      :bean "Bean"
-     (str i))])
+     (str (inc i)))])
 
 (defn label-row [rows]
   [:div {:class (cs :bean-label-row)}

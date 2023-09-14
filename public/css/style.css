@@ -50,6 +50,11 @@ body {
 }
 
 .edit-mode {
-    box-shadow: inset 0 0 3px black;
+    box-shadow: inset 0 0 2px black;
     outline: none;
+}
+
+.cell-error:not(.edit-mode) {
+    font-size: 9px;
+    color: #802525;
 }
