@@ -13,7 +13,7 @@
 
 (defn update-cell [address content]
   (swap! sheet
-         #(grid/evaluate-grid address content (:grid %) (:depgraph %))))
+         #(grid/eval-sheet % address content)))
 
 (defn set-mode [[r c] mode]
   (swap! sheet #(update-in % [:grid r c :mode] (constantly mode))))
@@ -24,7 +24,7 @@
                         :edit-mode #(set-mode % :edit)}])
 
 (defn ^:export main []
-  (reset! sheet (grid/evaluate-grid (start-sheet)))
+  (reset! sheet (grid/eval-sheet (start-sheet)))
   (r/render
    [active-sheet]
    (.getElementById js/document "app")))
