@@ -19,11 +19,11 @@
                   indexed-a)]
     [(dec n) (dec c)]))
 
+(defn map-on-matrix [f matrix]
+  (mapv #(mapv (fn [element] (f element)) %) matrix))
+
 ;; TODO: Is there a better way to return vectors instead of lists
 ;; for O(1) lookups later.
-(defn map-on-matrix [f matrix]
-  (vec (map #(vec (map (fn [element] (f element)) %)) matrix)))
-
 (defn map-on-matrix-addressed [f matrix]
   (vec (map-indexed (fn [row-idx row]
                       (vec (map-indexed

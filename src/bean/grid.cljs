@@ -202,6 +202,7 @@
    ;; Evaluation metadata
    :spilled-from nil
    :spilled-into nil
+   :interested-spillers #{}
 
    ;; Addressing information
    :address nil

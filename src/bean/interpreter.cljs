@@ -26,11 +26,6 @@
 (defn- first-error [ast-results]
   (->> ast-results (filter :error) first))
 
-(defn- formulas-map [ast-results f]
-  (if-let [referenced-error (first-error ast-results)]
-    referenced-error
-    (ast-result (apply f (map :value ast-results)))))
-
 (defn bean-op-+ [left right]
   (if (and (int? left) (int? right))
     (+ left right)
@@ -46,6 +41,42 @@
   (util/map-on-matrix
    #(util/get-cell grid %)
    (addresses-matrix start-address end-address)))
+
+(defn- apply-values
+  ([f ast-results]
+   (if-let [referenced-error (first-error ast-results)]
+     referenced-error
+     (ast-result (apply f (map :value ast-results)))))
+  ([f ast-results matrix]
+   {:matrix
+    (util/map-on-matrix
+     #(apply-values f (conj ast-results %))
+     matrix)}))
+
+(defn- dim [matrix]
+  [(count matrix) (count (first matrix))])
+
+(defn- matrix-op-matrix [lmatrix op rmatrix]
+  (if (= (dim lmatrix) (dim rmatrix))
+    {:matrix
+     (mapv (partial mapv
+                    (fn [l-el r-el]
+                      (apply-values
+                       #(apply %1 [%2 %3])
+                       [op l-el r-el])))
+           lmatrix
+           rmatrix)}
+    {:error "Matrices should be same size."
+     :representation "Matrices should be same size."}))
+
+(defn apply-op [op left right]
+  (let [lmatrix (:matrix left)
+        rmatrix (:matrix right)]
+    (cond
+      (and lmatrix rmatrix) (matrix-op-matrix lmatrix op rmatrix)
+      lmatrix (apply-values #(apply %1 [%2 %3]) [op right] lmatrix)
+      rmatrix (apply-values #(apply %1 [%3 %2]) [op left] rmatrix)
+      :else (apply-values #(apply %1 [%2 %3]) [op left right]))))
 
 (defn matrix-bounds [start-ref end-ref]
   (let [[_ start-a start-n] start-ref
@@ -93,10 +124,9 @@
                                (apply eval-matrix*))}
       :Expression (if (is-expression? arg)
                     (let [[left op right] args]
-                      (formulas-map [(eval-sub-ast op)
-                                     (eval-sub-ast left)
-                                     (eval-sub-ast right)]
-                                    #(apply %1 [%2 %3])))
+                      (apply-op (eval-sub-ast op)
+                                (eval-sub-ast left)
+                                (eval-sub-ast right)))
                     (eval-sub-ast arg))
       :Value (eval-sub-ast arg)
       :Integer (ast-result (js/parseInt arg))
