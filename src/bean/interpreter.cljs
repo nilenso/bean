@@ -14,13 +14,14 @@
 (defn- cell->ast-result [cell]
   (select-keys cell [:value :error :representation]))
 
-(defn- ast-result->cell [{:keys [error matrix] :as ast-result} cell]
+(defn- ast-result->cell [{:keys [error matrix ctx] :as ast-result} cell]
   (merge
    {:content (:content cell)
     :ast (:ast cell)
     :value (:value ast-result)
     :representation (:representation ast-result)}
    (when matrix {:matrix matrix})
+   (when ctx {:ctx ctx})
    (when error {:error error})))
 
 (defn- first-error [ast-results]
@@ -103,15 +104,27 @@
                     (ast->deps arg))
       #{})))
 
-(defn eval-ast [ast cell grid]
-  ; ast goes down, value or an error comes up
+(defn eval-ast [ast cell grid ctx]
+  ; ast goes down, value or an error comes up (with ctx)
+  ;; value: 1 "fewfe" {:function ast}, matrix, error,
   (let [[node-type & [arg :as args]] ast
-        eval-sub-ast #(eval-ast % cell grid)
+        eval-sub-ast #(eval-ast % cell grid ctx)
         eval-matrix* #(eval-matrix %1 %2 grid)]
     (case node-type
       :CellContents (if arg
                       (eval-sub-ast arg)
-                      (ast-result nil))
+                      (ast-result nil)) 
+      :Program (for [[_ ] args]
+                 (eval-sub-ast args))
+      :Statement (if arg
+                   (eval-sub-ast arg)
+                   (ast-result nil))
+      :LetExpression (let [[_ [_ name] expression] args
+                           expr-value (-> expression eval-sub-ast ast-result)
+                           new-ctx (assoc ctx name expr-value)]
+                       (assoc expr-value :ctx new-ctx))
+      :FunctionDefinition (let [_ args] (ast-result {:function args}))
+      :Name (let [[_ name] args] (get ctx name))
       :CellRef (let [[_ a n] ast
                      address (util/a1->rc a (js/parseInt n))
                      referred-cell (util/get-cell grid address)
@@ -135,6 +148,6 @@
       :Operation (ast-result (case arg
                                "+" bean-op-+)))))
 
-(defn eval-cell [cell grid]
-  (-> (eval-ast (:ast cell) cell grid)
+(defn eval-cell [cell grid ctx]
+  (-> (eval-ast (:ast cell) cell grid ctx)
       (ast-result->cell cell)))
