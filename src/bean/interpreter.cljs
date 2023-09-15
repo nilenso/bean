@@ -101,6 +101,7 @@
       :Value (eval-sub-ast arg)
       :Integer (ast-result (js/parseInt arg))
       :String (ast-result arg)
+      :QuotedString (ast-result arg)
       :Operation (ast-result (case arg
                                "+" bean-op-+)))))
 
