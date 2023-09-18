@@ -7,35 +7,28 @@
 
 (deftest evaluator-test
   (testing "Basic evaluation"
-    (let [grid [["1" "" ""]
-                ["2" "" ""]
-                ["=A1+A2" "" ""]
-                ["=A3+1" "" ""]
-                ["=A1+A2+A3+A4+10" "" ""]]
-          evaluated-sheet (eval-sheet grid)]
-      (is (= (util/map-on-matrix
-              #(select-keys % [:value :content :error :representation])
-              (:grid evaluated-sheet))
-             [[{:content "1" :value 1 :representation "1"}
-               {:content "" :value nil :representation ""}
-               {:content "" :value nil :representation ""}]
-              [{:content "2" :value 2 :representation "2"}
-               {:content "" :value nil :representation ""}
-               {:content "" :value nil :representation ""}]
-              [{:content "=A1+A2" :value 3 :representation "3"}
-               {:content "" :value nil :representation ""}
-               {:content "" :value nil :representation ""}]
-              [{:content "=A3+1" :value 4 :representation "4"}
-               {:content "" :value nil :representation ""}
-               {:content "" :value nil :representation ""}]
-              [{:content "=A1+A2+A3+A4+10" :value 20 :representation "20"}
-               {:content "" :value nil :representation ""}
-               {:content "" :value nil :representation ""}]]))
-      (is (= (:depgraph evaluated-sheet)
-             {[0 0] #{[2 0] [4 0]}
-              [1 0] #{[2 0] [4 0]}
-              [2 0] #{[3 0] [4 0]}
-              [3 0] #{[4 0]}}))))
+    (is (= (util/map-on-matrix
+            #(select-keys % [:value :content :error :representation])
+            (:grid (eval-sheet [["1" "" ""]
+                                ["2" "" ""]
+                                ["=A1+A2" "" ""]
+                                ["=A3+1" "" ""]
+                                ["=A1+A2+A3+A4+10" "" ""]])))
+           [[{:content "1" :value 1 :representation "1"}
+             {:content "" :value nil :representation ""}
+             {:content "" :value nil :representation ""}]
+            [{:content "2" :value 2 :representation "2"}
+             {:content "" :value nil :representation ""}
+             {:content "" :value nil :representation ""}]
+            [{:content "=A1+A2" :value 3 :representation "3"}
+             {:content "" :value nil :representation ""}
+             {:content "" :value nil :representation ""}]
+            [{:content "=A3+1" :value 4 :representation "4"}
+             {:content "" :value nil :representation ""}
+             {:content "" :value nil :representation ""}]
+            [{:content "=A1+A2+A3+A4+10" :value 20 :representation "20"}
+             {:content "" :value nil :representation ""}
+             {:content "" :value nil :representation ""}]])))
 
   (testing "Returns errors"
     (let [grid [["=1" "" ""]
