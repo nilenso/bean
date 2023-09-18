@@ -8,7 +8,7 @@
 (defn- content->cell
   ([content]
    {:content content
-    :ast (parser/parse content)}))
+    :ast (parser/parse-cell content)}))
 
 (defn- depgraph-add-edge [depgraph parent child]
   (assoc depgraph parent (conj (get depgraph parent #{}) child)))
@@ -130,7 +130,7 @@
 (defn- eval-cell [cell grid]
   (if (or (not (:spilled-from cell))
           (:matrix cell))
-    (interpreter/eval-cell cell grid)
+    (interpreter/eval-cell cell grid {})
     cell))
 
 (defn- dependents [addrs depgraph]
