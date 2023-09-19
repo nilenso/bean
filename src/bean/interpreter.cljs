@@ -104,6 +104,12 @@
                     (ast->deps arg))
       #{})))
 
+(defn- apply-fn [cell grid f args]
+  (eval-ast f cell grid
+            (into {} (map vector
+                          ["x" "y" "z"]
+                          args))))
+
 (defn eval-ast [ast cell grid ctx]
   ; ast goes down, value or an error comes up (with ctx)
   ;; value: 1 "fewfe" {:function ast}, matrix, error,
@@ -123,7 +129,11 @@
                            expr-value (-> expression eval-sub-ast ast-result)
                            new-ctx (assoc ctx name expr-value)]
                        (assoc expr-value :ctx new-ctx))
-      :FunctionDefinition (let [_ args] (ast-result {:function args}))
+      :FunctionInvocation (let [f (eval-sub-ast arg)
+                                params (map eval-sub-ast (rest args))]
+                            (apply-fn cell grid f params))
+      :FunctionDefinition (cell->ast-result {:value arg
+                                             :representation "𝑓"})
       :Name (let [[_ name] args] (get ctx name))
       :CellRef (let [[_ a n] ast
                      address (util/a1->rc a (js/parseInt n))

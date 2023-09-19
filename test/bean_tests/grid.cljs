@@ -220,3 +220,28 @@
               (fn [address item] [address item]) matrix)
              [[[[0 0] 10] [[0 1] 20] [[0 2] 30]]
               [[[1 0] 40] [[1 1] 50] [[1 2] 60]]])))))
+
+(deftest function-invocation-test
+  (testing "Function invocation when function is defined in place"
+    (is (= (util/map-on-matrix
+            #(select-keys % [:value :content :error :representation])
+            (:grid (eval-sheet [["1" "={x+x}(5)" ""]
+                                ["2" "" ""]
+                                ["=A1+A2" "" ""]
+                                ["=A3+1" "" ""]
+                                ["=A1+A2+A3+A4+10" "" ""]])))
+           [[{:content "1" :value 1 :representation "1"}
+             {:content "" :value nil :representation ""}
+             {:content "" :value nil :representation ""}]
+            [{:content "2" :value 2 :representation "2"}
+             {:content "" :value nil :representation ""}
+             {:content "" :value nil :representation ""}]
+            [{:content "=A1+A2" :value 3 :representation "3"}
+             {:content "" :value nil :representation ""}
+             {:content "" :value nil :representation ""}]
+            [{:content "=A3+1" :value 4 :representation "4"}
+             {:content "" :value nil :representation ""}
+             {:content "" :value nil :representation ""}]
+            [{:content "=A1+A2+A3+A4+10" :value 20 :representation "20"}
+             {:content "" :value nil :representation ""}
+             {:content "" :value nil :representation ""}]]))))
