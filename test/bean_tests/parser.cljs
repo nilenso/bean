@@ -21,10 +21,8 @@
            (parse "=A8+B9")))
     (is (= [:CellContents [:Expression
                            [:FunctionInvocation
-                            [:FunctionName "concat"]
-                            [:FunctionArguments
-                             [:Expression [:Value [:QuotedString "hello"]]]
-                             [:FunctionArguments
-                              [:Expression [:CellRef "A" "3"]]
-                              [:FunctionArguments [:Expression [:CellRef "A" "4"]]]]]]]]
-           (parse "=concat(\"hello\",A3,A4)")))))
+                            [:Name "concat"]
+                            [:Expression [:Value [:QuotedString "hello"]]]
+                            [:Expression [:CellRef "A" "3"]]
+                            [:Expression [:CellRef "A" "4"]]]]]
+           (parse "=concat(\"hello\" A3 A4)")))))

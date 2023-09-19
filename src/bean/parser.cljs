@@ -14,8 +14,8 @@
 
     Operation = '+'
     Expression = Value | CellRef | MatrixRef | Expression Operation Expression | FunctionInvocation
-    FunctionInvocation = FunctionName <'('> FunctionArguments <')'>
-    FunctionName = \"concat\"
+    FunctionInvocation = Name <'('> [Expression {<' '> Expression}] <')'>
+    Name = #'[a-z]+'
     FunctionArguments = Epsilon | Expression | Expression <','> FunctionArguments
 
     Value = Integer / <'\"'> QuotedString <'\"'>
