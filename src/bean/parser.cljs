@@ -13,8 +13,9 @@
     MatrixRef = CellRef <':'> CellRef
 
     Operation = '+'
-    Expression = Value | CellRef | MatrixRef | Expression Operation Expression | FunctionInvocation
-    FunctionInvocation = Name <'('> [Expression {<' '> Expression}] <')'>
+    Expression = Value | CellRef | MatrixRef | Expression Operation Expression | FunctionInvocation | FunctionDefinition | Name
+    FunctionInvocation = (FunctionDefinition | Name) <'('> [Expression {<' '> Expression}] <')'>
+    FunctionDefinition = <'{'> Expression <'}'>
     Name = #'[a-z]+'
 
     Value = Integer / <'\"'> QuotedString <'\"'>

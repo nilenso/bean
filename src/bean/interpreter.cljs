@@ -114,16 +114,12 @@
   {"concat" {:value functions/bean-concat
              :representation "f"}})
 
-(defn- apply-f [cell grid f params]
-  (if (fn? (:value f))
-    ((:value f) params)
-    (comment
-      (eval-ast f cell grid (into {} (map vector ["x" "y" "z"] params))))))
+(declare apply-f)
 
-(defn eval-ast [ast cell grid & bindings]
+(defn eval-ast [ast cell grid & [bindings]]
   ; ast goes down, value or an error comes up
   (let [[node-type & [arg :as args]] ast
-        eval-sub-ast #(eval-ast % cell grid)
+        eval-sub-ast #(eval-ast % cell grid bindings)
         eval-matrix* #(eval-matrix %1 %2 grid)]
     (case node-type
       :CellContents (if arg
@@ -140,6 +136,7 @@
                                (apply matrix-bounds)
                                (apply eval-matrix*))}
       :Name (or (get bindings arg) (get global-ctx arg))
+      :FunctionDefinition (fn-result arg)
       :FunctionInvocation (apply-f cell
                                    grid
                                    (eval-sub-ast arg)
@@ -156,6 +153,14 @@
       :QuotedString (ast-result arg)
       :Operation (ast-result (case arg
                                "+" bean-op-+)))))
+
+(defn- apply-f [cell grid f params]
+  (if (fn? (:value f))
+    ((:value f) params)
+    (eval-ast (:value f)
+              cell
+              grid
+              (into {} (map vector ["x" "y" "z"] params)))))
 
 (defn eval-cell [cell grid]
   (-> (eval-ast (:ast cell) cell grid)

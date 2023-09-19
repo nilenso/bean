@@ -152,6 +152,16 @@
              {:content "" :value nil :representation ""}]
             [{:content "=A1+A2+A3+A4+10" :value 20 :representation "20"}
              {:content "" :value nil :representation ""}
+             {:content "" :value nil :representation ""}]])))
+
+  (testing "Inlined function invocation"
+    (is (= (util/map-on-matrix
+            #(select-keys % [:value :content :error :representation])
+            (:grid (eval-sheet [["1" "={x+y+z}(9 A1 A2)"]
+                                ["2" ""]])))
+           [[{:content "1" :value 1 :representation "1"}
+             {:content "={x+y+z}(9 A1 A2)" :value 12 :representation "12"}]
+            [{:content "2" :value 2 :representation "2"}
              {:content "" :value nil :representation ""}]]))))
 
 (deftest incremental-evaluate-grid
