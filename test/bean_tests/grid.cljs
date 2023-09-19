@@ -128,7 +128,31 @@
       (is (= (get-in grid [2 1 :value]) 2))
       (is (= (get-in grid [3 0 :value]) 2))
       (is (= (get-in grid [3 1 :value]) 3))
-      (is (= (get-in grid [4 1 :value]) 2)))))
+      (is (= (get-in grid [4 1 :value]) 2))))
+
+  (testing "Function invocation"
+    (is (= (util/map-on-matrix
+            #(select-keys % [:value :content :error :representation])
+            (:grid (eval-sheet [["1" "=concat(\"hello \" A1 A2)" ""]
+                                ["2" "" ""]
+                                ["=A1+A2" "" ""]
+                                ["=A3+1" "" ""]
+                                ["=A1+A2+A3+A4+10" "" ""]])))
+           [[{:content "1" :value 1 :representation "1"}
+             {:content "=concat(\"hello \" A1 A2)" :value "hello 12" :representation "hello 12"}
+             {:content "" :value nil :representation ""}]
+            [{:content "2" :value 2 :representation "2"}
+             {:content "" :value nil :representation ""}
+             {:content "" :value nil :representation ""}]
+            [{:content "=A1+A2" :value 3 :representation "3"}
+             {:content "" :value nil :representation ""}
+             {:content "" :value nil :representation ""}]
+            [{:content "=A3+1" :value 4 :representation "4"}
+             {:content "" :value nil :representation ""}
+             {:content "" :value nil :representation ""}]
+            [{:content "=A1+A2+A3+A4+10" :value 20 :representation "20"}
+             {:content "" :value nil :representation ""}
+             {:content "" :value nil :representation ""}]]))))
 
 (deftest incremental-evaluate-grid
   (testing "Basic incremental evaluation given a pre-evaluated grid and a depgraph"

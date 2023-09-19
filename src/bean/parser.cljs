@@ -16,7 +16,6 @@
     Expression = Value | CellRef | MatrixRef | Expression Operation Expression | FunctionInvocation
     FunctionInvocation = Name <'('> [Expression {<' '> Expression}] <')'>
     Name = #'[a-z]+'
-    FunctionArguments = Epsilon | Expression | Expression <','> FunctionArguments
 
     Value = Integer / <'\"'> QuotedString <'\"'>
     QuotedString = #'[^\"]+'

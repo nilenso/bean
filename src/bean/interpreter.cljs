@@ -1,5 +1,6 @@
 (ns bean.interpreter
   (:require [clojure.set :as set]
+            [bean.functions :as functions]
             [bean.util :as util]))
 
 (defn- is-expression? [[node-type & _]]
@@ -10,6 +11,10 @@
     {:error error :representation (str error)}
     {:value error-or-val
      :representation (str error-or-val)}))
+
+(defn- fn-result [f]
+  {:value f
+   :representation ""})
 
 (defn- cell->ast-result [cell]
   (select-keys cell [:value :error :representation]))
@@ -89,6 +94,8 @@
   (let [[node-type & [arg :as args]] ast]
     (case node-type
       :CellContents (if arg (ast->deps arg) #{})
+      :FunctionInvocation (apply set/union
+                                 (map ast->deps args))
       :CellRef (let [[_ a n] ast]
                  #{(util/a1->rc a (js/parseInt n))})
       :MatrixRef (->> (apply matrix-bounds args)
@@ -103,7 +110,17 @@
                     (ast->deps arg))
       #{})))
 
-(defn eval-ast [ast cell grid]
+(def global-ctx
+  {"concat" {:value functions/bean-concat
+             :representation "f"}})
+
+(defn- apply-f [cell grid f params]
+  (if (fn? (:value f))
+    ((:value f) params)
+    (comment
+      (eval-ast f cell grid (into {} (map vector ["x" "y" "z"] params))))))
+
+(defn eval-ast [ast cell grid & bindings]
   ; ast goes down, value or an error comes up
   (let [[node-type & [arg :as args]] ast
         eval-sub-ast #(eval-ast % cell grid)
@@ -122,6 +139,11 @@
       :MatrixRef {:matrix (->> args
                                (apply matrix-bounds)
                                (apply eval-matrix*))}
+      :Name (or (get bindings arg) (get global-ctx arg))
+      :FunctionInvocation (apply-f cell
+                                   grid
+                                   (eval-sub-ast arg)
+                                   (map eval-sub-ast (rest args)))
       :Expression (if (is-expression? arg)
                     (let [[left op right] args]
                       (apply-op (eval-sub-ast op)
