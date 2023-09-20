@@ -23,10 +23,9 @@
          :on-key-down #(when (= (.-keyCode %) 13)
                          (.preventDefault %)
                          (-> % .-target .blur)
-                         (set-mode [row col] :view)
                          (let [below [(inc row) col]]
                            (-> below cell-dom .focus)
-                           (set-mode below :edit)))
+                           (edit-mode below)))
          :on-blur (fn [e]
                     (set-mode [row col] :view)
                     (update-cell [row col] (.-textContent (.-currentTarget e))))
@@ -49,15 +48,16 @@
 
 (defn label-cell [i & [kind]]
   [:div {:class (cs :bean-label
+                    (when (= kind :alpha) :bean-label-top)
                     (when-not kind :bean-label-left)
                     (when (= i :bean) :bean-corner))}
    (case kind
      :alpha (i->a i)
-     :bean "Bean"
+     :bean ""
      (str (inc i)))])
 
 (defn label-row [rows]
-  [:div {:class (cs :bean-label-row)}
+  [:div {:class (cs :bean-row :bean-labels-top)}
    [label-cell :bean :bean]
    (map-indexed
     (fn [i _] ^{:key i}
@@ -72,7 +72,7 @@
                 cells)])
 
 (defn sheet1 [{:keys [grid depgraph]} state-fns]
-  [:div {:class "bean-sheet"}
+  [:div {:class :bean-sheet}
    [label-row grid]
    (map-indexed #(do ^{:key %1}
                   [row state-fns %1 %2])

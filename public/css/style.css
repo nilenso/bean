@@ -1,60 +1,108 @@
+:root {
+    --dark-grey: #dedbd7;
+    --cell-height: 30px;
+    --cell-width: 110px;
+    --cell-padding: 5px;
+    --cell-border: 1px;
+    --label-left-width: 30px;
+}
 
 body {
     margin: 0;
-    background: #fcf8f4;
+    background: #fffefc;
+}
+
+.container {
+    overflow: scroll;
+    /* Todo: specify height when we start drawing full size grids */
+    /* height: 100vh; */
+    position: relative;
 }
 
 .bean-sheet {
     display: grid;
-    background-color: #dedbd7;
-    grid-gap: 1px;
-    grid-template-columns: 1fr;
     font-family: monospace;
-    font-size: 1.3em;
+    font-size: 1.1em;
+    width: 1500px;
 }
 
 .bean-row {
-    grid-gap: 1px;
     display: grid;
-    grid-template-rows: 30px;
     grid-auto-flow: column;
+    grid-template-rows: var(--cell-height);
+    grid-template-columns: 
+      calc(var(--label-left-width) + var(--cell-padding) * 2 + var(--cell-border))
+      repeat(auto-fill, var(--cell-width));
 }
+
 .bean-cell {
-    background: #fcf8f4;
-    padding: 5px;
-    width: 100px;
+    background: white;
+    border: solid var(--dark-grey);
+    border-width: 0 1px 1px 0;
+    padding: var(--cell-padding);
     overflow: hidden;
     cursor: cell;
-}
-
-.bean-label-row {
-    display: grid;
-    grid-template-rows: 30px;
-    grid-auto-flow: column;
-    background-color: #dedbd7;
-}
-
-.bean-label-left {
-    text-align: end;
-    background-color: #dedbd7;
+    color: #111;
 }
 
 .bean-label {
-    padding: 5px;
-    width: 100px;
+    background-color: #f2f2f1;
+    color: #666;
+    padding: var(--cell-padding);
+}
+
+.bean-labels-top {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.bean-label-top {
+    text-align: center;
+    border-bottom: var(--cell-border) solid var(--dark-grey);
+    border-right: var(--cell-border) solid #8a868440;
+    position: sticky;
+    left: 0;
+}
+
+.bean-label-left {
+    width: var(--label-left-width);
+    text-align: center;
+    border-bottom: 0.1 solid #8a868440;
+    border-right: var(--cell-border) solid var(--dark-grey);
+    position: sticky;
+    left: 0;
+    z-index: 0;
 }
 
 .bean-corner {
-    text-align: end;
-    background-color: rgb(147, 196, 125);
+    background-color: #ddd;
+    color: darkgreen;
+    width: var(--label-left-width);
+    border-right: var(--cell-border) solid var(--dark-grey);
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 2;
 }
 
 .edit-mode {
-    box-shadow: inset 0 0 2px black;
     outline: none;
 }
 
 .cell-error:not(.edit-mode) {
     font-size: 9px;
     color: #802525;
+}
+
+#cell-selector {
+    position: absolute;
+    top: -100px;
+    left: 10px;
+    width: 108px;
+    height: 26px;
+    border: 2px solid rgb(78, 87, 98);
+    transition: 100ms;
+    pointer-events: none;
+    display: none;
 }
