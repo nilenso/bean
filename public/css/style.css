@@ -81,7 +81,7 @@ body {
     left: 10px;
     width: var(--cell-width);
     height: var(--cell-height);
-    border: 2px solid rgb(78, 87, 98);
+    border: 2px solid rgb(14, 54, 174);
     transition: 100ms;
     pointer-events: none;
     display: none;
