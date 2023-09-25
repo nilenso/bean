@@ -76,7 +76,7 @@
   [:div {:class :bean-sheet
          :style {:grid-template-columns (str "var(--label-left-width)
                                               repeat(" num-cols ", var(--cell-width))")
-                 :grid-template-rows (str "repeat(" num-rows ", var(--cell-height))")}}
+                 :grid-template-rows (str "repeat(" (inc num-rows) ", var(--cell-height))")}}
    [labels-top grid]
    (map-indexed #(do ^{:key %1}
                   [row state-fns %1 %2]) grid)])
