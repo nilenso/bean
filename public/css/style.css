@@ -12,11 +12,6 @@ body {
     background: #fffefc;
 }
 
-.container {
-    overflow: scroll;
-    position: relative;
-}
-
 .bean-sheet {
     display: grid;
     font-family: monospace;
@@ -25,12 +20,12 @@ body {
 
 .bean-cell {
     background: white;
-    border: solid var(--dark-grey);
-    border-width: 0 1px 1px 0;
+    outline: 0.5px solid var(--dark-grey);
     padding: var(--cell-padding);
     overflow: hidden;
     cursor: cell;
     color: #111;
+    box-sizing: border-box;
 }
 
 .bean-label {
@@ -75,10 +70,6 @@ body {
     z-index: 2;
 }
 
-.edit-mode {
-    outline: none;
-}
-
 .cell-error:not(.edit-mode) {
     font-size: 9px;
     color: #802525;
@@ -88,10 +79,11 @@ body {
     position: absolute;
     top: -100px;
     left: 10px;
-    width: 108px;
-    height: 26px;
+    width: var(--cell-width);
+    height: var(--cell-height);
     border: 2px solid rgb(78, 87, 98);
     transition: 100ms;
     pointer-events: none;
     display: none;
+    box-sizing: border-box;
 }
