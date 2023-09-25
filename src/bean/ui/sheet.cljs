@@ -72,8 +72,11 @@
                   [cell state-fns i %1 %2])
                 cells)])
 
-(defn sheet1 [{:keys [grid]} state-fns]
-  [:div {:class :bean-sheet}
+(defn sheet1 [num-rows num-cols {:keys [grid]} state-fns]
+  [:div {:class :bean-sheet
+         :style {:grid-template-columns (str "var(--label-left-width)
+                                              repeat(" num-cols ", var(--cell-width))")
+                 :grid-template-rows (str "repeat(" num-rows ", var(--cell-height))")}}
    [labels-top grid]
    (map-indexed #(do ^{:key %1}
                   [row state-fns %1 %2]) grid)])

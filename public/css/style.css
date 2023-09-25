@@ -4,7 +4,7 @@
     --cell-width: 110px;
     --cell-padding: 5px;
     --cell-border: 1px;
-    --label-left-width: 30px;
+    --label-left-width: 40px;
 }
 
 body {
@@ -21,11 +21,6 @@ body {
     display: grid;
     font-family: monospace;
     font-size: 1.1em;
-    width: 1500px;
-    grid-template-rows: repeat(100, var(--cell-height));
-    grid-template-columns: 
-      calc(var(--label-left-width) + var(--cell-padding) * 2 + var(--cell-border))
-      repeat(12, var(--cell-width));
 }
 
 .bean-cell {
@@ -42,6 +37,7 @@ body {
     background-color: #f2f2f1;
     color: #666;
     padding: var(--cell-padding);
+    box-sizing: border-box;
 }
 
 .bean-labels-top {
