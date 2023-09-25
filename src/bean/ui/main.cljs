@@ -110,3 +110,24 @@
                   :background-color (when (= 1 (rand-int 50))
                                       "beige")}} "HAHAHAHAHHA"])]
      (.getElementById js/document "app")))
+
+
+;; Features we want (and tested in this branch)
+;; drawing cells
+;; variable row/column sizes
+;; borders: entire grid, single cell, adjacent cells do not repeat border
+;; getting cell row-col from click on grid
+;; inserting column/row
+;; deleting column/row
+;; drawing selection around cells
+;; merged cells
+;; nested grids with different layout
+;; text inside cells
+;; cell formatting
+;; number of cells
+
+;; Table vs grid
+;; -----------------
+;; - Grid is flat, table is nested.
+;; - Doing mixed sizes (nested grids) is easier with grid. All cells in a table need to be the same size.
+;; - No real reason otherwise seems like. See a lot of "tables are good for static layouts" comments but not sure why.
