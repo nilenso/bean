@@ -8,7 +8,7 @@
        (map name)
        (str/join " ")))
 
-(defn- cell-dom
+(defn- cell-dom-el
   [[row col]]
   (.querySelector
    js/document
@@ -24,7 +24,7 @@
                          (.preventDefault %)
                          (-> % .-target .blur)
                          (let [below [(inc row) col]]
-                           (-> below cell-dom .focus)
+                           (.focus (cell-dom-el below))
                            (edit-mode below)))
          :on-blur (fn [e]
                     (set-mode [row col] :view)
@@ -47,7 +47,8 @@
         (cons (char (+ 64 m)) a)))))
 
 (defn label-cell [i & [kind]]
-  [:div {:class (cs :bean-label
+  [:div {:key (str "label" i)
+         :class (cs :bean-label
                     (when (= kind :alpha) :bean-label-top)
                     (when-not kind :bean-label-left)
                     (when (= i :bean) :bean-corner))}
@@ -56,8 +57,8 @@
      :bean ""
      (str (inc i)))])
 
-(defn label-row [rows]
-  [:div {:class (cs :bean-row :bean-labels-top)}
+(defn labels-top [rows]
+  [:<>
    [label-cell :bean :bean]
    (map-indexed
     (fn [i _] ^{:key i}
@@ -65,15 +66,14 @@
     (first rows))])
 
 (defn row [state-fns i cells]
-  [:div {:class (cs :bean-row)}
+  [:<>
    [label-cell i]
    (map-indexed #(do ^{:key %1}
                   [cell state-fns i %1 %2])
                 cells)])
 
-(defn sheet1 [{:keys [grid depgraph]} state-fns]
+(defn sheet1 [{:keys [grid]} state-fns]
   [:div {:class :bean-sheet}
-   [label-row grid]
+   [labels-top grid]
    (map-indexed #(do ^{:key %1}
-                  [row state-fns %1 %2])
-                grid)])
+                  [row state-fns %1 %2]) grid)])

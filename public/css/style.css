@@ -14,8 +14,6 @@ body {
 
 .container {
     overflow: scroll;
-    /* Todo: specify height when we start drawing full size grids */
-    /* height: 100vh; */
     position: relative;
 }
 
@@ -24,15 +22,10 @@ body {
     font-family: monospace;
     font-size: 1.1em;
     width: 1500px;
-}
-
-.bean-row {
-    display: grid;
-    grid-auto-flow: column;
-    grid-template-rows: var(--cell-height);
+    grid-template-rows: repeat(100, var(--cell-height));
     grid-template-columns: 
       calc(var(--label-left-width) + var(--cell-padding) * 2 + var(--cell-border))
-      repeat(auto-fill, var(--cell-width));
+      repeat(12, var(--cell-width));
 }
 
 .bean-cell {
@@ -68,7 +61,7 @@ body {
 .bean-label-left {
     width: var(--label-left-width);
     text-align: center;
-    border-bottom: 0.1 solid #8a868440;
+    border-bottom: 0.1px solid #8a868440;
     border-right: var(--cell-border) solid var(--dark-grey);
     position: sticky;
     left: 0;
