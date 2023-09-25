@@ -20,11 +20,11 @@
 
 (defn cell-selector []
   (when @selected-cell
-    [:div
-     {:id :cell-selector
-      :style {:top (str (+ 30 (* (first @selected-cell) 30)) "px")
-              :left (str (+ 40 (* (second @selected-cell) 110)) "px")
-              :display :block}}]))
+   [:div
+    {:id :cell-selector
+     :style {:top (str (+ 30 (* (first @selected-cell) 30)) "px")
+             :left (str (+ 40 350 (* (second @selected-cell) 110)) "px")
+             :display :block}}]))
 
 (defn set-mode [[r c] mode]
   (swap! sheet #(update-in % [:grid r c :mode] (constantly mode)))
@@ -39,9 +39,24 @@
     :set-mode set-mode
     :edit-mode #(set-mode % :edit)}])
 
+(defn scratch []
+  [:div {:class :scratch}
+   [:div {:class "scratch-header bean-label"}]
+   [:div {:class :scratch-thick-lines}]
+   [:div {:class :scratch-body}
+    [:div {:class :scratch-margin}]
+    [:textarea
+      ;; TODO: The textarea and the scratch should keep expanding as more text is added
+     {:class :scratch-text
+      :content-editable ""
+      :spell-check false}
+     (apply str "let area {x+x}" (for [_ (range num-rows)] "\n"))]]])
+
 (defn ^:dev/after-load ^:export main []
+  (reset! sheet (grid/eval-sheet (start-sheet)))
   (r/render
-   [:div
+   [:div {:class :container}
     [cell-selector]
+    [scratch]
     [active-sheet]]
    (.getElementById js/document "app")))

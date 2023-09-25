@@ -5,11 +5,20 @@
     --cell-padding: 5px;
     --cell-border: 1px;
     --label-left-width: 40px;
+    --label-left-bottom-border: 0.1px;
+    --scratch-width: 350px;
+    --scratch-thick-line-gap: 4;
 }
 
 body {
     margin: 0;
     background: #fffefc;
+}
+
+.container {
+    position: relative;
+    display: grid;
+    grid-template-columns: var(--scratch-width) auto;
 }
 
 .bean-sheet {
@@ -47,6 +56,7 @@ body {
     border-right: var(--cell-border) solid #8a868440;
     position: sticky;
     left: 0;
+    padding: var(--cell-padding);
 }
 
 .bean-label-left {
@@ -55,8 +65,9 @@ body {
     border-bottom: 0.1px solid #8a868440;
     border-right: var(--cell-border) solid var(--dark-grey);
     position: sticky;
-    left: 0;
+    left: var(--scratch-width);
     z-index: 0;
+    padding: var(--cell-padding);
 }
 
 .bean-corner {
@@ -65,9 +76,9 @@ body {
     width: var(--label-left-width);
     border-right: var(--cell-border) solid var(--dark-grey);
     position: sticky;
-    top: 0;
-    left: 0;
     z-index: 2;
+    left: var(--scratch-width);
+    padding: var(--cell-padding);
 }
 
 .cell-error:not(.edit-mode) {
@@ -86,4 +97,67 @@ body {
     pointer-events: none;
     display: none;
     box-sizing: border-box;
+}
+
+.scratch {
+    background-color: #fff;
+    background-image: linear-gradient(#90b1ccaa 0.7px, transparent 0.7px);
+    background-size: 100% var(--cell-height);
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    margin-top: -0.7px;
+}
+
+.scratch-body {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    position: absolute;
+    top: 30px;
+    width: 100%;
+    height: 100%;
+}
+
+.scratch-text {
+    background: none;
+    border: none;
+    padding: 0 10px 0 10px;
+    z-index: 3;
+    height: 100%;
+    font-family: monospace;
+    font-size: 1.1em;
+    line-height: 30px;
+    outline: none;
+    word-wrap: break-word;
+    overflow-block: hidden;
+    resize: none;
+}
+
+.scratch-thick-lines {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    background-color: transparent;
+    background-image: linear-gradient(#4a759987 0.9px, transparent 0.9px);
+    background-size: 100% calc(var(--cell-height) * var(--scratch-thick-line-gap));
+    position: sticky;
+    left: 0;
+}
+
+.scratch::before {
+    position: absolute;
+    content: '';
+    left: 30px;
+    height: 100%;
+    width: 2px;
+    background: 2px rgba(255, 0, 0, 0.4);
+}
+
+.scratch-header {
+    position: sticky;
+    top: 0;
+    height: var(--cell-height);
+    width: 100%;
+    padding: 0px;
+    z-index: 10;
 }
