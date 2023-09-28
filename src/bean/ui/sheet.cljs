@@ -14,7 +14,7 @@
    js/document
    (str "[data-row=\"" row "\"][data-col=\"" col "\"]")))
 
-(defn cell [{:keys [set-mode edit-mode update-cell]} row col {:keys [mode error content representation] :as cell}]
+(defn- cell [{:keys [set-mode edit-mode update-cell]} row col {:keys [mode error content representation] :as cell}]
   [:div {:content-editable true
          :suppressContentEditableWarning true
          :data-row row
@@ -36,7 +36,7 @@
      :edit content
      representation)])
 
-(defn i->a [i]
+(defn- i->a [i]
   (loop [a '()
          i (inc i)]
     (let [m (mod i 26)
