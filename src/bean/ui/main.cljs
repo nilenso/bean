@@ -51,8 +51,8 @@
       ;; TODO: The textarea and the scratch should keep expanding as more text is added
      {:class :scratch-text
       :content-editable ""
-      :spell-check false}
-     (apply str "let area {x+x}" (for [_ (range num-rows)] "\n"))]]])
+      :spell-check false
+      :default-value (apply str "let area {x+x}" (for [_ (range num-rows)] "\n"))}]]])
 
 (defn ^:dev/after-load ^:export main []
   (r/render
