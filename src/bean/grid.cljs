@@ -160,7 +160,7 @@
   ([sheet address new-content]
    (eval-sheet sheet address (content->cell new-content) true))
 
-  ([{:keys [grid depgraph]} address cell content-changed?]
+  ([{:keys [grid depgraph ui]} address cell content-changed?]
    ; todo: if cyclic dependency break with error
    (let [existing-cell (util/get-cell grid address)
          cell* (eval-cell cell grid)
@@ -183,7 +183,8 @@
                    content-changed? (update-depgraph
                                      address
                                      existing-cell
-                                     cell*))}
+                                     cell*))
+       :ui (or ui {})}
       addrs-to-reval))))
 
 (comment
