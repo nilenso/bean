@@ -1,6 +1,7 @@
 (ns bean.ui.sheet
   (:require [clojure.string :as str]
             [cljs.core :refer [char]]
+            [bean.ui.drawing :as drawing]
             [bean.ui.util :refer [px]]))
 
 (defn cs [& classes]
@@ -50,28 +51,25 @@
                n)
         (cons (char (+ 64 m)) a)))))
 
-(defn label-cell [i & [kind]]
-  [:div {:key (str "label" i)
-         :class (cs :bean-label
-                    (when (= kind :alpha) :bean-label-top)
-                    (when-not kind :bean-label-left)
-                    (when (= i :bean) :bean-corner))}
-   (case kind
-     :alpha (i->a i)
-     :bean ""
-     (str (inc i)))])
-
-(defn labels-top [rows]
+(defn- labels-top [rows state-fns]
   [:<>
-   [label-cell :bean :bean]
+   [:div {:class (cs :bean-label :bean-corner)}]
    (map-indexed
     (fn [i _] ^{:key i}
-      [label-cell i :alpha])
+      [:div {:key (str "label" i)
+             :data-col i
+             :class (cs :bean-label :bean-label-top)
+             :on-mouse-down #(drawing/resize-top %1 (:resize-col state-fns))}
+       (i->a i)])
     (first rows))])
 
-(defn row [state-fns i cells]
+(defn- row [state-fns i cells]
   [:<>
-   [label-cell i]
+   [:div {:key (str "label" i)
+          :data-row i
+          :class (cs :bean-label :bean-label-left)
+          :on-mouse-down #(drawing/resize-left %1 (:resize-row state-fns))}
+    (inc i)]
    (map-indexed #(do ^{:key %1}
                   [cell state-fns i %1 %2])
                 cells)])
@@ -99,4 +97,6 @@
    [labels-top grid state-fns]
    (map-indexed #(do ^{:key %1}
                   [row state-fns %1 %2]) grid)
+   [:div {:id :bean-resize-indicator-v}]
+   [:div {:id :bean-resize-indicator-h}]
    (when (:selected-cell ui) [cell-selector ui])])
