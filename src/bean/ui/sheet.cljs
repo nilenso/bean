@@ -1,6 +1,7 @@
 (ns bean.ui.sheet
   (:require [clojure.string :as str]
-            [cljs.core :refer [char]]))
+            [cljs.core :refer [char]]
+            [bean.ui.util :refer [px]]))
 
 (defn cs [& classes]
   (->> classes
@@ -13,6 +14,9 @@
   (.querySelector
    js/document
    (str "[data-row=\"" row "\"][data-col=\"" col "\"]")))
+
+(defn- sizes->pxs [sizes]
+  (reduce #(str %1 (px %2) " ") "" sizes))
 
 (defn- cell [{:keys [set-mode edit-mode update-cell]} row col {:keys [mode error content representation] :as cell}]
   [:div {:content-editable true
@@ -72,11 +76,27 @@
                   [cell state-fns i %1 %2])
                 cells)])
 
-(defn sheet1 [num-rows num-cols {:keys [grid]} state-fns]
-  [:div {:class :bean-sheet
-         :style {:grid-template-columns (str "var(--label-left-width)
-                                              repeat(" num-cols ", var(--cell-width))")
-                 :grid-template-rows (str "repeat(" (inc num-rows) ", var(--cell-height))")}}
-   [labels-top grid]
+(defn cell-selector [{:keys [selected-cell row-heights col-widths]}]
+  (let [[r c] selected-cell]
+    [:div
+     {:id :cell-selector
+      :style {:top (px (+ 30 (apply + (take r row-heights))))
+              :left (px (+ 40 (apply + (take c col-widths))))
+              :display :block
+              :height (get row-heights r)
+              :width (get col-widths c)}}]))
+
+(defn sheet [{:keys [grid ui]} state-fns]
+  [:div
+   {:class :bean-sheet
+    :id :bean-sheet
+    :style {:grid-template-columns (str
+                                    "var(--label-left-width) "
+                                    (sizes->pxs (:col-widths ui)))
+            :grid-template-rows (str
+                                 "var(--cell-height) "
+                                 (sizes->pxs (:row-heights ui)))}}
+   [labels-top grid state-fns]
    (map-indexed #(do ^{:key %1}
-                  [row state-fns %1 %2]) grid)])
+                  [row state-fns %1 %2]) grid)
+   (when (:selected-cell ui) [cell-selector ui])])

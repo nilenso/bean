@@ -25,6 +25,8 @@ body {
     display: grid;
     font-family: monospace;
     font-size: 1.1em;
+    user-select: none;
+    position: relative;
 }
 
 .bean-cell {

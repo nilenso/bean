@@ -12,32 +12,34 @@
    (for [_ (range num-rows)]
      (vec (map (fn [_] "") (range num-cols))))))
 
-(defonce sheet (rc/atom (grid/eval-sheet (start-sheet))))
-(def selected-cell (rc/atom nil))
+(defonce sheet1
+  (rc/atom
+   (assoc (grid/eval-sheet (start-sheet))
+          :ui {:row-heights (vec (repeat num-rows 30))
+               :col-widths (vec (repeat num-cols 110))
+               :selected-cell nil})))
 
 (defn update-cell [address content]
-  (swap! sheet #(grid/eval-sheet % address content)))
+  (swap! sheet1 #(grid/eval-sheet % address content)))
 
-(defn cell-selector []
-  (when @selected-cell
-   [:div
-    {:id :cell-selector
-     :style {:top (str (+ 30 (* (first @selected-cell) 30)) "px")
-             :left (str (+ 40 350 (* (second @selected-cell) 110)) "px")
-             :display :block}}]))
+(defn resize-row [row height]
+  (swap! sheet1 #(assoc-in % [:ui :row-heights row] height)))
+
+(defn resize-col [col width]
+  (swap! sheet1 #(assoc-in % [:ui :col-widths col] width)))
 
 (defn set-mode [[r c] mode]
-  (swap! sheet #(update-in % [:grid r c :mode] (constantly mode)))
-  (when (= mode :edit) (reset! selected-cell [r c])))
+  (swap! sheet1 #(update-in % [:grid r c :mode] (constantly mode)))
+  (when (= mode :edit) (swap! sheet1 #(assoc-in % [:ui :selected-cell] [r c]))))
 
 (defn active-sheet []
-  [sheet/sheet1
-   num-rows
-   num-cols
-   @sheet
+  [sheet/sheet
+   @sheet1
    {:update-cell update-cell
     :set-mode set-mode
-    :edit-mode #(set-mode % :edit)}])
+    :edit-mode #(set-mode % :edit)
+    :resize-col resize-col
+    :resize-row resize-row}])
 
 (defn scratch []
   [:div {:class :scratch}
@@ -55,7 +57,6 @@
 (defn ^:dev/after-load ^:export main []
   (r/render
    [:div {:class :container}
-    [cell-selector]
     [scratch]
     [active-sheet]]
    (.getElementById js/document "app")))
