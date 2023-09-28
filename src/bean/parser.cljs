@@ -1,11 +1,18 @@
 (ns bean.parser
   (:require [instaparse.core :as insta]))
 
-(def ^:private parser
-  (insta/parser
+(def ^:private statement-grammer
+  "
+    Program = Statement? { <'\n'+> Statement }
+    <Statement> = LetStatement
+    LetStatement = Name <{' '}> <':'> <{' '}> Expression
+   ")
+
+(def ^:private expression-grammer
   ;; TODO: Integers are currently just natural numbers
-   "
-    CellContents = <'='> Expression / Integer / String / Epsilon
+  "
+    CellContents = <'='> Expression / RawValue / Epsilon
+    <RawValue> =  Integer / String
     Integer = #'[0-9]+'
     String = #'.+'
 
@@ -20,7 +27,16 @@
 
     Value = Integer / <'\"'> QuotedString <'\"'>
     QuotedString = #'[^\"]+'
-    "))
+    ")
+
+(def ^:private parser
+  (insta/parser expression-grammer))
+
+(def ^:private statement-parser
+  (insta/parser (str statement-grammer "\n" expression-grammer)))
+
+(defn parse-statement [v]
+  (insta/parse statement-parser v))
 
 (defn parse [v]
   (insta/parse parser v))

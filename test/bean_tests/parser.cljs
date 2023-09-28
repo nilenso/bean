@@ -1,5 +1,5 @@
 (ns bean-tests.parser
-  (:require [bean.parser :refer [parse]]
+  (:require [bean.parser :refer [parse parse-statement]]
             [clojure.test :refer [deftest testing is]]))
 
 (deftest parser-test
@@ -26,3 +26,13 @@
                             [:Expression [:CellRef "A" "3"]]
                             [:Expression [:CellRef "A" "4"]]]]]
            (parse "=concat(\"hello\" A3 A4)")))))
+
+(deftest parse-statement-test
+  (testing "Statement parsing"
+    (is (= [:Program]
+           (parse-statement "")))
+    (is (= [:Program [:LetStatement [:Name "foo"] [:Expression [:Value [:Integer "99"]]]]
+            [:LetStatement [:Name "bar"] [:Expression [:Expression [:CellRef "A" "1"]]
+                                          [:Operation "+"]
+                                          [:Expression [:Value [:Integer "9"]]]]]]
+           (parse-statement "foo:99\n\n\nbar   :A1+9")))))
