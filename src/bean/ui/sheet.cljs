@@ -33,7 +33,9 @@
                            (edit-mode below)))
          :on-blur (fn [e]
                     (set-mode [row col] :view)
-                    (update-cell [row col] (.-textContent (.-currentTarget e))))
+                    (let [input (.-textContent (.-target e))]
+                      (set! (.-innerHTML (.-target e)) (:value cell))
+                      (update-cell [row col] input)))
          :class (cs :bean-cell
                     (when (= mode :edit) :edit-mode)
                     (when error :cell-error))}
