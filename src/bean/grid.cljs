@@ -86,21 +86,30 @@
 (defn- spill-matrix [grid address]
   (letfn
    [(desired-spillage
-      [{:keys [matrix] :as cell}]
-      (->> matrix
-           (util/map-on-matrix-addressed
-            #(cond-> {:relative-address %1
-                      :spilled-from address
-                      :error (:error %2)
-                      :representation (:representation %2)
-                      :value (:value %2)}
-               (= %1 [0 0]) (merge {:matrix matrix
-                                    :content (:content cell)
-                                    :ast (:ast cell)})))
-           flatten))
+     [{:keys [matrix] :as cell}]
+     "Returns a collection of cells that the given cell intends to spill"
+     (->> matrix
+          (util/map-on-matrix-addressed
+           #(cond-> {:relative-address %1
+                     :spilled-from address
+                     :error (:error %2)
+                     :representation (:representation %2)
+                     :value (:value %2)}
+              (= %1 [0 0]) (merge {:matrix matrix
+                                   :content (:content cell)
+                                   :ast (:ast cell)})))
+          flatten))
 
     (express-interests
       [grid spillage]
+      "Marks cells in a given grid for potential spillage. The potential spillage
+       information is stored in the cell structure's `:interested-spillers` field.
+
+       The :interested-spillers field is used to track spillers that need to be
+       re-evaluated when a conflicting spiller is removed. eg. When two cells
+       spill into a common cell and one of the cells stops spilling into the
+       common cell, the other spiller must not have a spill error anymore and
+       spill into the (previously common) cell successfully"
       (reduce
        #(let [{:keys [spilled-from relative-address]} %2
               address (offset spilled-from relative-address)
@@ -114,6 +123,9 @@
 
     (spill
       [grid spillage]
+      "Update the grid with the spillage 'applied' into the grid. If the spillage
+       conflicts with existing content (or spillage), the spiller is marked as a
+       spill error and none of the spillage is applied."
       (let [grid1 (express-interests grid spillage)]
         (loop [initial-grid grid1
                spilled-grid grid1
@@ -193,10 +205,11 @@
                                 (spill-matrix unspilled-grid address)
                                 [unspilled-grid #{address}])
          updated-addrs (set/union evaled-addrs cleared-addrs)
-         addrs-to-reval (-> (set/union (set (map second (dependents updated-addrs depgraph)))
-                                       (interested-spillers updated-addrs grid))
          ;; temp hack while we transition to a more comprehensive dependency resolution system
          ;; Eventually, we will want to handle :ref and :binding dependencies seperately.
+         addrs-to-reval (-> (set/union (set (map second (dependents updated-addrs depgraph)))
+         ;; The interested spillers here are re-evaluated to mark them as spill errors
+                                       (interested-spillers updated-addrs grid))
                             (disj address))]
      (reduce
       eval-sheet
