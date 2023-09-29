@@ -38,7 +38,7 @@
   (assoc-in grid address cell))
 
 (defn- disaddress [cell]
-  (dissoc cell :address :relative-address))
+  (dissoc cell :relative-address))
 
 (defn- set-spill-error [grid address]
   (-> grid
@@ -206,5 +206,4 @@
    :interested-spillers #{}
 
    ;; Addressing information
-   :address nil
    :relative-address nil})
