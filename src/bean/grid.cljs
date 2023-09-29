@@ -2,6 +2,7 @@
   (:require [bean.interpreter :as interpreter]
             [bean.parser :as parser]
             [bean.util :as util]
+            [bean.deps :as deps]
             [clojure.set :as set]
             [clojure.string]))
 
@@ -20,9 +21,8 @@
   (->> grid
        (util/map-on-matrix-addressed
         #(for [dependency (interpreter/ast->deps (:ast %2))]
-           {:parent dependency :child %1}))
+           {:parent dependency :child (deps/->ref-dep %1)}))
        flatten
-;       (comment reduce #(depgraph-add-edge %1 (:parent [:binding ...]) (:child %2)) {} bindings)
        (reduce #(depgraph-add-edge %1 (:parent %2) (:child %2)) {})))
 
 (comment defn eval-dep [[deptype dep]]
@@ -49,8 +49,8 @@
   (let [old-dependencies (interpreter/ast->deps (:ast old-cell))
         new-dependencies (interpreter/ast->deps (:ast new-cell))]
     (as-> depgraph g
-      (reduce #(depgraph-remove-edge %1 %2 address) g old-dependencies)
-      (reduce #(depgraph-add-edge %1 %2 address) g new-dependencies))))
+      (reduce #(depgraph-remove-edge %1 %2 (deps/->ref-dep address)) g old-dependencies)
+      (reduce #(depgraph-add-edge %1 %2 (deps/->ref-dep address)) g new-dependencies))))
 
 (defn- offset [[start-row start-col] [offset-rows offset-cols]]
   [(+ start-row offset-rows) (+ start-col offset-cols)])
@@ -152,6 +152,7 @@
 
 (defn- dependents [addrs depgraph]
   (->> addrs
+       (map deps/->ref-dep)
        (map depgraph)
        (mapcat identity)
        set))
@@ -192,9 +193,10 @@
                                 (spill-matrix unspilled-grid address)
                                 [unspilled-grid #{address}])
          updated-addrs (set/union evaled-addrs cleared-addrs)
-         addrs-to-reval (-> (set/union
-                             (dependents updated-addrs depgraph)
-                             (interested-spillers updated-addrs grid))
+         addrs-to-reval (-> (set/union (set (map second (dependents updated-addrs depgraph)))
+                                       (interested-spillers updated-addrs grid))
+         ;; temp hack while we transition to a more comprehensive dependency resolution system
+         ;; Eventually, we will want to handle :ref and :binding dependencies seperately.
                             (disj address))]
      (reduce
       eval-sheet

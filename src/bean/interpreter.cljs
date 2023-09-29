@@ -1,6 +1,7 @@
 (ns bean.interpreter
   (:require [clojure.set :as set]
             [bean.functions :as functions]
+            [bean.deps :as deps]
             [bean.util :as util]))
 
 (defn is-expression? [[node-type & _]]
@@ -93,14 +94,15 @@
 (defn ast->deps [ast]
   (let [[node-type & [arg :as args]] ast]
     (case node-type
-      :CellContents (if arg (ast->deps arg) #{})
+      :CellContents (ast->deps arg)
       :FunctionInvocation (apply set/union
                                  (map ast->deps args))
       :CellRef (let [[_ a n] ast]
-                 #{(util/a1->rc a (js/parseInt n))})
+                 #{(deps/->ref-dep (util/a1->rc a (js/parseInt n)))})
       :MatrixRef (->> (apply matrix-bounds args)
                       (apply addresses-matrix)
                       (mapcat identity)
+                      (map deps/->ref-dep)
                       set)
       :Expression (if (is-expression? arg)
                     (let [[left _ right] args]
@@ -153,13 +155,14 @@
       :Operation (ast-result (case arg
                                "+" bean-op-+)))))
 
-(defn- apply-f [cell {:keys [grid bindings] :as sheet} f params]
+(defn- apply-f [cell sheet f params]
   (if (fn? (:value f))
     ((:value f) params)
     (eval-ast (:value f)
-              {:grid grid
-               :bindings (merge bindings
-                                (into {} (map vector ["x" "y" "z"] params)))})))
+              (update-in sheet
+                         [:bindings]
+                         #(merge %
+                                 (into {} (map vector ["x" "y" "z"] params)))))))
 
 (defn eval-cell [cell sheet]
   (-> (eval-ast (:ast cell) sheet)
@@ -180,9 +183,3 @@
                     
                     ;; UI fields
                     :grid-dimensions grid-dimensions})
-
-(comment add
-         bindings
-         to
-         depgraph
-         )
