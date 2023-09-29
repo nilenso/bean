@@ -22,7 +22,28 @@
         #(for [dependency (interpreter/ast->deps (:ast %2))]
            {:parent dependency :child %1}))
        flatten
+;       (comment reduce #(depgraph-add-edge %1 (:parent [:binding ...]) (:child %2)) {} bindings)
        (reduce #(depgraph-add-edge %1 (:parent %2) (:child %2)) {})))
+
+(comment defn eval-dep [[deptype dep]]
+  (case deptype
+    :ref (eval-sheet dep)
+    :binding (eval-binding dep)))
+
+(comment
+  A1=5, foo=A1+x, B1=foo (4), M1=A1+8
+  [:ref A1] [:binding foo]
+  [:ref A1] [:ref M1]
+  [:binding foo] [:ref B1]
+  if deps, eval deps
+  )
+
+(comment
+  on scratch evaluation trigger
+
+  from old deps, for binding parents, re-evaluate children
+  update deps
+  )
 
 (defn- update-depgraph [depgraph address old-cell new-cell]
   (let [old-dependencies (interpreter/ast->deps (:ast old-cell))
@@ -123,10 +144,10 @@
 (defn parse-grid [grid]
   (util/map-on-matrix content->cell grid))
 
-(defn- eval-cell [cell grid]
+(defn- eval-cell [cell sheet]
   (if (or (not (:spilled-from cell))
           (:matrix cell))
-    (interpreter/eval-cell cell grid)
+    (interpreter/eval-cell cell sheet)
     cell))
 
 (defn- dependents [addrs depgraph]
@@ -140,11 +161,14 @@
        (mapcat #(get-in grid (conj % :interested-spillers)))
        set))
 
+(defn- make-sheet [parsed-grid]
+  {:grid parsed-grid
+   :bindings {}
+   :depgraph (make-depgraph parsed-grid)})
+
 (defn eval-sheet
   ([content-grid]
-   (let [parsed-grid (parse-grid content-grid)
-         sheet {:grid parsed-grid
-                :depgraph (make-depgraph parsed-grid)}]
+   (let [sheet (make-sheet (parse-grid content-grid))]
      (util/reduce-on-sheet-addressed
       (fn [sheet address _]
         (eval-sheet sheet address))
@@ -156,10 +180,10 @@
   ([sheet address new-content]
    (eval-sheet sheet address (content->cell new-content) true))
 
-  ([{:keys [grid depgraph ui]} address cell content-changed?]
+  ([{:keys [grid depgraph ui] :as sheet} address cell content-changed?]
    ; todo: if cyclic dependency break with error
    (let [existing-cell (util/get-cell grid address)
-         cell* (eval-cell cell grid)
+         cell* (eval-cell cell sheet)
          unspilled-grid (-> grid
                             (clear-matrix address existing-cell)
                             (assoc-in address cell*))

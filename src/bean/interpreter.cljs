@@ -116,10 +116,10 @@
 
 (declare apply-f)
 
-(defn eval-ast [ast grid & [bindings]]
+(defn eval-ast [ast {:keys [grid bindings] :as sheet}]
   ; ast goes down, value or an error comes up
   (let [[node-type & [arg :as args]] ast
-        eval-sub-ast #(eval-ast % grid bindings)
+        eval-sub-ast #(eval-ast % sheet)
         eval-matrix* #(eval-matrix %1 %2 grid)]
     (case node-type
       :CellContents (if arg
@@ -153,13 +153,36 @@
       :Operation (ast-result (case arg
                                "+" bean-op-+)))))
 
-(defn- apply-f [grid f params]
+(defn- apply-f [cell {:keys [grid bindings] :as sheet} f params]
   (if (fn? (:value f))
     ((:value f) params)
     (eval-ast (:value f)
-              grid
-              (into {} (map vector ["x" "y" "z"] params)))))
+              {:grid grid
+               :bindings (merge bindings
+                                (into {} (map vector ["x" "y" "z"] params)))})))
 
-(defn eval-cell [cell grid]
-  (-> (eval-ast (:ast cell) grid)
+(defn eval-cell [cell sheet]
+  (-> (eval-ast (:ast cell) sheet)
       (ast-result->cell cell)))
+
+(defn eval-statements [scratch]
+  (comment
+    eval scratch
+    generate bindings names -> ast))
+
+(comment def sheet {;; Source fields
+                    :grid grid
+                    :scratch scratch
+
+                    ;; Evaluated fields
+                    :depgraph depgraph
+                    :bindings bindings
+                    
+                    ;; UI fields
+                    :grid-dimensions grid-dimensions})
+
+(comment add
+         bindings
+         to
+         depgraph
+         )
