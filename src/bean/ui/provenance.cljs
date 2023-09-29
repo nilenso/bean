@@ -31,7 +31,7 @@
   ([expression sheet]
    (let [proof-tree (provenance/ast-proof
                      (parser/parse (str "=" expression))
-                     (:grid sheet))
+                     sheet)
          [proof-type proof & dependency-proofs] proof-tree
          sproof (case proof-type
                   :value (str "it's " proof)

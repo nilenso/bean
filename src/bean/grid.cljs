@@ -123,10 +123,10 @@
 (defn parse-grid [grid]
   (util/map-on-matrix content->cell grid))
 
-(defn- eval-cell [cell grid]
+(defn- eval-cell [cell sheet]
   (if (or (not (:spilled-from cell))
           (:matrix cell))
-    (interpreter/eval-cell cell grid)
+    (interpreter/eval-cell cell sheet)
     cell))
 
 (defn- dependents [addrs depgraph]
@@ -140,11 +140,14 @@
        (mapcat #(get-in grid (conj % :interested-spillers)))
        set))
 
+(defn- make-sheet [parsed-grid]
+  {:grid parsed-grid
+   :bindings {}
+   :depgraph (make-depgraph parsed-grid)})
+
 (defn eval-sheet
   ([content-grid]
-   (let [parsed-grid (parse-grid content-grid)
-         sheet {:grid parsed-grid
-                :depgraph (make-depgraph parsed-grid)}]
+   (let [sheet (make-sheet (parse-grid content-grid))]
      (util/reduce-on-sheet-addressed
       (fn [sheet address _]
         (eval-sheet sheet address))
@@ -156,10 +159,10 @@
   ([sheet address new-content]
    (eval-sheet sheet address (content->cell new-content) true))
 
-  ([{:keys [grid depgraph ui]} address cell content-changed?]
+  ([{:keys [grid depgraph ui] :as sheet} address cell content-changed?]
    ; todo: if cyclic dependency break with error
    (let [existing-cell (util/get-cell grid address)
-         cell* (eval-cell cell grid)
+         cell* (eval-cell cell sheet)
          unspilled-grid (-> grid
                             (clear-matrix address existing-cell)
                             (assoc-in address cell*))
@@ -184,6 +187,7 @@
       addrs-to-reval))))
 
 (comment
+  :cell
   {;; User input
    :content nil
 
@@ -202,4 +206,18 @@
    :interested-spillers #{}
 
    ;; Addressing information
-   :relative-address nil})
+   :relative-address nil}
+  )
+
+(comment
+  :sheet
+  {;; Source fields
+   :grid grid
+   :scratch scratch
+
+   ;; Evaluated fields
+   :depgraph depgraph
+   :bindings bindings
+
+   ;; UI fields
+   :grid-dimensions grid-dimensions})
