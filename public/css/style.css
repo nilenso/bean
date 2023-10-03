@@ -19,6 +19,7 @@ body {
     position: relative;
     display: grid;
     grid-template-columns: var(--scratch-width) auto;
+    width: min-content;
 }
 
 .bean-sheet {
