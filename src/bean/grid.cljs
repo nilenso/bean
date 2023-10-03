@@ -18,32 +18,14 @@
   (assoc depgraph parent (disj (get depgraph parent) child)))
 
 (defn make-depgraph [grid]
+  "Iterates through each cell in the grid and their dependencies and returns
+   an adjacency matrix of the dependency graph"
   (->> grid
        (util/map-on-matrix-addressed
         #(for [dependency (interpreter/ast->deps (:ast %2))]
            {:parent dependency :child (deps/->ref-dep %1)}))
        flatten
        (reduce #(depgraph-add-edge %1 (:parent %2) (:child %2)) {})))
-
-(comment defn eval-dep [[deptype dep]]
-  (case deptype
-    :ref (eval-sheet dep)
-    :binding (eval-binding dep)))
-
-(comment
-  A1=5, foo=A1+x, B1=foo (4), M1=A1+8
-  [:ref A1] [:binding foo]
-  [:ref A1] [:ref M1]
-  [:binding foo] [:ref B1]
-  if deps, eval deps
-  )
-
-(comment
-  on scratch evaluation trigger
-
-  from old deps, for binding parents, re-evaluate children
-  update deps
-  )
 
 (defn- update-depgraph [depgraph address old-cell new-cell]
   (let [old-dependencies (interpreter/ast->deps (:ast old-cell))
@@ -162,13 +144,6 @@
     (interpreter/eval-cell cell sheet)
     cell))
 
-(defn- dependents [addrs depgraph]
-  (->> addrs
-       (map deps/->ref-dep)
-       (map depgraph)
-       (mapcat identity)
-       set))
-
 (defn- interested-spillers [addrs grid]
   (->> addrs
        (mapcat #(get-in grid (conj % :interested-spillers)))
@@ -204,23 +179,30 @@
          [grid* evaled-addrs] (if (:matrix cell*)
                                 (spill-matrix unspilled-grid address)
                                 [unspilled-grid #{address}])
-         updated-addrs (set/union evaled-addrs cleared-addrs)
-         ;; temp hack while we transition to a more comprehensive dependency resolution system
-         ;; Eventually, we will want to handle :ref and :binding dependencies seperately.
-         addrs-to-reval (-> (set/union (set (map second (dependents updated-addrs depgraph)))
-         ;; The interested spillers here are re-evaluated to mark them as spill errors
-                                       (interested-spillers updated-addrs grid))
-                            (disj address))]
-     (reduce
-      eval-sheet
-      {:grid grid*
-       :depgraph (cond-> depgraph
-                   content-changed? (update-depgraph
-                                     address
-                                     existing-cell
-                                     cell*))
-       :ui (or ui {})}
-      addrs-to-reval))))
+         updated-addrs (set/union evaled-addrs cleared-addrs)]
+     (as-> {:grid grid*
+            :depgraph (cond-> depgraph
+                        content-changed? (update-depgraph
+                                          address
+                                          existing-cell
+                                          cell*))
+            :ui (or ui {})} sheet
+       (reduce eval-sheet
+               sheet
+               (-> (interested-spillers updated-addrs grid)
+                   (disj address)))
+       (reduce eval-sheet
+               sheet
+               (->> updated-addrs
+                    (deps/immediate-dependents sheet)
+                    (deps/resolve-dependents sheet)))))))
+
+;; 
+;; ~~add binding dependencies to graph~~
+;; hardcoded scratch with bindings
+;; cells depend on binding
+;; eval scratch is run on page load which evaluates the hardcoded function declaration in scratch
+;; 
 
 (comment
   {;; User input
