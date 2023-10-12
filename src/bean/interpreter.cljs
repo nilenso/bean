@@ -116,10 +116,10 @@
 
 (declare apply-f)
 
-(defn eval-ast [ast cell grid & [bindings]]
+(defn eval-ast [ast grid & [bindings]]
   ; ast goes down, value or an error comes up
   (let [[node-type & [arg :as args]] ast
-        eval-sub-ast #(eval-ast % cell grid bindings)
+        eval-sub-ast #(eval-ast % grid bindings)
         eval-matrix* #(eval-matrix %1 %2 grid)]
     (case node-type
       :CellContents (if arg
@@ -137,8 +137,7 @@
                                (apply eval-matrix*))}
       :Name (or (get bindings arg) (get global-ctx arg))
       :FunctionDefinition (fn-result arg)
-      :FunctionInvocation (apply-f cell
-                                   grid
+      :FunctionInvocation (apply-f grid
                                    (eval-sub-ast arg)
                                    (map eval-sub-ast (rest args)))
       :Expression (if (is-expression? arg)
@@ -154,14 +153,13 @@
       :Operation (ast-result (case arg
                                "+" bean-op-+)))))
 
-(defn- apply-f [cell grid f params]
+(defn- apply-f [grid f params]
   (if (fn? (:value f))
     ((:value f) params)
     (eval-ast (:value f)
-              cell
               grid
               (into {} (map vector ["x" "y" "z"] params)))))
 
 (defn eval-cell [cell grid]
-  (-> (eval-ast (:ast cell) cell grid)
+  (-> (eval-ast (:ast cell) grid)
       (ast-result->cell cell)))
