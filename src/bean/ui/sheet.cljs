@@ -44,14 +44,16 @@
      representation)])
 
 (defn- i->a [i]
-  (loop [a '()
-         i (inc i)]
-    (let [m (mod i 26)
-          n (/ i 26)]
-      (if (> n 1)
-        (recur (cons (char (+ 64 m)) a)
-               n)
-        (cons (char (+ 64 m)) a)))))
+  (apply 
+   str
+   (loop [a '()
+          i (inc i)]
+     (let [m (mod i 26)
+           n (/ i 26)]
+       (if (> n 1)
+         (recur (cons (char (+ 64 m)) a)
+                n)
+         (cons (char (+ 64 m)) a))))))
 
 (defn- labels-top [rows state-fns]
   [:<>
