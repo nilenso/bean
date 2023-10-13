@@ -2,55 +2,59 @@
   (:require [bean.util :as util]
             [bean.interpreter :as interpreter]))
 
-;; workings can be
-;; - a list: [{value-workings}]
-;; - {:ref {:address ... (a cell proof)}}
-;; - {self-evident true}
-
-(defn- proof [value workings]
-  {:value value
-   :workings workings})
-
 (defn- self-evident [value]
-  {:value value
-   :workings {:self-evident true}})
+  [:value value :self-evident])
 
 (declare cell-proof)
 
-(defn- ast-workings [ast grid]
-  ;; ast goes down, workings come up
+(defn- ast-proof [ast grid]
+  ;; ast goes down, proof come up
   (let [[node-type & [arg :as args]] ast
-        sub-ast-workings #(ast-workings % grid)]
+        sub-ast-proof #(ast-proof % grid)
+        ast-value #(:value (interpreter/eval-ast ast grid))]
     (case node-type
       :CellContents (if arg
-                      (sub-ast-workings arg)
-                      {:workings []})
+                      (sub-ast-proof arg) [])
       :CellRef (let [[_ a n] ast
                      address (util/a1->rc a (js/parseInt n))]
-                 (proof
-                  (:value (util/get-cell grid address))
-                  {:ref (cell-proof address grid)}))
+                 (cell-proof address grid))
       :Expression (if (interpreter/is-expression? arg)
                     (let [[left op right] args]
-                      (proof
-                       (:value (interpreter/eval-ast ast grid))
-                       [(sub-ast-workings left)
-                        (sub-ast-workings op)
-                        (sub-ast-workings right)]))
-                    (sub-ast-workings arg))
-      :Value (sub-ast-workings arg)
-      :Integer (self-evident (:value (interpreter/eval-ast ast grid)))
-      :String (self-evident (:value (interpreter/eval-ast ast grid)))
-      :QuotedString (self-evident (:value (interpreter/eval-ast ast grid)))
+                      [:value
+                       (ast-value)
+                       (sub-ast-proof left)
+                       (sub-ast-proof op)
+                       (sub-ast-proof right)])
+                    (sub-ast-proof arg))
+      :Value (sub-ast-proof arg)
+      :Integer (self-evident (ast-value))
+      :String (self-evident (ast-value))
+      :QuotedString (self-evident (ast-value))
       :Operation (self-evident arg))))
 
 (defn cell-proof
+  "Returns a hiccup style proof tree.
+   A proof is a vector of the shape [proof-type proof & dependency-proofs].
+  `dependency-proofs` is a list of proofs."
   [address grid]
   (let [cell (util/get-cell grid address)
         error? (:error cell)]
     (when-not error?
-      {:address address
-       :content (:content cell)
-       :value (:value cell)
-       :workings (:workings (ast-workings (:ast cell) grid))})))
+      [:cell-ref
+       {:address address
+        :content (:content cell)
+        :value (:value cell)}
+       (ast-proof (:ast cell) grid)])))
 
+(defn explain
+  "Linearise cell-proof"
+  [acc proof-tree]
+  (let [[proof-type proof & dependency-proofs] proof-tree]
+    (concat
+     acc
+     [(case proof-type
+        :cell-ref proof
+        :value proof)]
+     (if (= :self-evident (first dependency-proofs))
+       [(str proof " is self-evident")]
+       (reduce explain [] dependency-proofs)))))
