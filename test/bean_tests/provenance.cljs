@@ -75,6 +75,28 @@
                 [:value "+" :self-evident]
                 [:cell-ref
                  {:address [0 1] :content "2" :value 2}
-                 [:value 2 :self-evident]]]]])))))
+                 [:value 2 :self-evident]]]]]))))
+
+  (testing "Provenance of spilled cells"
+    (let [evaled-grid (grid/eval-sheet [["1" "=A1:A2" ""]
+                                        ["2" "" ""]])]
+      (is (= (provenance/cell-proof [0 1] (:grid evaled-grid))
+             [:spill
+              {:spilled-from [0 1]
+               :content "=A1:A2"
+               :value 1
+               :relative-address [0 0]}
+              [:cell-ref
+               {:address [0 0] :content "1" :value 1}
+               [:value 1 :self-evident]]]))
+      (is (= (provenance/cell-proof [1 1] (:grid evaled-grid))
+             [:spill
+              {:spilled-from [0 1]
+               :content "=A1:A2"
+               :value 2
+               :relative-address [1 0]}
+              [:cell-ref
+               {:address [1 0] :content "2" :value 2}
+               [:value 2 :self-evident]]])))))
 
 (run-all-tests)

@@ -37,9 +37,6 @@
 (defn- set-spilled-cell [grid address cell]
   (assoc-in grid address cell))
 
-(defn- disaddress [cell]
-  (dissoc cell :relative-address))
-
 (defn- set-spill-error [grid address]
   (-> grid
       (assoc-in (conj address :value) nil)
@@ -114,7 +111,6 @@
                         spilled-grid
                         address*
                         (-> spilled-cell
-                            disaddress
                             (assoc :interested-spillers (:interested-spillers cell))))
                        (conj updated-addresses address*)
                        (rest spillage))

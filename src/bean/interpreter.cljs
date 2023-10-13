@@ -36,7 +36,7 @@
     (+ left right)
     {:error "Addition only works for Integers"}))
 
-(defn- addresses-matrix
+(defn addresses-matrix
   [[start-row start-col] [end-row end-col]]
   (for [r (range start-row (inc end-row))]
     (for [c (range start-col (inc end-col))]
