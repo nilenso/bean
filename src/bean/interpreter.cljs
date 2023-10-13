@@ -3,7 +3,7 @@
             [bean.functions :as functions]
             [bean.util :as util]))
 
-(defn- is-expression? [[node-type & _]]
+(defn is-expression? [[node-type & _]]
   (= node-type :Expression))
 
 (defn- ast-result [error-or-val]
