@@ -2,7 +2,7 @@
   (:require [clojure.string :as str]
             [cljs.core :refer [char]]
             [bean.ui.drawing :as drawing]
-            [bean.ui.util :refer [px]]))
+            [bean.ui.util :refer [px] :as util]))
 
 (defn cs [& classes]
   (->> classes
@@ -43,18 +43,6 @@
      :edit content
      representation)])
 
-(defn- i->a [i]
-  (apply 
-   str
-   (loop [a '()
-          i (inc i)]
-     (let [m (mod i 26)
-           n (/ i 26)]
-       (if (> n 1)
-         (recur (cons (char (+ 64 m)) a)
-                n)
-         (cons (char (+ 64 m)) a))))))
-
 (defn- labels-top [rows state-fns]
   [:<>
    [:div {:class (cs :bean-label :bean-corner)}]
@@ -64,7 +52,7 @@
              :data-col i
              :class (cs :bean-label :bean-label-top)
              :on-mouse-down #(drawing/resize-top %1 (:resize-col state-fns))}
-       (i->a i)])
+       (util/i->a i)])
     (first rows))])
 
 (defn- row [state-fns i cells]

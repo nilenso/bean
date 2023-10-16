@@ -1,8 +1,9 @@
 (ns bean.ui.main
-  (:require [reagent.dom :as r]
+  (:require [bean.grid :as grid]
+            [bean.ui.provenance :as provenance]
+            [bean.ui.sheet :as sheet]
             [reagent.core :as rc]
-            [bean.grid :as grid]
-            [bean.ui.sheet :as sheet]))
+            [reagent.dom :as r]))
 
 (def num-rows 20)
 (def num-cols 12)
@@ -31,6 +32,9 @@
 (defn set-mode [[r c] mode]
   (swap! sheet1 #(update-in % [:grid r c :mode] (constantly mode)))
   (when (= mode :edit) (swap! sheet1 #(assoc-in % [:ui :selected-cell] [r c]))))
+
+(defn explain [expression]
+  (println (provenance/sentence-proof expression @sheet1)))
 
 (defn active-sheet []
   [sheet/sheet
