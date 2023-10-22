@@ -39,10 +39,10 @@
                      address (util/a1->rc a (js/parseInt n))]
                  (cell-proof address grid))
       :MatrixRef {:matrix
-                  (->> (apply interpreter/matrix-bounds args)
-                       (apply interpreter/addresses-matrix)
+                  (->> (apply util/matrix-bounds args)
+                       (apply util/addresses-matrix)
                        (util/map-on-matrix #(cell-proof % grid)))}
-      :Expression (if (interpreter/is-expression? arg)
+      :Expression (if (util/is-expression? arg)
                     (let [[left op right] args]
                       (combine-op-proof
                        (ast-result)

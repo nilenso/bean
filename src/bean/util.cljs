@@ -37,3 +37,19 @@
             (f sheet addr cell))
           sheet
           (mapcat identity (map-on-matrix-addressed vector grid))))
+
+(defn addresses-matrix
+  [[start-row start-col] [end-row end-col]]
+  (for [r (range start-row (inc end-row))]
+    (for [c (range start-col (inc end-col))]
+      [r c])))
+
+(defn is-expression? [[node-type & _]]
+  (= node-type :Expression))
+
+(defn matrix-bounds [start-ref end-ref]
+  (let [[_ start-a start-n] start-ref
+        [_ end-a end-n] end-ref
+        start-address (a1->rc start-a (js/parseInt start-n))
+        end-address (a1->rc end-a (js/parseInt end-n))]
+    [start-address end-address]))
