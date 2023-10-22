@@ -1,8 +1,6 @@
 (ns bean.interpreter
-  (:require [clojure.set :as set]
-            [bean.functions :as functions]
-            [bean.util :as util]
-            [bean.ui.sheet :as sheet]))
+  (:require [bean.functions :as functions]
+            [bean.util :as util]))
 
 (defn- ast-result [error-or-val]
   (if-let [error (:error error-or-val)]
@@ -141,14 +139,16 @@
   (-> (eval-ast (:ast cell) sheet)
       (ast-result->cell cell)))
 
-(defn eval-statements [scratch]
-  (comment
-    eval scratch
-    generate bindings names -> ast))
+(defn reset-and-eval-code [{:keys [code-ast] :as sheet}]
+  (update-in sheet
+             [:bindings]
+             (fn [_]
+               (eval-code code-ast sheet))))
 
 (comment def sheet {;; Source fields
                     :grid grid
-                    :scratch scratch
+                    :code code ;; code in the scratch text area
+                    :code-ast code-ast ;; ast of the code in the scratch text area
 
                     ;; Evaluated fields
                     :depgraph depgraph
