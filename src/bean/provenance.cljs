@@ -72,7 +72,13 @@
 (defn cell-proof
   "Returns a hiccup style proof tree.
    A proof is a vector of the shape [proof-type proof & dependency-proofs].
-  `dependency-proofs` is a list of proofs."
+  `dependency-proofs` is a list of proofs.
+
+   The proof types may be one of:
+
+   - :value - Created when a sub expression is evaluated to a value
+   - :cell-ref - Created at the top-level or when a sub expression references a CellRef
+   - :spill - Created when any cell evaluates into a matrix that spills into the given cell"
   [address grid]
   (let [cell (util/get-cell grid address)
         error? (:error cell)]
