@@ -2,13 +2,7 @@
   (:require [clojure.string :as str]
             [cljs.core :refer [char]]
             [bean.ui.drawing :as drawing]
-            [bean.ui.util :refer [px] :as util]))
-
-(defn cs [& classes]
-  (->> classes
-       (remove nil?)
-       (map name)
-       (str/join " ")))
+            [bean.ui.util :refer [cs px] :as util]))
 
 (defn- cell-dom-el
   [[row col]]

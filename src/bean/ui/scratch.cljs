@@ -1,10 +1,9 @@
 (ns bean.ui.scratch
   (:require [bean.scratch :as scratch]
-            [bean.ui.util :refer [cs] :as util]
-            [bean.ui.sheet :as sheet]))
+            [bean.ui.util :refer [cs] :as util]))
 
 (defn set-eval-state [sheet]
-(prn "UIII" (get sheet :ui))
+  (prn "UIII" (get sheet :ui))
   (assoc-in sheet
             [:ui :scratch-evaluation-state]
             (if (:errors sheet)

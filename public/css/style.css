@@ -159,10 +159,23 @@ body {
     box-sizing: border-box;
 }
 
-.scratch {
+.scratch-state-pending {
+    background: #fff5e3;
+}
+
+.scratch-state-error {
+    background: #ffe3e3;
+}
+
+.scratch-state-evaluated {
     background-color: var(--scratch-background);
     color: var(--scratch-foreground);
+}
+
+.scratch {
     background-image: linear-gradient(#eee8d5 0.7px, transparent 0.7px);
+    background-color: var(--scratch-background);
+    color: var(--scratch-foreground);
     background-size: 100% var(--cell-height);
     position: sticky;
     left: 0;
