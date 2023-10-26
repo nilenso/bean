@@ -1,5 +1,13 @@
 :root {
-    --dark-grey: #dedbd7;
+    --sheet-background: #073642;
+    --sheet-foreground: #93a1a1;
+    --sheet-error: #dc322f;
+    --sheet-label-background: #002b36;
+    --sheet-label-foreground: #839496;
+    --scratch-background: #073642;
+    --scratch-foreground: #93a1a1;
+    --scratch-sidebar: #cb4b16;
+    --sheet-border: #002b36;
     --cell-height: 30px;
     --cell-width: 110px;
     --cell-padding: 5px;
@@ -12,7 +20,7 @@
 
 body {
     margin: 0;
-    background: #fffefc;
+    background: var(--sheet-background);
 }
 
 .container {
@@ -24,6 +32,7 @@ body {
 
 .bean-sheet {
     display: grid;
+    color: var(--sheet-foreground);
     font-family: monospace;
     font-size: 1.1em;
     user-select: none;
@@ -31,18 +40,16 @@ body {
 }
 
 .bean-cell {
-    background: white;
-    outline: 0.5px solid var(--dark-grey);
+    outline: 0.5px solid var(--sheet-border);
     padding: var(--cell-padding);
     overflow: hidden;
     cursor: cell;
-    color: #111;
     box-sizing: border-box;
 }
 
 .bean-label {
-    background-color: #f2f2f1;
-    color: #666;
+    background-color: var(--sheet-label-background);
+    color: var(--sheet-label-foreground);
     padding: var(--cell-padding);
     box-sizing: border-box;
 }
@@ -55,8 +62,8 @@ body {
 
 .bean-label-top {
     text-align: center;
-    border-bottom: var(--cell-border) solid var(--dark-grey);
-    border-right: var(--cell-border) solid #8a868440;
+    border-right: var(--cell-border) solid var(--sheet-background);
+    border-bottom: var(--cell-border) solid var(--sheet-border);
     position: sticky;
     left: 0;
     padding: var(--cell-padding);
@@ -67,8 +74,8 @@ body {
 .bean-label-left {
     width: var(--label-left-width);
     text-align: center;
-    border-bottom: 0.1px solid #8a868440;
-    border-right: var(--cell-border) solid var(--dark-grey);
+    border-bottom: var(--cell-border) solid var(--sheet-background);
+    border-right: var(--cell-border) solid var(--sheet-border);
     position: sticky;
     left: var(--scratch-width);
     z-index: 0;
@@ -76,10 +83,12 @@ body {
 }
 
 .bean-corner {
-    background-color: #ddd;
-    color: darkgreen;
+    background-color: var(--sheet-label-background);
+    color: #859900;
     width: var(--label-left-width);
-    border-right: var(--cell-border) solid var(--dark-grey);
+    border-bottom: var(--cell-border) solid var(--sheet-background);
+    border-right: var(--cell-border) solid var(--sheet-background);
+    border-left: var(--cell-border) solid var(--sheet-background);
     position: sticky;
     z-index: 2;
     left: var(--scratch-width);
@@ -134,7 +143,7 @@ body {
 
 .cell-error:not(.edit-mode) {
     font-size: 9px;
-    color: #802525;
+    color: var(--sheet-error);
 }
 
 #cell-selector {
@@ -151,8 +160,9 @@ body {
 }
 
 .scratch {
-    background-color: #fff;
-    background-image: linear-gradient(#90b1ccaa 0.7px, transparent 0.7px);
+    background-color: var(--scratch-background);
+    color: var(--scratch-foreground);
+    background-image: linear-gradient(#eee8d5 0.7px, transparent 0.7px);
     background-size: 100% var(--cell-height);
     position: sticky;
     left: 0;
@@ -171,6 +181,7 @@ body {
 
 .scratch-text {
     background: none;
+    color: var(--scratch-foreground);
     border: none;
     padding: 0 10px 0 10px;
     height: 100%;
@@ -200,7 +211,19 @@ body {
     left: 30px;
     height: 100%;
     width: 2px;
-    background: 2px rgba(255, 0, 0, 0.4);
+    background: 2px var(--scratch-sidebar);
+}
+
+.scratch.scratch-state-evaluated::before {
+    background: 2px #859900;
+}
+
+.scratch.scratch-state-pending::before {
+    background: 2px #6c71c4;
+}
+
+.scratch.scratch-state-error::before {
+    background: 2px #dc322f;
 }
 
 .scratch-header {
