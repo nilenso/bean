@@ -164,5 +164,3 @@
                   [:value 0 :self-evident]]
                  [:value "+" :self-evident]
                  [:value 1 :self-evident]]]]])))))
-
-(run-all-tests)
