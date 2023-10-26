@@ -1,7 +1,7 @@
 (ns bean-tests.grid
   (:require [bean.grid :refer [parse-grid
-                               make-depgraph
                                eval-sheet]]
+            [bean.deps :refer [make-depgraph]]
             [bean.util :as util]
             [clojure.test :refer [deftest testing is]]))
 

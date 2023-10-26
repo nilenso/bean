@@ -117,7 +117,7 @@
       :Operation (ast-result (case arg
                                "+" bean-op-+)))))
 
-(defn- apply-f [cell sheet f params]
+(defn- apply-f [sheet f params]
   (if (fn? (:value f))
     ((:value f) params)
     (eval-ast (:value f)
