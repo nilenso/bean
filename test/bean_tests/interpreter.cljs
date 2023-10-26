@@ -1,5 +1,5 @@
 (ns bean-tests.interpreter
-  (:require [bean.interpreter :refer [bean-op-+ apply-op]]
+  (:require [bean.interpreter :refer [bean-op-+ apply-op eval-code]]
             [clojure.test :refer [deftest testing is]]))
 
 (deftest bean-op-+-test
@@ -42,3 +42,24 @@
             [[{:value 2 :representation "2"}
               {:value 4 :representation "4"}
               {:value 2 :representation "2"}]]}))))
+
+(deftest eval-code-test
+  (testing "Let statements bindings are usable"
+    (is (= {:bindings {"foo" {:value 398
+                                        :representation "398"}}}
+           (eval-code
+              [:Program [:LetStatement [:Name "foo"]
+                         [:Expression
+                          [:Expression [:Value [:Integer "199"]]]
+                          [:Operation "+"]
+                          [:Expression [:Value [:Integer "199"]]]]]]
+              {})))
+    (is (= {:bindings {"foo" {:value 398
+                                        :representation "398"}}}
+           (eval-code
+              [:Program [:LetStatement [:Name "foo"]
+                         [:Expression
+                          [:Expression [:Name "abc"]]
+                          [:Operation "+"]
+                          [:Expression [:Value [:Integer "199"]]]]]]
+              {}))))) 

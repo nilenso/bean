@@ -2,8 +2,9 @@
   (:require [clojure.set :as set]
             [bean.util :as util]))
 
-(defn ->ref-dep [dep]
-  [:ref dep])
+(defn ->ref-dep [dependent-address]
+  "Return a representation of a :ref dependent for the given address."
+  [:ref dependent-address])
 
 (defn ast->deps [ast]
   (let [[node-type & [arg :as args]] ast]

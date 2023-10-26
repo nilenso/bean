@@ -1,7 +1,8 @@
 (ns bean.interpreter
   (:require [clojure.set :as set]
             [bean.functions :as functions]
-            [bean.util :as util]))
+            [bean.util :as util]
+            [bean.ui.sheet :as sheet]))
 
 (defn- ast-result [error-or-val]
   (if-let [error (:error error-or-val)]
@@ -116,6 +117,16 @@
       :QuotedString (ast-result arg)
       :Operation (ast-result (case arg
                                "+" bean-op-+)))))
+
+(defn eval-code
+  "Runs code and assigns bindings one at a time."
+  [code-ast sheet]
+(prn (rest code-ast))
+  (reduce (fn [sheet [_ [_name name] expr]]
+            (let [output (eval-ast expr sheet)]
+              (update sheet :bindings #(assoc % name output))))
+          sheet
+          (rest code-ast)))
 
 (defn- apply-f [sheet f params]
   (if (fn? (:value f))
