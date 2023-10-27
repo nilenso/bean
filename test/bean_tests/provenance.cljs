@@ -84,6 +84,7 @@
              [:spill
               {:spilled-from [0 1]
                :content "=A1:A2"
+               :address [0 1]
                :value 1
                :relative-address [0 0]}
               [:cell-ref
@@ -93,6 +94,7 @@
              [:spill
               {:spilled-from [0 1]
                :content "=A1:A2"
+               :address [1 1]
                :value 2
                :relative-address [1 0]}
               [:cell-ref
@@ -106,6 +108,7 @@
              [:spill
               {:spilled-from [0 1]
                :content "=A1:A2+C1:C2"
+               :address [1 1]
                :value 3
                :relative-address [1 0]}
               [:value 3
@@ -126,6 +129,7 @@
              [:spill
               {:spilled-from [0 1]
                :content "=A1:A2+1"
+               :address [1 1]
                :value 3
                :relative-address [1 0]}
               [:value 3
@@ -141,6 +145,7 @@
              [:spill
               {:spilled-from [0 1]
                :content "=A1:A2+C1:C2+D1:D2+1"
+               :address [1 1]
                :value 7
                :relative-address [1 0]}
               [:value 7
