@@ -9,9 +9,11 @@
 (def num-cols 12)
 
 (defn- start-sheet []
-  (vec
-   (for [_ (range num-rows)]
-     (vec (map (fn [_] "") (range num-cols))))))
+  (grid/new-sheet
+   (vec
+    (for [_ (range num-rows)]
+      (vec (map (fn [_] "") (range num-cols)))))
+   ""))
 
 (defonce sheet1
   (rc/atom

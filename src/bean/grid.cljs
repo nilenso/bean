@@ -133,18 +133,21 @@
        (mapcat #(get-in grid (conj % :interested-spillers)))
        set))
 
-(defn- make-sheet [parsed-grid]
+(defn- make-sheet [parsed-grid & code]
   {:grid parsed-grid
+   :code code
    :bindings {}
    :depgraph (deps/make-depgraph parsed-grid)})
 
+(defn new-sheet [content-grid code]
+  (make-sheet (parse-grid content-grid) code))
+
 (defn eval-sheet
-  ([content-grid]
-   (let [sheet (make-sheet (parse-grid content-grid))]
-     (util/reduce-on-sheet-addressed
-      (fn [sheet address _]
-        (eval-sheet sheet address))
-      sheet)))
+  ([sheet]
+   (util/reduce-on-sheet-addressed
+    (fn [sheet address _]
+      (eval-sheet sheet address))
+    sheet))
 
   ([{:keys [grid] :as sheet} address]
    (eval-sheet sheet address (util/get-cell grid address) false))
@@ -208,7 +211,7 @@
   :sheet
   {;; Source fields
    :grid grid
-   :scratch scratch
+   :code code
 
    ;; Evaluated fields
    :depgraph depgraph
