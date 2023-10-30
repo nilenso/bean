@@ -1,6 +1,7 @@
 (ns bean.grid-test
   (:require [bean.grid :refer [parse-grid
-                               eval-sheet]]
+                               eval-sheet
+                               new-sheet]]
             [bean.deps :refer [make-depgraph]]
             [bean.util :as util]
             [clojure.test :refer [deftest testing is]]))
@@ -12,7 +13,7 @@
                 ["=A1+A2" "" ""]
                 ["=A3+1" "" ""]
                 ["=A1+A2+A3+A4+10" "" ""]]
-          evaluated-sheet (eval-sheet grid)]
+          evaluated-sheet (eval-sheet (new-sheet grid ""))]
       (is (= (util/map-on-matrix
               #(select-keys % [:value :content :error :representation])
               (:grid evaluated-sheet))
@@ -44,7 +45,7 @@
                 ["=A3+1" "" ""]]]
       (is (= (util/map-on-matrix
               #(select-keys % [:value :content :error :representation])
-              (:grid (eval-sheet grid)))
+              (:grid (eval-sheet (new-sheet grid ""))))
              [[{:content "=1" :value 1 :representation "1"}
                {:content "" :value nil :representation ""}
                {:content "" :value nil :representation ""}]
@@ -62,7 +63,7 @@
     (let [grid [["=A1000+1" "=A1+100" ""]]]
       (is (= (util/map-on-matrix
               #(select-keys % [:error])
-              (:grid (eval-sheet grid)))
+              (:grid (eval-sheet (new-sheet grid ""))))
              [[{:error "Invalid address [999 0]"}
                {:error "Invalid address [999 0]"}
                {}]]))))
@@ -71,7 +72,7 @@
     (let [grid [["=A1000" "=A1" "=B1"]]]
       (is (= (util/map-on-matrix
               #(select-keys % [:error])
-              (:grid (eval-sheet grid)))
+              (:grid (eval-sheet (new-sheet grid ""))))
              [[{:error "Invalid address [999 0]"}
                {:error "Invalid address [999 0]"}
                {:error "Invalid address [999 0]"}]]))))
@@ -80,7 +81,7 @@
     (let [grid [["1" ""]
                 ["2" "=A1:A2"]
                 ["" ""]]
-          evaluated-sheet (eval-sheet grid)
+          evaluated-sheet (eval-sheet (new-sheet grid ""))
           matrix (get-in evaluated-sheet [:grid 1 1 :matrix])]
       (is (= matrix [[{:content "1"
                        :ast [:CellContents [:Integer "1"]]
@@ -98,7 +99,7 @@
     (let [grid [["1" ""]
                 ["2" "=A1:A2"]
                 ["" "A string"]]
-          evaluated-sheet (eval-sheet grid)]
+          evaluated-sheet (eval-sheet (new-sheet grid ""))]
       (is (get-in evaluated-sheet [:grid 1 1 :matrix]))
       (is (= (get-in evaluated-sheet [:grid 1 1 :error]) "Spill error"))
       (is (= (get-in evaluated-sheet [:grid 2 1 :value]) "A string"))))
@@ -107,7 +108,7 @@
     (let [grid [["1" "3"]
                 ["2" "=A1:A2"]
                 ["=A1:B1" ""]]
-          evaluated-sheet (eval-sheet grid)]
+          evaluated-sheet (eval-sheet (new-sheet grid ""))]
       (is (= (get-in evaluated-sheet [:grid 1 1 :value]) 1))
       (is (= (get-in evaluated-sheet [:grid 2 1 :value]) 2))
       (is (= (get-in evaluated-sheet [:grid 2 0 :error]) "Spill error"))
@@ -119,12 +120,13 @@
               ["Spill error" "2"]]))))
 
   (testing "Cells depending on spillages are evaluated"
-    (let [grid (:grid (eval-sheet [["1" "" "=A1:A3"]
-                                   ["2" "" ""]
-                                   ["3" "=C2" ""]
-                                   ["=B3" "=A3:A5" ""]
-                                   ["" "" ""]
-                                   ["" "" ""]]))]
+    (let [grid (:grid (eval-sheet (new-sheet [["1" "" "=A1:A3"]
+                                              ["2" "" ""]
+                                              ["3" "=C2" ""]
+                                              ["=B3" "=A3:A5" ""]
+                                              ["" "" ""]
+                                              ["" "" ""]]
+                                             "")))]
       (is (= (get-in grid [2 1 :value]) 2))
       (is (= (get-in grid [3 0 :value]) 2))
       (is (= (get-in grid [3 1 :value]) 3))
@@ -133,11 +135,12 @@
   (testing "Function invocation"
     (is (= (util/map-on-matrix
             #(select-keys % [:value :content :error :representation])
-            (:grid (eval-sheet [["1" "=concat(\"hello \" A1 A2)" ""]
-                                ["2" "" ""]
-                                ["=A1+A2" "" ""]
-                                ["=A3+1" "" ""]
-                                ["=A1+A2+A3+A4+10" "" ""]])))
+            (:grid (eval-sheet (new-sheet [["1" "=concat(\"hello \" A1 A2)" ""]
+                                           ["2" "" ""]
+                                           ["=A1+A2" "" ""]
+                                           ["=A3+1" "" ""]
+                                           ["=A1+A2+A3+A4+10" "" ""]]
+                                          ""))))
            [[{:content "1" :value 1 :representation "1"}
              {:content "=concat(\"hello \" A1 A2)" :value "hello 12" :representation "hello 12"}
              {:content "" :value nil :representation ""}]
@@ -157,8 +160,9 @@
   (testing "Inlined function invocation"
     (is (= (util/map-on-matrix
             #(select-keys % [:value :content :error :representation])
-            (:grid (eval-sheet [["1" "={x+y+z}(9 A1 A2)"]
-                                ["2" ""]])))
+            (:grid (eval-sheet (new-sheet [["1" "={x+y+z}(9 A1 A2)"]
+                                           ["2" ""]]
+                                          ""))))
            [[{:content "1" :value 1 :representation "1"}
              {:content "={x+y+z}(9 A1 A2)" :value 12 :representation "12"}]
             [{:content "2" :value 2 :representation "2"}
@@ -166,7 +170,8 @@
 
 (deftest incremental-evaluate-grid
   (testing "Basic incremental evaluation given a pre-evaluated grid and a depgraph"
-    (let [sheet (eval-sheet [["10" "=A1" "=A1+B1" "100" "=C1" "=A1"]])
+    (let [sheet (eval-sheet (new-sheet [["10" "=A1" "=A1+B1" "100" "=C1" "=A1"]]
+                                       ""))
           {evaluated-grid :grid depgraph :depgraph} (eval-sheet sheet [0 1] "=A1+D1")]
       (is (= 10 (:value (util/get-cell evaluated-grid [0 0]))))
       (is (= 110 (:value (util/get-cell evaluated-grid [0 1]))))
@@ -180,7 +185,8 @@
               [:ref [0 3]] #{[:ref [0 1]]}}))))
 
   (testing "Older dependencies are removed in an incremental evaluation"
-    (let [sheet (eval-sheet [["10" "=A1" "=A1+B1" "100"]])
+    (let [sheet (eval-sheet (new-sheet [["10" "=A1" "=A1+B1" "100"]]
+                                       ""))
           {depgraph :depgraph} (eval-sheet sheet [0 1] "=D1")]
       (is (= depgraph
              {[:ref [0 0]] #{[:ref [0 2]]}
@@ -188,9 +194,10 @@
               [:ref [0 3]] #{[:ref [0 1]]}}))))
 
   (testing "Cells containing matrix references are spilled"
-    (let [sheet (eval-sheet [["10" ""]
-                             ["20" ""]
-                             ["30" ""]])
+    (let [sheet (eval-sheet (new-sheet [["10" ""]
+                                        ["20" ""]
+                                        ["30" ""]]
+                                       ""))
           {evaluated-grid :grid depgraph :depgraph} (eval-sheet sheet [0 1] "=A1:A3")]
       (is (= (util/map-on-matrix :representation evaluated-grid)
              [["10" "10"]
@@ -202,10 +209,11 @@
                        [:ref [2 0]] #{[:ref [0 1]]}}))))
 
   (testing "If the address is referred somewhere in a matrix reference, the matrix reference is re-evaluated and spilled"
-    (let [sheet (eval-sheet [["10" "=A1:A3"]
-                             ["" ""]
-                             ["" ""]
-                             ["=B2" ""]])
+    (let [sheet (eval-sheet (new-sheet [["10" "=A1:A3"]
+                                        ["" ""]
+                                        ["" ""]
+                                        ["=B2" ""]]
+                                       ""))
           {evaluated-grid :grid depgraph :depgraph} (eval-sheet sheet [1 0] "20")]
       (is (= (util/map-on-matrix :representation evaluated-grid)
              [["10" "10"]
@@ -214,9 +222,10 @@
               ["20" ""]]))))
 
   (testing "If content is added to a spilled cell, the origin results in a spill error"
-    (let [sheet (eval-sheet [["10" "=A1:A3"]
-                             ["20" ""]
-                             ["" ""]])
+    (let [sheet (eval-sheet (new-sheet [["10" "=A1:A3"]
+                                        ["20" ""]
+                                        ["" ""]]
+                                       ""))
           {evaluated-grid :grid} (eval-sheet sheet [1 1] "A string")]
       (is (= (util/map-on-matrix :representation evaluated-grid)
              [["10" "Spill error"]
@@ -224,10 +233,11 @@
               ["" ""]]))))
 
   (testing "Unorderly references"
-    (let [sheet (eval-sheet [["=B1:B4" "8"      "=D3" "19"]
-                             [""       "1"      "2"  "4"]
-                             [""       "=C1:D2" ""   "=C2+D2"]
-                             [""       "" ""   ""]])
+    (let [sheet (eval-sheet (new-sheet [["=B1:B4" "8"      "=D3" "19"]
+                                        [""       "1"      "2"  "4"]
+                                        [""       "=C1:D2" ""   "=C2+D2"]
+                                        [""       "" ""   ""]]
+                                       ""))
           {evaluated-grid :grid} (eval-sheet sheet [1 2] "202")]
       (is (= (util/map-on-matrix :representation (:grid sheet))
              [["8" "8" "6" "19"]
