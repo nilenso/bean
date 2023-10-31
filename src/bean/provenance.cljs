@@ -2,8 +2,13 @@
   (:require [bean.util :as util]
             [bean.interpreter :as interpreter]))
 
+(defn- value-proof [v & args]
+  (->> args
+       (concat [:value v])
+       (into [])))
+
 (defn- self-evident [value]
-  [:value value :self-evident])
+  (value-proof value :self-evident))
 
 (defn combine-op-proof [ast-result lproof op rproof]
   (let [value (:value ast-result)
@@ -13,16 +18,16 @@
     (cond
       (and lmatrix rmatrix) {:matrix
                              (util/map-on-matrix-addressed
-                              #(do [:value (:value %2) (get-in lmatrix %1) op (get-in rmatrix %1)])
+                              #(value-proof (:value %2) (get-in lmatrix %1) op (get-in rmatrix %1))
                               matrix)}
       lmatrix {:matrix
                (util/map-on-matrix-addressed
-                #(do [:value (get-in matrix (conj %1 :value)) %2 op rproof])
+                #(value-proof (get-in matrix (conj %1 :value)) %2 op rproof)
                 lmatrix)}
       rmatrix {:matrix (util/map-on-matrix-addressed
-                #(do [:value (get-in matrix (conj %1 :value)) lproof op %2])
+                #(value-proof (get-in matrix (conj %1 :value)) lproof op %2)
                 rmatrix)}
-      :else [:value value lproof op rproof])))
+      :else (value-proof value lproof op rproof))))
 
 (declare cell-proof)
 
