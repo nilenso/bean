@@ -11,27 +11,6 @@
    {:content content
     :ast (parser/parse content)}))
 
-(defn- depgraph-add-edge [depgraph parent child]
-  (assoc depgraph parent (conj (get depgraph parent #{}) child)))
-
-(defn- depgraph-remove-edge [depgraph parent child]
-  (assoc depgraph parent (disj (get depgraph parent) child)))
-
-(defn make-depgraph [grid]
-  (->> grid
-       (util/map-on-matrix-addressed
-        #(for [dependency (interpreter/ast->deps (:ast %2))]
-           {:parent dependency :child (deps/->ref-dep %1)}))
-       flatten
-       (reduce #(depgraph-add-edge %1 (:parent %2) (:child %2)) {})))
-
-(defn- update-depgraph [depgraph address old-cell new-cell]
-  (let [old-dependencies (interpreter/ast->deps (:ast old-cell))
-        new-dependencies (interpreter/ast->deps (:ast new-cell))]
-    (as-> depgraph g
-      (reduce #(depgraph-remove-edge %1 %2 (deps/->ref-dep address)) g old-dependencies)
-      (reduce #(depgraph-add-edge %1 %2 (deps/->ref-dep address)) g new-dependencies))))
-
 (defn- offset [[start-row start-col] [offset-rows offset-cols]]
   [(+ start-row offset-rows) (+ start-col offset-cols)])
 
@@ -157,7 +136,7 @@
 (defn- make-sheet [parsed-grid]
   {:grid parsed-grid
    :bindings {}
-   :depgraph (make-depgraph parsed-grid)})
+   :depgraph (deps/make-depgraph parsed-grid)})
 
 (defn eval-sheet
   ([content-grid]
@@ -195,7 +174,7 @@
       eval-sheet
       {:grid grid*
        :depgraph (cond-> depgraph
-                   content-changed? (update-depgraph
+                   content-changed? (deps/update-depgraph
                                      address
                                      existing-cell
                                      cell*))

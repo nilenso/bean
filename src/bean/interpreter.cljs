@@ -1,11 +1,6 @@
 (ns bean.interpreter
-  (:require [clojure.set :as set]
-            [bean.functions :as functions]
-            [bean.deps :as deps]
+  (:require [bean.functions :as functions]
             [bean.util :as util]))
-
-(defn is-expression? [[node-type & _]]
-  (= node-type :Expression))
 
 (defn- ast-result [error-or-val]
   (if-let [error (:error error-or-val)]
@@ -37,16 +32,10 @@
     (+ left right)
     {:error "Addition only works for Integers"}))
 
-(defn addresses-matrix
-  [[start-row start-col] [end-row end-col]]
-  (for [r (range start-row (inc end-row))]
-    (for [c (range start-col (inc end-col))]
-      [r c])))
-
 (defn- eval-matrix [start-address end-address grid]
   (util/map-on-matrix
    #(util/get-cell grid %)
-   (addresses-matrix start-address end-address)))
+   (util/addresses-matrix start-address end-address)))
 
 (defn- apply-values
   ([f ast-results]
@@ -84,34 +73,6 @@
       rmatrix (apply-values #(apply %1 [%3 %2]) [op left] rmatrix)
       :else (apply-values #(apply %1 [%2 %3]) [op left right]))))
 
-(defn matrix-bounds [start-ref end-ref]
-  (let [[_ start-a start-n] start-ref
-        [_ end-a end-n] end-ref
-        start-address (util/a1->rc start-a (js/parseInt start-n))
-        end-address (util/a1->rc end-a (js/parseInt end-n))]
-    [start-address end-address]))
-
-(defn ast->deps [ast]
-  (let [[node-type & [arg :as args]] ast]
-    (case node-type
-      :CellContents (ast->deps arg)
-      :FunctionInvocation (apply set/union
-                                 (map ast->deps args))
-      :CellRef (let [[_ a n] ast]
-                 #{(deps/->ref-dep (util/a1->rc a (js/parseInt n)))})
-      :MatrixRef (->> (apply matrix-bounds args)
-                      (apply addresses-matrix)
-                      (mapcat identity)
-                      (map deps/->ref-dep)
-                      set)
-      :Expression (if (is-expression? arg)
-                    (let [[left _ right] args]
-                      (set/union
-                       (ast->deps left)
-                       (ast->deps right)))
-                    (ast->deps arg))
-      #{})))
-
 (def global-ctx
   {"concat" {:value functions/bean-concat
              :representation "f"}})
@@ -135,14 +96,14 @@
                    cell-exists? cell->ast-result
                    (not cell-exists?) ast-result))
       :MatrixRef {:matrix (->> args
-                               (apply matrix-bounds)
+                               (apply util/matrix-bounds)
                                (apply eval-matrix*))}
       :Name (or (get bindings arg) (get global-ctx arg))
       :FunctionDefinition (fn-result arg)
       :FunctionInvocation (apply-f sheet
                                    (eval-sub-ast arg)
                                    (map eval-sub-ast (rest args)))
-      :Expression (if (is-expression? arg)
+      :Expression (if (util/is-expression? arg)
                     (let [[left op right] args]
                       (apply-op (eval-sub-ast op)
                                 (eval-sub-ast left)
@@ -155,7 +116,7 @@
       :Operation (ast-result (case arg
                                "+" bean-op-+)))))
 
-(defn- apply-f [{:keys [grid bindings] :as sheet} f params]
+(defn- apply-f [sheet f params]
   (if (fn? (:value f))
     ((:value f) params)
     (eval-ast (:value f)
