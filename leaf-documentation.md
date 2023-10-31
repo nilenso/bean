@@ -2,5 +2,5 @@
 
 [BNF Grammar](src/bean/parser.cljs)
 
-Operators: `+`
-Functions: `concat`
+- Operators: `+`
+- Functions: `concat`
