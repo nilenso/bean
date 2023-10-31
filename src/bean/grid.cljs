@@ -146,16 +146,16 @@
   ([sheet]
    (util/reduce-on-sheet-addressed
     (fn [sheet address _]
-      (eval-sheet sheet address))
+      (eval-sheet address sheet))
     sheet))
 
-  ([{:keys [grid] :as sheet} address]
-   (eval-sheet sheet address (util/get-cell grid address) false))
+  ([address {:keys [grid] :as sheet}]
+   (eval-sheet address sheet (util/get-cell grid address) false))
 
-  ([sheet address new-content]
-   (eval-sheet sheet address (content->cell new-content) true))
+  ([address sheet new-content]
+   (eval-sheet address sheet (content->cell new-content) true))
 
-  ([{:keys [grid depgraph ui] :as sheet} address cell content-changed?]
+  ([address {:keys [grid depgraph ui] :as sheet} cell content-changed?]
    ; todo: if cyclic dependency break with error
    (let [existing-cell (util/get-cell grid address)
          cell* (eval-cell cell sheet)
@@ -174,7 +174,7 @@
                                        (interested-spillers updated-addrs grid))
                             (disj address))]
      (reduce
-      eval-sheet
+      #(eval-sheet %2 %1)
       {:grid grid*
        :depgraph (cond-> depgraph
                    content-changed? (deps/update-depgraph

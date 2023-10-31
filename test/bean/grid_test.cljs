@@ -172,7 +172,7 @@
   (testing "Basic incremental evaluation given a pre-evaluated grid and a depgraph"
     (let [sheet (eval-sheet (new-sheet [["10" "=A1" "=A1+B1" "100" "=C1" "=A1"]]
                                        ""))
-          {evaluated-grid :grid depgraph :depgraph} (eval-sheet sheet [0 1] "=A1+D1")]
+          {evaluated-grid :grid depgraph :depgraph} (eval-sheet [0 1] sheet "=A1+D1")]
       (is (= 10 (:value (util/get-cell evaluated-grid [0 0]))))
       (is (= 110 (:value (util/get-cell evaluated-grid [0 1]))))
       (is (= 120 (:value (util/get-cell evaluated-grid [0 2]))))
@@ -187,7 +187,7 @@
   (testing "Older dependencies are removed in an incremental evaluation"
     (let [sheet (eval-sheet (new-sheet [["10" "=A1" "=A1+B1" "100"]]
                                        ""))
-          {depgraph :depgraph} (eval-sheet sheet [0 1] "=D1")]
+          {depgraph :depgraph} (eval-sheet [0 1] sheet "=D1")]
       (is (= depgraph
              {[:ref [0 0]] #{[:ref [0 2]]}
               [:ref [0 1]] #{[:ref [0 2]]}
@@ -198,7 +198,7 @@
                                         ["20" ""]
                                         ["30" ""]]
                                        ""))
-          {evaluated-grid :grid depgraph :depgraph} (eval-sheet sheet [0 1] "=A1:A3")]
+          {evaluated-grid :grid depgraph :depgraph} (eval-sheet [0 1] sheet "=A1:A3")]
       (is (= (util/map-on-matrix :representation evaluated-grid)
              [["10" "10"]
               ["20" "20"]
@@ -214,7 +214,7 @@
                                         ["" ""]
                                         ["=B2" ""]]
                                        ""))
-          {evaluated-grid :grid depgraph :depgraph} (eval-sheet sheet [1 0] "20")]
+          {evaluated-grid :grid depgraph :depgraph} (eval-sheet [1 0] sheet "20")]
       (is (= (util/map-on-matrix :representation evaluated-grid)
              [["10" "10"]
               ["20" "20"]
@@ -226,7 +226,7 @@
                                         ["20" ""]
                                         ["" ""]]
                                        ""))
-          {evaluated-grid :grid} (eval-sheet sheet [1 1] "A string")]
+          {evaluated-grid :grid} (eval-sheet [1 1] sheet "A string")]
       (is (= (util/map-on-matrix :representation evaluated-grid)
              [["10" "Spill error"]
               ["20" "A string"]
@@ -238,7 +238,7 @@
                                         [""       "=C1:D2" ""   "=C2+D2"]
                                         [""       "" ""   ""]]
                                        ""))
-          {evaluated-grid :grid} (eval-sheet sheet [1 2] "202")]
+          {evaluated-grid :grid} (eval-sheet [1 2] sheet "202")]
       (is (= (util/map-on-matrix :representation (:grid sheet))
              [["8" "8" "6" "19"]
               ["1" "1" "2" "4"]
