@@ -1,6 +1,6 @@
 # Leaf documentation
 
-Link to BNF Grammar
+[BNF Grammar](src/bean/parser.cljs)
 
 Operators: `+`
 Functions: `concat`
