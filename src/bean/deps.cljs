@@ -3,7 +3,7 @@
             [bean.util :as util]))
 
 (defn ->ref-dep [dep]
-  [:ref dep])
+  [:cell dep])
 
 (defn- ast->deps [ast]
   (let [[node-type & [arg :as args]] ast]
@@ -44,5 +44,5 @@
   (let [old-dependencies (ast->deps (:ast old-cell))
         new-dependencies (ast->deps (:ast new-cell))]
     (as-> depgraph g
-      (reduce #(depgraph-remove-edge %1 %2 (->ref-dep address)) g old-dependencies)
-      (reduce #(depgraph-add-edge %1 %2 (->ref-dep address)) g new-dependencies))))
+      (reduce #(depgraph-remove-edge %1 %2 address) g old-dependencies)
+      (reduce #(depgraph-add-edge %1 %2 address) g new-dependencies))))
