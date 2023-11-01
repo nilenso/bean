@@ -23,7 +23,7 @@
                :selected-cell nil})))
 
 (defn update-cell [address content]
-  (swap! sheet1 #(grid/eval-sheet address % content)))
+  (swap! sheet1 #(grid/eval-address address % content)))
 
 (defn resize-row [row height]
   (swap! sheet1 #(assoc-in % [:ui :row-heights row] height)))
