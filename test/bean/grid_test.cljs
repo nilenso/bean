@@ -34,10 +34,10 @@
                {:content "" :value nil :representation ""}
                {:content "" :value nil :representation ""}]]))
       (is (= (:depgraph evaluated-sheet)
-             {[:ref [0 0]] #{[:ref [2 0]] [:ref [4 0]]}
-              [:ref [1 0]] #{[:ref [2 0]] [:ref [4 0]]}
-              [:ref [2 0]] #{[:ref [3 0]] [:ref [4 0]]}
-              [:ref [3 0]] #{[:ref [4 0]]}}))))
+             {[:cell [0 0]] #{[:cell [2 0]] [:cell [4 0]]}
+              [:cell [1 0]] #{[:cell [2 0]] [:cell [4 0]]}
+              [:cell [2 0]] #{[:cell [3 0]] [:cell [4 0]]}
+              [:cell [3 0]] #{[:cell [4 0]]}}))))
 
   (testing "Returns errors"
     (let [grid [["=1" "" ""]
@@ -173,41 +173,41 @@
   (testing "Basic incremental evaluation given a pre-evaluated grid and a depgraph"
     (let [sheet (eval-sheet (new-sheet [["10" "=A1" "=A1+B1" "100" "=C1" "=A1"]]
                                        ""))
-          {evaluated-grid :grid depgraph :depgraph} (eval-address [0 1] sheet "=A1+D1")]
+          {evaluated-grid :grid depgraph :depgraph} (eval-address [:cell [0 1]] sheet "=A1+D1")]
       (is (= 10 (:value (util/get-cell evaluated-grid [0 0]))))
       (is (= 110 (:value (util/get-cell evaluated-grid [0 1]))))
       (is (= 120 (:value (util/get-cell evaluated-grid [0 2]))))
       (is (= 100 (:value (util/get-cell evaluated-grid [0 3]))))
       (is (= 120 (:value (util/get-cell evaluated-grid [0 4]))))
       (is (= depgraph
-             {[:ref [0 0]] #{[:ref [0 1]] [:ref [0 2]] [:ref [0 5]]}
-              [:ref [0 1]] #{[:ref [0 2]]}
-              [:ref [0 2]] #{[:ref [0 4]]}
-              [:ref [0 3]] #{[:ref [0 1]]}}))))
+             {[:cell [0 0]] #{[:cell [0 1]] [:cell [0 2]] [:cell [0 5]]}
+              [:cell [0 1]] #{[:cell [0 2]]}
+              [:cell [0 2]] #{[:cell [0 4]]}
+              [:cell [0 3]] #{[:cell [0 1]]}}))))
 
   (testing "Older dependencies are removed in an incremental evaluation"
     (let [sheet (eval-sheet (new-sheet [["10" "=A1" "=A1+B1" "100"]]
                                        ""))
-          {depgraph :depgraph} (eval-address [0 1] sheet "=D1")]
+          {depgraph :depgraph} (eval-address [:cell [0 1]] sheet "=D1")]
       (is (= depgraph
-             {[:ref [0 0]] #{[:ref [0 2]]}
-              [:ref [0 1]] #{[:ref [0 2]]}
-              [:ref [0 3]] #{[:ref [0 1]]}}))))
+             {[:cell [0 0]] #{[:cell [0 2]]}
+              [:cell [0 1]] #{[:cell [0 2]]}
+              [:cell [0 3]] #{[:cell [0 1]]}}))))
 
   (testing "Cells containing matrix references are spilled"
     (let [sheet (eval-sheet (new-sheet [["10" ""]
                                         ["20" ""]
                                         ["30" ""]]
                                        ""))
-          {evaluated-grid :grid depgraph :depgraph} (eval-address [0 1] sheet "=A1:A3")]
+          {evaluated-grid :grid depgraph :depgraph} (eval-address [:cell [0 1]] sheet "=A1:A3")]
       (is (= (util/map-on-matrix :representation evaluated-grid)
              [["10" "10"]
               ["20" "20"]
               ["30" "30"]]))
       (is (get-in evaluated-grid [0 1 :matrix]))
-      (is (= depgraph {[:ref [0 0]] #{[:ref [0 1]]}
-                       [:ref [1 0]] #{[:ref [0 1]]}
-                       [:ref [2 0]] #{[:ref [0 1]]}}))))
+      (is (= depgraph {[:cell [0 0]] #{[:cell [0 1]]}
+                       [:cell [1 0]] #{[:cell [0 1]]}
+                       [:cell [2 0]] #{[:cell [0 1]]}}))))
 
   (testing "If the address is referred somewhere in a matrix reference, the matrix reference is re-evaluated and spilled"
     (let [sheet (eval-sheet (new-sheet [["10" "=A1:A3"]
@@ -215,7 +215,7 @@
                                         ["" ""]
                                         ["=B2" ""]]
                                        ""))
-          {evaluated-grid :grid depgraph :depgraph} (eval-address [1 0] sheet "20")]
+          {evaluated-grid :grid depgraph :depgraph} (eval-address [:cell [1 0]] sheet "20")]
       (is (= (util/map-on-matrix :representation evaluated-grid)
              [["10" "10"]
               ["20" "20"]
@@ -227,7 +227,7 @@
                                         ["20" ""]
                                         ["" ""]]
                                        ""))
-          {evaluated-grid :grid} (eval-address [1 1] sheet "A string")]
+          {evaluated-grid :grid} (eval-address [:cell [1 1]] sheet "A string")]
       (is (= (util/map-on-matrix :representation evaluated-grid)
              [["10" "Spill error"]
               ["20" "A string"]
@@ -239,7 +239,7 @@
                                         [""       "=C1:D2" ""   "=C2+D2"]
                                         [""       "" ""   ""]]
                                        ""))
-          {evaluated-grid :grid} (eval-address [1 2] sheet "202")]
+          {evaluated-grid :grid} (eval-address [:cell [1 2]] sheet "202")]
       (is (= (util/map-on-matrix :representation (:grid sheet))
              [["8" "8" "6" "19"]
               ["1" "1" "2" "4"]
@@ -254,9 +254,9 @@
 (deftest depgraph-test
   (testing "Returns a reverse dependency graph for an evaluated grid"
     (is (= (make-depgraph (parse-grid [["10" "=A1" "=A1+B1" "=C1"]]))
-           {[:ref [0 0]] #{[:ref [0 2]] [:ref [0 1]]}
-            [:ref [0 1]] #{[:ref [0 2]]}
-            [:ref [0 2]] #{[:ref [0 3]]}}))))
+           {[:cell [0 0]] #{[:cell [0 2]] [:cell [0 1]]}
+            [:cell [0 1]] #{[:cell [0 2]]}
+            [:cell [0 2]] #{[:cell [0 3]]}}))))
 
 (deftest map-on-matrix-test
   (testing "Row order map of f over a 2D matrix"
