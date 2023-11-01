@@ -142,18 +142,12 @@
 (defn new-sheet [content-grid code]
   (make-sheet (parse-grid content-grid) code))
 
-(defn eval-sheet
-  ([sheet]
-   (util/reduce-on-sheet-addressed
-    (fn [sheet address _]
-      (eval-sheet address sheet))
-    sheet))
-
+(defn eval-address
   ([address {:keys [grid] :as sheet}]
-   (eval-sheet address sheet (util/get-cell grid address) false))
+   (eval-address address sheet (util/get-cell grid address) false))
 
   ([address sheet new-content]
-   (eval-sheet address sheet (content->cell new-content) true))
+   (eval-address address sheet (content->cell new-content) true))
 
   ([address {:keys [grid depgraph ui] :as sheet} cell content-changed?]
    ; todo: if cyclic dependency break with error
@@ -174,7 +168,7 @@
                                        (interested-spillers updated-addrs grid))
                             (disj address))]
      (reduce
-      #(eval-sheet %2 %1)
+      #(eval-address %2 %1)
       {:grid grid*
        :depgraph (cond-> depgraph
                    content-changed? (deps/update-depgraph
@@ -183,6 +177,13 @@
                                      cell*))
        :ui (or ui {})}
       addrs-to-reval))))
+
+(defn eval-sheet
+  ([sheet]
+   (util/reduce-on-sheet-addressed
+    (fn [sheet address _]
+      (eval-address address sheet))
+    sheet)))
 
 (comment
   :cell
