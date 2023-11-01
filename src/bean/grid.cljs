@@ -131,6 +131,7 @@
 (defn- interested-spillers [addrs grid]
   (->> addrs
        (mapcat #(get-in grid (conj % :interested-spillers)))
+       (map deps/->ref-dep)
        set))
 
 (defn- make-sheet [parsed-grid & code]
@@ -142,47 +143,51 @@
 (defn new-sheet [content-grid code]
   (make-sheet (parse-grid content-grid) code))
 
-(defn eval-address
-  ([address {:keys [grid] :as sheet}]
-   (eval-address address sheet (util/get-cell grid address) false))
+(defmulti eval-address first)
+;; not a fan of making this a defmulti
+;; when we make this iterative instead of recursive, we'll have to undo this
+
+(defmethod eval-address :cell
+  ([[_ cell-address :as address] {:keys [grid] :as sheet}]
+   (eval-address address sheet (util/get-cell grid cell-address) false))
 
   ([address sheet new-content]
    (eval-address address sheet (content->cell new-content) true))
 
-  ([address {:keys [grid depgraph ui] :as sheet} cell content-changed?]
+  ([[_ cell-address :as address] {:keys [grid depgraph ui] :as sheet} cell content-changed?]
    ; todo: if cyclic dependency break with error
-   (let [existing-cell (util/get-cell grid address)
+   (let [existing-cell (util/get-cell grid cell-address)
          cell* (eval-cell cell sheet)
          unspilled-grid (-> grid
-                            (clear-matrix address existing-cell)
-                            (assoc-in address cell*))
+                            (clear-matrix cell-address existing-cell)
+                            (assoc-in cell-address cell*))
          cleared-addrs (:spilled-into existing-cell)
          [grid* evaled-addrs] (if (:matrix cell*)
-                                (spill-matrix unspilled-grid address)
-                                [unspilled-grid #{address}])
-         updated-addrs (set/union evaled-addrs cleared-addrs)
-         ;; temp hack while we transition to a more comprehensive dependency resolution system
-         ;; Eventually, we will want to handle :ref and :binding dependencies seperately.
-         addrs-to-reval (-> (set/union (set (map second (dependents updated-addrs depgraph)))
-         ;; The interested spillers here are re-evaluated to mark them as spill errors
-                                       (interested-spillers updated-addrs grid))
-                            (disj address))]
-     (reduce
-      #(eval-address %2 %1)
-      {:grid grid*
-       :depgraph (cond-> depgraph
-                   content-changed? (deps/update-depgraph
-                                     address
-                                     existing-cell
-                                     cell*))
-       :ui (or ui {})}
-      addrs-to-reval))))
+                                (spill-matrix unspilled-grid cell-address)
+                                [unspilled-grid #{cell-address}])
+         updated-addrs (set/union evaled-addrs cleared-addrs)]
+     (as-> {:grid grid*
+            :depgraph (cond-> depgraph
+                        content-changed? (deps/update-depgraph
+                                          address
+                                          existing-cell
+                                          cell*))
+            :ui (or ui {})}
+           sheet
+       (reduce #(eval-address %2 %1) sheet
+               (-> (dependents updated-addrs depgraph)
+                   (disj address)))
+       ;; The interested spillers here are re-evaluated
+       ;; to mark them as spill errors
+       (reduce #(eval-address %2 %1) sheet
+               (-> (interested-spillers updated-addrs grid)
+                   (disj address)))))))
 
 (defn eval-sheet
   ([sheet]
    (util/reduce-on-sheet-addressed
     (fn [sheet address _]
-      (eval-address address sheet))
+      (eval-address [:cell address] sheet))
     sheet)))
 
 (comment
