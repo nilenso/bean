@@ -2,6 +2,7 @@
   "name": "bean",
   "version": "0.0.1",
   "private": true,
+  "prepare": "husky install",
   "devDependencies": {
     "shadow-cljs": "2.25.2"
   },

@@ -1,4 +1,4 @@
-(ns bean-tests.grid
+(ns bean.grid-test
   (:require [bean.grid :refer [parse-grid
                                make-depgraph
                                eval-sheet]]

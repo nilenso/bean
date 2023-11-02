@@ -1,4 +1,4 @@
-(ns bean-tests.parser
+(ns bean.parser-test
   (:require [bean.parser :refer [parse parse-statement]]
             [clojure.test :refer [deftest testing is]]))
 

@@ -1,6 +1,7 @@
 ;; shadow-cljs configuration
 {:source-paths
- ["src/"]
+ ["src/"
+  "test/"]
 
  :dependencies
  [[instaparse "1.4.12"]
@@ -14,4 +15,7 @@
   :ui {:target :browser
        :output-dir "public/js"
        :asset-path "/js"
-       :modules {:main {:entries [bean.ui.main]}}}}}
+       :modules {:main {:entries [bean.ui.main]}}}
+  :test {:target :node-test
+         :output-to "tests.js"
+         :ns-regexp "-test$"}}}
