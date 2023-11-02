@@ -5,12 +5,17 @@
 (defn ->ref-dep [dep]
   [:cell dep])
 
+(defn ->named-dep [dep]
+  [:Name dep])
+
 (defn- ast->deps [ast]
   (let [[node-type & [arg :as args]] ast]
     (case node-type
       :CellContents (ast->deps arg)
       :FunctionInvocation (apply set/union
                                  (map ast->deps args))
+      :FunctionDefinition (ast->deps arg)
+      :Name (if (#{"x" "y" "z"} arg) #{} #{(->named-dep arg)})
       :CellRef (let [[_ a n] ast]
                  #{(->ref-dep (util/a1->rc a (js/parseInt n)))})
       :MatrixRef (->> (apply util/matrix-bounds args)
@@ -30,7 +35,13 @@
   (assoc depgraph parent (conj (get depgraph parent #{}) child)))
 
 (defn- depgraph-remove-edge [depgraph parent child]
-  (assoc depgraph parent (disj (get depgraph parent) child)))
+  ;; TODO There should be a better way to write this
+  (if (get (get depgraph parent) child)
+    (let [x (disj (get depgraph parent) child)]
+      (if (empty? x)
+        (dissoc depgraph parent)
+        (assoc depgraph parent x)))
+    depgraph))
 
 (defn make-depgraph [grid]
   (->> grid

@@ -4,9 +4,15 @@
             [bean.util :as util]
             [bean.deps :as deps]
             [clojure.set :as set]
-            [clojure.string]))
+            [clojure.string]
+            [bean.ui.sheet :as sheet]))
 
-(defn- content->cell
+(defn- ast->val
+  ([ast]
+   {:content "nocontent"
+    :ast ast}))
+
+(defn- content->val
   ([content]
    {:content content
     :ast (parser/parse content)}))
@@ -45,30 +51,30 @@
 (defn- spill-matrix [grid address]
   (letfn
    [(desired-spillage
-     [{:keys [matrix] :as cell}]
-     "Returns a collection of cells that the given cell intends to spill"
-     (->> matrix
-          (util/map-on-matrix-addressed
-           #(cond-> {:relative-address %1
-                     :spilled-from address
-                     :error (:error %2)
-                     :representation (:representation %2)
-                     :value (:value %2)}
-              (= %1 [0 0]) (merge {:matrix matrix
-                                   :content (:content cell)
-                                   :ast (:ast cell)})))
-          flatten))
+      [{:keys [matrix] :as cell}]
+      "Returns a collection of cells that the given cell intends to spill"
+      (->> matrix
+           (util/map-on-matrix-addressed
+            #(cond-> {:relative-address %1
+                      :spilled-from address
+                      :error (:error %2)
+                      :representation (:representation %2)
+                      :value (:value %2)}
+               (= %1 [0 0]) (merge {:matrix matrix
+                                    :content (:content cell)
+                                    :ast (:ast cell)})))
+           flatten))
 
     (express-interests
       [grid spillage]
       "Marks cells in a given grid for potential spillage. The potential spillage
-       information is stored in the cell structure's `:interested-spillers` field.
+      information is stored in the cell structure's `:interested-spillers` field.
 
-       The :interested-spillers field is used to track spillers that need to be
-       re-evaluated when a conflicting spiller is removed. eg. When two cells
-       spill into a common cell and one of the cells stops spilling into the
-       common cell, the other spiller must not have a spill error anymore and
-       spill into the (previously common) cell successfully"
+      The :interested-spillers field is used to track spillers that need to be
+      re-evaluated when a conflicting spiller is removed. eg. When two cells
+      spill into a common cell and one of the cells stops spilling into the
+      common cell, the other spiller must not have a spill error anymore and
+      spill into the (previously common) cell successfully"
       (reduce
        #(let [{:keys [spilled-from relative-address]} %2
               address (offset spilled-from relative-address)
@@ -113,7 +119,7 @@
          (spill grid))))
 
 (defn parse-grid [grid]
-  (util/map-on-matrix content->cell grid))
+  (util/map-on-matrix content->val grid))
 
 (defn- eval-cell [cell sheet]
   (if (or (not (:spilled-from cell))
@@ -121,9 +127,16 @@
     (interpreter/eval-cell cell sheet)
     cell))
 
+(defn- eval-named [cell sheet]
+  (if (:ast cell)
+    (assoc-in sheet
+              [:bindings name]
+              (interpreter/eval-ast (:ast cell) sheet))
+    ;; TODO: error case
+    sheet))
+
 (defn- dependents [addrs depgraph]
   (->> addrs
-       (map deps/->ref-dep)
        (map depgraph)
        (mapcat identity)
        set))
@@ -134,14 +147,12 @@
        (map deps/->ref-dep)
        set))
 
-(defn- make-sheet [parsed-grid & code]
-  {:grid parsed-grid
-   :code code
-   :bindings {}
-   :depgraph (deps/make-depgraph parsed-grid)})
-
 (defn new-sheet [content-grid code]
-  (make-sheet (parse-grid content-grid) code))
+  (let [parsed-grid (parse-grid content-grid)]
+    {:grid parsed-grid
+     :code code
+     :bindings {}
+     :depgraph (deps/make-depgraph parsed-grid)}))
 
 (defmulti eval-address first)
 ;; not a fan of making this a defmulti
@@ -152,7 +163,7 @@
    (eval-address address sheet (util/get-cell grid cell-address) false))
 
   ([address sheet new-content]
-   (eval-address address sheet (content->cell new-content) true))
+   (eval-address address sheet (content->val new-content) true))
 
   ([[_ cell-address :as address] {:keys [grid depgraph ui] :as sheet} cell content-changed?]
    ; todo: if cyclic dependency break with error
@@ -166,16 +177,17 @@
                                 (spill-matrix unspilled-grid cell-address)
                                 [unspilled-grid #{cell-address}])
          updated-addrs (set/union evaled-addrs cleared-addrs)]
-     (as-> {:grid grid*
-            :depgraph (cond-> depgraph
-                        content-changed? (deps/update-depgraph
-                                          address
-                                          existing-cell
-                                          cell*))
-            :ui (or ui {})}
+         
+     (as-> (-> sheet
+               (assoc :grid grid*)
+               (assoc :depgraph (cond-> depgraph
+                                  content-changed? (deps/update-depgraph
+                                                    address
+                                                    existing-cell
+                                                    cell*))))
            sheet
        (reduce #(eval-address %2 %1) sheet
-               (-> (dependents updated-addrs depgraph)
+               (-> (dependents (map deps/->ref-dep updated-addrs) depgraph)
                    (disj address)))
        ;; The interested spillers here are re-evaluated
        ;; to mark them as spill errors
@@ -183,12 +195,50 @@
                (-> (interested-spillers updated-addrs grid)
                    (disj address)))))))
 
+(defmethod eval-address :Name
+  ([[_ named :as address] {:keys [bindings] :as sheet}]
+   (if-let [v (bindings named)]
+     (eval-address address sheet v false)
+     ;;TODO: named ref error case
+     sheet))
+
+  ([address sheet new-content]
+  ;; TODO: This is invalid
+   (eval-address address sheet (ast->val new-content) true))
+
+  ([[_ named :as address] {:keys [bindings] :as sheet} val _content-changed?]
+   (let [existing-val (bindings named)
+         val* (merge val (interpreter/eval-ast (:ast val) sheet))]
+         ;; TODO: Can ast be missing from val?
+     (as-> sheet sheet
+       (assoc-in sheet [:bindings named] val*)
+       (update-in sheet [:depgraph] #(deps/update-depgraph % address existing-val val*))
+       (reduce #(eval-address %2 %1)
+               sheet
+               (-> (dependents [address] (:depgraph sheet))
+                   (disj address)))))))
+
+(defn- eval-grid [sheet]
+  (util/reduce-on-sheet-addressed
+   (fn [sheet address _]
+     (eval-address [:cell address] sheet))
+   sheet))
+
+(defn eval-code
+  ([sheet] (eval-code sheet (:code sheet)))
+  ([sheet code]
+   (let [code-ast (parser/parse-statement code)]
+     (-> (reduce (fn [sheet [_ address expr]]
+                   (eval-address address sheet (ast->val expr) false))
+                 sheet
+                 (rest code-ast))
+         (assoc :code-ast code-ast)))))
+
 (defn eval-sheet
   ([sheet]
-   (util/reduce-on-sheet-addressed
-    (fn [sheet address _]
-      (eval-address [:cell address] sheet))
-    sheet)))
+   (->> sheet
+        eval-code
+        eval-grid)))
 
 (comment
   :cell
@@ -210,8 +260,8 @@
    :interested-spillers #{}
 
    ;; Addressing information
-   :relative-address nil}
-  )
+   :relative-address nil})
+  
 
 (comment
   :sheet
