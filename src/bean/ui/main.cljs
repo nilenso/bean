@@ -58,7 +58,7 @@
      {:class :scratch-text
       :content-editable ""
       :spell-check false
-      :default-value (apply str "let area {x+x}" (for [_ (range num-rows)] "\n"))}]]])
+      :default-value ""}]]])
 
 (defn ^:dev/after-load ^:export main []
   (r/render

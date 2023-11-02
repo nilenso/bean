@@ -1,6 +1,7 @@
 (ns bean.grid-test
   (:require [bean.grid :refer [parse-grid
                                eval-sheet
+                               eval-code
                                eval-address
                                new-sheet]]
             [bean.deps :refer [make-depgraph]]
@@ -272,3 +273,39 @@
               (fn [address item] [address item]) matrix)
              [[[[0 0] 10] [[0 1] 20] [[0 2] 30]]
               [[[1 0] 40] [[1 1] 50] [[1 2] 60]]])))))
+
+(deftest named-reference-evaluation-test
+  (testing "A named reference is evaluated"
+    (is (= [["1" "2" "3"]]
+           (->> (new-sheet [["1" "2" "=addthree(1 1 1)"]] "addthree:{x+y+z}")
+                eval-sheet
+                :grid
+                (util/map-on-matrix :representation)))))
+
+  (testing "A named reference's dependents are re-evaluated"
+    (is (= [["11" "2" "20"]]
+           (as-> (new-sheet [["1" "2" "=addaone(9)"]] "addaone:{x+A1}") sheet
+             (eval-sheet sheet)
+             (eval-address [:cell [0 0]] sheet "=11")
+             (util/map-on-matrix :representation (:grid sheet))))))
+
+  (testing "A named reference is re-evaluated when its dependency changes"
+    (is (= 10
+           (as-> (new-sheet [["1" "2"]] "addaone:4+A1") sheet
+             (eval-sheet sheet)
+             (eval-address [:cell [0 0]] sheet "6")
+             (get-in sheet [:bindings "addaone" :value])))))
+
+  (testing "Depgraph is updated when a named reference's dependencies change"
+    (is (= {[:cell [0 1]] #{[:Name "addaone"]}}
+           (as-> (new-sheet [["1" "2"]] "addaone:4+A1") sheet
+             (eval-sheet sheet)
+             (eval-code sheet "addaone:4+B1")
+             (get-in sheet [:depgraph])))))
+
+  (testing "Depgraph is updated when a named reference's dependents change"
+    (is (= {[:Name "addaone"] #{[:cell [0 1]]}}
+           (as-> (new-sheet [["1" "2"]] "addaone:4") sheet
+             (eval-sheet sheet)
+             (eval-address [:cell [0 1]] sheet "=addaone+20")
+             (get-in sheet [:depgraph]))))))
