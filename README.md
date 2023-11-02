@@ -26,15 +26,15 @@ A repository with the accompanying research work will be put up soon.
 Bean is written in [ClojureScript](https://clojurescript.org/). You'll need [npm and nodejs](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installed. Then run
 
 ```
-npx install
-shadow-cljs watch ui
+npm install
+npx shadow-cljs watch ui
 ```
 
 You can access Bean running locally at http://localhost:8090.
 
 #### Tests
 ```
-shadow-cljs compile test && node out/node-tests.js
+npx shadow-cljs compile test && node out/node-tests.js
 ```
 
 ## Authors

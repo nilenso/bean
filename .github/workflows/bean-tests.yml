@@ -1,9 +1,9 @@
 name: Bean tests
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
@@ -18,5 +18,5 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - run: npx install
-    - run: npx shadow-cljs compile test && node out/node-tests.js
+    - run: npm install
+    - run: npx shadow-cljs compile test && node tests.js

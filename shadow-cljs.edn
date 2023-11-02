@@ -17,6 +17,6 @@
        :asset-path "/js"
        :modules {:main {:entries [bean.ui.main]}}}
   :test {:target :node-test
-         :output-to "out/test.js"
+         :output-to "tests.js"
          :ns-regexp "-test$"
          :autorun true}}}
