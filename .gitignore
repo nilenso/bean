@@ -22,4 +22,5 @@ pom.xml.asc
 .clj-kondo/
 .lsp/
 output.js
+out/
 .calva/

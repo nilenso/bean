@@ -32,6 +32,11 @@ shadow-cljs watch ui
 
 You can access Bean running locally at http://localhost:8090.
 
+#### Tests
+```
+shadow-cljs compile test && node out/node-tests.js
+```
+
 ## Authors
 - [Prabhanshu Gupta](https://github.com/prabhanshuguptagit)
 - [Ravi Chandra Padmala](https://github.com/neenaoffline)

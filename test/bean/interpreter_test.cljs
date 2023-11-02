@@ -1,4 +1,4 @@
-(ns bean-tests.interpreter
+(ns bean.interpreter-test
   (:require [bean.interpreter :refer [bean-op-+ apply-op]]
             [clojure.test :refer [deftest testing is]]))
 

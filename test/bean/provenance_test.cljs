@@ -1,4 +1,4 @@
-(ns bean-tests.provenance
+(ns bean.provenance-test
   (:require [clojure.test :refer [deftest testing is run-all-tests]]
             [bean.provenance :as provenance]
             [bean.grid :as grid]))
