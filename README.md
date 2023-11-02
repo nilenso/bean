@@ -27,10 +27,15 @@ Bean is written in [ClojureScript](https://clojurescript.org/). You'll need [npm
 
 ```
 npx install
-shadow-cljs watch ui
+npx shadow-cljs watch ui
 ```
 
 You can access Bean running locally at http://localhost:8090.
+
+#### Tests
+```
+npx shadow-cljs compile test && node out/node-tests.js
+```
 
 ## Authors
 - [Prabhanshu Gupta](https://github.com/prabhanshuguptagit)
