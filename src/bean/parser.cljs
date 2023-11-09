@@ -40,3 +40,8 @@
 
 (defn parse [v]
   (insta/parse parser v))
+
+(defn error [result]
+  (when (insta/get-failure result)
+    (let [{:keys [index reason]} result]
+      (str "Parse Error: idx " index ". " reason))))

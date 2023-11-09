@@ -3,9 +3,9 @@
             [bean.parser :as parser]
             [bean.util :as util]
             [bean.deps :as deps]
+            [bean.errors :as errors]
             [clojure.set :as set]
-            [clojure.string]
-            [bean.ui.sheet :as sheet]))
+            [clojure.string]))
 
 (defn- ast->val
   ([ast]
@@ -146,6 +146,14 @@
      :bindings {}
      :depgraph (deps/make-depgraph parsed-grid)}))
 
+(defn- escalate-bindings-errors [sheet]
+  (reduce (fn [sheet [named {:keys [error] :as v}]]
+            (if error
+              (reduced (assoc sheet :code-error (errors/named-ref-error named error)))
+              sheet))
+          (dissoc sheet :code-error)
+          (:bindings sheet)))
+
 (defmulti eval-address first)
 ;; not a fan of making this a defmulti
 ;; when we make this iterative instead of recursive, we'll have to undo this
@@ -191,46 +199,56 @@
   ([[_ named :as address] {:keys [bindings] :as sheet}]
    (if-let [v (bindings named)]
      (eval-address address sheet v false)
-     ;;TODO: named ref error case
-     sheet))
+     (errors/undefined-named-ref named)))
 
   ([address sheet new-content]
   ;; TODO: This is invalid
    (eval-address address sheet (ast->val new-content) true))
 
   ([[_ named :as address] {:keys [bindings] :as sheet} val _content-changed?]
-   (let [existing-val (bindings named)
-         val* (merge val (interpreter/eval-ast (:ast val) sheet))]
-         ;; TODO: Can ast be missing from val?
-     (as-> sheet sheet
-       (assoc-in sheet [:bindings named] val*)
-       (update-in sheet [:depgraph] #(deps/update-depgraph % address existing-val val*))
-       (reduce #(eval-address %2 %1)
-               sheet
-               (-> (dependents [address] (:depgraph sheet))
-                   (disj address)))))))
+   (-> (let [existing-val (bindings named)
+             val* (-> val
+                      (dissoc :error)
+                      (merge (interpreter/eval-ast (:ast val) sheet)))]
+         (as-> sheet sheet
+           (assoc-in sheet [:bindings named] val*)
+           (update-in sheet [:depgraph] #(deps/update-depgraph % address existing-val val*))
+           (reduce #(eval-address %2 %1)
+                   sheet
+                   (-> (dependents [address] (:depgraph sheet))
+                       (disj address)))))
+       escalate-bindings-errors)))
 
 (defn- eval-grid [sheet]
   (util/reduce-on-sheet-addressed
    (fn [sheet address _]
-     (eval-address [:cell address] sheet))
+     (eval-address (deps/->ref-dep address) sheet))
    sheet))
 
 (defn eval-code
-  ([sheet] (eval-code sheet (:code sheet)))
-  ([sheet code]
-   (let [code-ast (parser/parse-statement code)]
-     (-> (reduce (fn [sheet [_ address expr]]
-                   (eval-address address sheet (ast->val expr) false))
-                 sheet
-                 (rest code-ast))
-         (assoc :code-ast code-ast)))))
+  ;; Suppressing errors so we let the grid evaluate before showing any errors in the code
+  ([sheet] (eval-code sheet (:code sheet) true))
+  ([sheet code & suppress-errors]
+   (let [res (let [code-ast (parser/parse-statement code)]
+               (if-let [parse-error (parser/error code-ast)]
+                 (assoc sheet :code-error parse-error)
+                 (-> (reduce (fn [sheet [_ address expr]]
+                               (eval-address address sheet (ast->val expr) false))
+                             (dissoc sheet :code-error)
+                             (rest code-ast))
+                     (assoc :code-ast code-ast))))]
+     (if (true? suppress-errors)
+       res
+       (escalate-bindings-errors res)))))
+
+
 
 (defn eval-sheet
   ([sheet]
    (->> sheet
         eval-code
-        eval-grid)))
+        eval-grid
+        escalate-bindings-errors)))
 
 (comment
   :cell
