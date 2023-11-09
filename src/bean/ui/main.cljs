@@ -2,6 +2,7 @@
   (:require [bean.grid :as grid]
             [bean.ui.provenance :as provenance]
             [bean.ui.sheet :as sheet]
+            [bean.ui.scratch :as scratch]
             [reagent.core :as rc]
             [reagent.dom :as r]))
 
@@ -47,22 +48,9 @@
     :resize-col resize-col
     :resize-row resize-row}])
 
-(defn scratch []
-  [:div {:class :scratch}
-   [:div {:class "scratch-header bean-label"}]
-   [:div {:class :scratch-thick-lines}]
-   [:div {:class :scratch-body}
-    [:div {:class :scratch-margin}]
-    [:textarea
-      ;; TODO: The textarea and the scratch should keep expanding as more text is added
-     {:class :scratch-text
-      :content-editable ""
-      :spell-check false
-      :default-value ""}]]])
-
 (defn ^:dev/after-load ^:export main []
   (r/render
    [:div {:class :container}
-    [scratch]
+    [scratch/text-area sheet1]
     [active-sheet]]
    (.getElementById js/document "app")))
