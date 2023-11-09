@@ -22,7 +22,8 @@
                           (swap! sheet #(-> %
                                             scratch/reevaluate
                                             set-eval-state)))}
-     "▶"]]
+     "▶"]
+    [:div {:class :scratch-error} (:code-error @sheet)]]
    [:div {:class :scratch-thick-lines}]
    [:div {:class :scratch-body}
     [:div {:class :scratch-margin}]

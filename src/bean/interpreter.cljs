@@ -1,6 +1,7 @@
 (ns bean.interpreter
   (:require [bean.functions :as functions]
-            [bean.util :as util]))
+            [bean.util :as util]
+            [bean.errors :as errors]))
 
 (defn- ast-result [error-or-val]
   (if-let [error (:error error-or-val)]
@@ -98,7 +99,9 @@
       :MatrixRef {:matrix (->> args
                                (apply util/matrix-bounds)
                                (apply eval-matrix*))}
-      :Name (or (get bindings arg) (get global-ctx arg))
+      :Name (or (get bindings arg)
+                (get global-ctx arg)
+                (errors/undefined-named-ref arg))
       :FunctionDefinition (fn-result arg)
       :FunctionInvocation (apply-f sheet
                                    (eval-sub-ast arg)
