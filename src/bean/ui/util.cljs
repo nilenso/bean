@@ -1,9 +1,10 @@
-(ns bean.ui.util)
+(ns bean.ui.util
+  (:require [clojure.string :as str]))
 
 (defn px [int]
   (str int "px"))
 
-(defn- i->a [i]
+(defn i->a [i]
   (apply
    str
    (loop [a '()
@@ -17,3 +18,9 @@
 
 (defn rc->a1 [r c]
   (str (i->a c) (inc r)))
+
+(defn cs [& classes]
+  (->> classes
+       (remove nil?)
+       (map name)
+       (str/join " ")))
