@@ -1,13 +1,19 @@
 :root {
-    --sheet-background: #073642;
-    --sheet-foreground: #93a1a1;
-    --sheet-error: #dc322f;
-    --sheet-label-background: #002b36;
-    --sheet-label-foreground: #839496;
-    --scratch-background: #073642;
-    --scratch-foreground: #93a1a1;
+    --sheet-background: #fffefc;
+    --sheet-foreground: #111;
+    --sheet-error: #802525;
+    --sheet-label-background: #f2f2f1;
+    --sheet-label-foreground: #666;
+    --cell-background: white;
+    --corner-background: #ddd;
+    --scratch-background: #fff;
+    --scratch-foreground: #111;
     --scratch-sidebar: #cb4b16;
-    --sheet-border: #002b36;
+    --sheet-border: #dedbd7;
+    --label-border: #8a868440;
+    --scratch-lines: #90b1ccaa;
+    --btn-background: #e9e9ed;
+    --cell-selector: #666;
     --cell-height: 30px;
     --cell-width: 110px;
     --cell-padding: 5px;
@@ -16,6 +22,26 @@
     --label-left-bottom-border: 0.1px;
     --scratch-width: 350px;
     --scratch-thick-line-gap: 4;
+}
+
+[data-theme='dark'] {
+    --sheet-background: #073642;
+    --sheet-foreground: #93a1a1;
+    --corner-background: var(--sheet-label-background);
+    --sheet-error: #dc322f;
+    --sheet-label-background: #002b36;
+    --sheet-label-foreground: #839496;
+    --cell-background: #073642;
+    --scratch-background: #073642;
+    --scratch-foreground: #93a1a1;
+    --scratch-sidebar: #cb4b16;
+    --sheet-border: #002b36;
+    --sheet-header-border: #002b36;
+    --label-border: #073642;
+    --scratch-lines: #93a1a1;
+    --btn-foreground: white;
+    --btn-background: var(--sheet-background);
+    --cell-selector: #666;
 }
 
 body {
@@ -40,6 +66,7 @@ body {
 }
 
 .bean-cell {
+    background: var(--cell-background);
     outline: 0.5px solid var(--sheet-border);
     padding: var(--cell-padding);
     overflow: hidden;
@@ -62,7 +89,7 @@ body {
 
 .bean-label-top {
     text-align: center;
-    border-right: var(--cell-border) solid var(--sheet-background);
+    border-right: var(--cell-border) solid var(--label-border);
     border-bottom: var(--cell-border) solid var(--sheet-border);
     position: sticky;
     left: 0;
@@ -74,7 +101,7 @@ body {
 .bean-label-left {
     width: var(--label-left-width);
     text-align: center;
-    border-bottom: var(--cell-border) solid var(--sheet-background);
+    border-bottom: 0.1px solid var(--label-border);
     border-right: var(--cell-border) solid var(--sheet-border);
     position: sticky;
     left: var(--scratch-width);
@@ -83,12 +110,12 @@ body {
 }
 
 .bean-corner {
-    background-color: var(--sheet-label-background);
+    background-color: var(--corner-background);
     color: #859900;
     width: var(--label-left-width);
-    border-bottom: var(--cell-border) solid var(--sheet-background);
-    border-right: var(--cell-border) solid var(--sheet-background);
-    border-left: var(--cell-border) solid var(--sheet-background);
+    border-bottom: var(--cell-border) solid var(--sheet-border);
+    border-right: var(--cell-border) solid var(--sheet-border);
+    border-left: var(--cell-border) solid var(--sheet-border);
     position: sticky;
     z-index: 2;
     left: var(--scratch-width);
@@ -152,7 +179,7 @@ body {
     left: 10px;
     width: var(--cell-width);
     height: var(--cell-height);
-    border: 2px solid #666;
+    border: 2px solid var(--cell-selector);
     transition: 100ms;
     pointer-events: none;
     display: none;
@@ -162,7 +189,7 @@ body {
 .scratch {
     background-color: var(--scratch-background);
     color: var(--scratch-foreground);
-    background-image: linear-gradient(#eee8d5 0.7px, transparent 0.7px);
+    background-image: linear-gradient(var(--scratch-lines) 0.7px, transparent 0.7px);
     background-size: 100% var(--cell-height);
     position: sticky;
     left: 0;
@@ -232,4 +259,47 @@ body {
     height: var(--cell-height);
     width: 100%;
     padding: 0px;
+    display: flex;
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+.scratch-error {
+    display: inline;
+    font-family: monospace;
+    font-size: 9px;
+    color: var(--sheet-error);
+}
+
+.scratch-header-btn {
+    height: 24px;
+    width: 28px;
+    cursor: pointer;
+    margin: auto 0px auto 0px;
+    border: none;
+    border-radius: 2px;
+    color: var(--btn-foreground);
+    background-color: var(--btn-background);
+}
+
+.scratch-header .dark-mode-btn {
+    margin-left: auto;
+}
+
+.scratch-header .light-mode-btn {
+    margin-left: auto;
+    display: none;
+    padding-bottom: 4px;
+}
+
+[data-theme='dark'] .light-mode-btn {
+    display: block !important;
+}
+
+[data-theme='dark'] .dark-mode-btn {
+    display: none;
+}
+
+[data-theme='light'] .light-mode-btn {
+    display: none;
 }
