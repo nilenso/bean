@@ -18,11 +18,18 @@
                                    :evaluated)))
                     :scratch)}
    [:div {:class "scratch-header bean-label"}
-    [:button {:on-click (fn [_]
+    [:button {:class [:scratch-header-btn]
+              :on-click (fn [_]
                           (swap! sheet #(-> %
                                             scratch/reevaluate
                                             set-eval-state)))}
      "▶"]
+    [:button {:class [:scratch-header-btn :dark-mode-btn]
+              :on-click #(.setAttribute js/document.documentElement "data-theme" "dark")}
+     "☾"]
+    [:button {:class [:scratch-header-btn :light-mode-btn]
+              :on-click #(.setAttribute js/document.documentElement "data-theme" "light")}
+     "☀"]
     [:div {:class :scratch-error} (:code-error @sheet)]]
    [:div {:class :scratch-thick-lines}]
    [:div {:class :scratch-body}
