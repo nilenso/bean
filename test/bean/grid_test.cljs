@@ -297,14 +297,14 @@
              (get-in sheet [:bindings "addaone" :value])))))
 
   (testing "Depgraph is updated when a named reference's dependencies change"
-    (is (= {[:cell [0 1]] #{[:Name "addaone"]}}
+    (is (= {[:cell [0 1]] #{[:named "addaone"]}}
            (as-> (new-sheet [["1" "2"]] "addaone:4+A1") sheet
              (eval-sheet sheet)
              (eval-code sheet "addaone:4+B1")
              (get-in sheet [:depgraph])))))
 
   (testing "Depgraph is updated when a named reference's dependents change"
-    (is (= {[:Name "addaone"] #{[:cell [0 1]]}}
+    (is (= {[:named "addaone"] #{[:cell [0 1]]}}
            (as-> (new-sheet [["1" "2"]] "addaone:4") sheet
              (eval-sheet sheet)
              (eval-address [:cell [0 1]] sheet "=addaone+20")
