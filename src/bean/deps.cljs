@@ -6,7 +6,7 @@
   [:cell dep])
 
 (defn ->named-dep [dep]
-  [:Name dep])
+  [:named dep])
 
 (defn- ast->deps [ast]
   (let [[node-type & [arg :as args]] ast]

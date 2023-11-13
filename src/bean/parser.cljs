@@ -35,11 +35,15 @@
 (def ^:private statement-parser
   (insta/parser (str statement-grammer "\n" expression-grammer)))
 
-(defn parse-statement [v]
-  (insta/parse statement-parser v))
+(defn parse-statement [src]
+  (let [program (insta/parse statement-parser src)]
+    (insta/add-line-and-column-info-to-metadata src program)))
 
 (defn parse [v]
   (insta/parse parser v))
+
+(defn statement-source [code statement]
+  (apply subs code (insta/span statement)))
 
 (defn error [result]
   (when (insta/get-failure result)

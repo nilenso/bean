@@ -2,20 +2,11 @@
   (:require [bean.interpreter :as interpreter]
             [bean.parser :as parser]
             [bean.util :as util]
+            [bean.value :as value]
             [bean.deps :as deps]
             [bean.errors :as errors]
             [clojure.set :as set]
             [clojure.string]))
-
-(defn- ast->val
-  ([ast]
-   {:content "nocontent"
-    :ast ast}))
-
-(defn- content->val
-  ([content]
-   {:content content
-    :ast (parser/parse content)}))
 
 (defn- offset [[start-row start-col] [offset-rows offset-cols]]
   [(+ start-row offset-rows) (+ start-col offset-cols)])
@@ -119,7 +110,7 @@
          (spill grid))))
 
 (defn parse-grid [grid]
-  (util/map-on-matrix content->val grid))
+  (util/map-on-matrix value/from-cell grid))
 
 (defn- eval-cell [cell sheet]
   (if (or (not (:spilled-from cell))
@@ -163,7 +154,7 @@
    (eval-address address sheet (util/get-cell grid cell-address) false))
 
   ([address sheet new-content]
-   (eval-address address sheet (content->val new-content) true))
+   (eval-address address sheet (value/from-cell new-content) true))
 
   ([[_ cell-address :as address] {:keys [grid depgraph ui] :as sheet} cell content-changed?]
    ; todo: if cyclic dependency break with error
@@ -177,7 +168,7 @@
                                 (spill-matrix unspilled-grid cell-address)
                                 [unspilled-grid #{cell-address}])
          updated-addrs (set/union evaled-addrs cleared-addrs)]
-         
+
      (as-> (-> sheet
                (assoc :grid grid*)
                (assoc :depgraph (cond-> depgraph
@@ -195,7 +186,7 @@
                (-> (interested-spillers updated-addrs grid)
                    (disj address)))))))
 
-(defmethod eval-address :Name
+(defmethod eval-address :named
   ([[_ named :as address] {:keys [bindings] :as sheet}]
    (if-let [v (bindings named)]
      (eval-address address sheet v false)
@@ -203,7 +194,12 @@
 
   ([address sheet new-content]
   ;; TODO: This is invalid
-   (eval-address address sheet (ast->val new-content) true))
+   (eval-address address
+                 sheet
+                 (value/from-statement (parser/statement-source (:code sheet)
+                                                                new-content)
+                                       new-content)
+                 true))
 
   ([[_ named :as address] {:keys [bindings] :as sheet} val _content-changed?]
    (-> (let [existing-val (bindings named)
@@ -232,8 +228,12 @@
    (let [res (let [code-ast (parser/parse-statement code)]
                (if-let [parse-error (parser/error code-ast)]
                  (assoc sheet :code-error parse-error)
-                 (-> (reduce (fn [sheet [_ address expr]]
-                               (eval-address address sheet (ast->val expr) false))
+                 (-> (reduce (fn [sheet [_ [_ named] expr]]
+                               (eval-address [:named named]
+                                             sheet
+                                             (value/from-statement (parser/statement-source code expr)
+                                                                   expr)
+                                             false))
                              (dissoc sheet :code-error)
                              (rest code-ast))
                      (assoc :code-ast code-ast))))]
