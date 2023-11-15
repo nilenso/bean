@@ -1,7 +1,8 @@
 (ns bean.interpreter
   (:require [bean.functions :as functions]
             [bean.util :as util]
-            [bean.errors :as errors]))
+            [bean.errors :as errors]
+            [bean.operators :as operators]))
 
 (defn- ast-result [error-or-val]
   (if-let [error (:error error-or-val)]
@@ -27,11 +28,6 @@
 
 (defn- first-error [ast-results]
   (->> ast-results (filter :error) first))
-
-(defn bean-op-+ [left right]
-  (if (and (int? left) (int? right))
-    (+ left right)
-    {:error "Addition only works for Integers"}))
 
 (defn- eval-matrix [start-address end-address grid]
   (util/map-on-matrix
@@ -117,7 +113,8 @@
       :String (ast-result arg)
       :QuotedString (ast-result arg)
       :Operation (ast-result (case arg
-                               "+" bean-op-+)))))
+                               "+" operators/bean-op-+
+                               "*" operators/bean-op-*)))))
 
 (defn- apply-f [sheet f params]
   (if (fn? (:value f))
