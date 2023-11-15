@@ -4,7 +4,7 @@ Spreadsheets are an outstanding tool for building small software. However, mains
 
 Bean is an exploration into new/overlooked ideas in the spreadsheet paradigm. It's intended to be a playground for trying out features (and _maybe_ eventually become a full-fledged spreadsheet software).
 
-This involves looking at spreadsheets as a programming environment from the ground up. The full background is [here](put link to blog). [This talk](https://www.youtube.com/watch?v=0yKf8TrLUOw) is a great introduction to the problem.
+This involves looking at spreadsheets as a programming environment from the ground up. The full background is [here](https://blog.nilenso.com/blog/2023/11/10/spreadsheets-and-small-software). [This talk](https://www.youtube.com/watch?v=0yKf8TrLUOw) is a great introduction to the problem.
 
 ## State of affairs
 
@@ -12,7 +12,7 @@ This involves looking at spreadsheets as a programming environment from the grou
 
 Bean has these basics in place: a grid, a parser, an interpreter for a small formula language and reactive recalculation (with dynamic arrays). The formula language (Leaf) is documented [here](formula-language.md).
 
-Please shoot us an email at moshimoshi @ nilenso dot com and we'd be happy to walk you through.
+Please shoot us an email at bean @ nilenso dot com and we'd be happy to walk you through.
 
 We are currently trying out the following features
 - A "secondary space" for linear thinking
