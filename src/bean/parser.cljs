@@ -30,10 +30,10 @@
     ")
 
 (def ^:private parser
-  (insta/parser expression-grammer))
+  (insta/parser expression-grammer :auto-whitespace :standard))
 
 (def ^:private statement-parser
-  (insta/parser (str statement-grammer "\n" expression-grammer)))
+  (insta/parser (str statement-grammer "\n" expression-grammer) :auto-whitespace :standard))
 
 (defn parse-statement [src]
   (let [program (insta/parse statement-parser src)]
