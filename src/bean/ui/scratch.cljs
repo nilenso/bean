@@ -12,25 +12,29 @@
 (defn set-eval-state-pending [sheet]
   (assoc-in sheet [:ui :scratch-evaluation-state] :pending))
 
-(defn text-area [sheet]
-  [:div {:class (cs (str "scratch-state-"
-                         (name (or (get-in @sheet [:ui :scratch-evaluation-state])
-                                   :evaluated)))
-                    :scratch)}
+(defn text-area [sheet ui-state]
+  [:div {:class :scratch}
    [:div {:class "scratch-header bean-label"}
-    [:button {:class [:scratch-header-btn]
+    [:button {:class (cs
+                      :small-btn
+                      (str "scratch-state-"
+                           (name (or (get-in @sheet [:ui :scratch-evaluation-state])
+                                     :evaluated))))
               :on-click (fn [_]
                           (swap! sheet #(-> %
                                             scratch/reevaluate
                                             set-eval-state)))}
      "▶"]
-    [:button {:class [:scratch-header-btn :dark-mode-btn]
-              :on-click #(.setAttribute js/document.documentElement "data-theme" "dark")}
-     "☾"]
-    [:button {:class [:scratch-header-btn :light-mode-btn]
-              :on-click #(.setAttribute js/document.documentElement "data-theme" "light")}
-     "☀"]
-    [:div {:class :scratch-error} (:code-error @sheet)]]
+    [:div {:class :scratch-error} (:code-error @sheet)]
+    [:button {:class [:small-btn :help-btn]
+              :on-click #(swap! ui-state (fn [s] (assoc s :help-display "block")))}
+     "?"]
+    #_[:button {:class [:small-btn :dark-mode-btn]
+                :on-click #(.setAttribute js/document.documentElement "data-theme" "dark")}
+       "☾"]
+    #_[:button {:class [:small-btn :light-mode-btn]
+                :on-click #(.setAttribute js/document.documentElement "data-theme" "light")}
+       "☀"]]
    [:div {:class :scratch-thick-lines}]
    [:div {:class :scratch-body}
     [:div {:class :scratch-margin}]
