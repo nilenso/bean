@@ -30,7 +30,8 @@
                       (update-cell [row col] input)))
          :class (cs :bean-cell
                     (when (= mode :edit) :edit-mode)
-                    (when error :cell-error))}
+                    (when error :cell-error))
+         :spell-check :false}
    (case mode
      :edit content
      representation)])
