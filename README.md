@@ -6,11 +6,13 @@ Bean is an exploration into new/overlooked ideas in the spreadsheet paradigm. It
 
 This involves looking at spreadsheets as a programming environment from the ground up. Read [this blogpost](https://blog.nilenso.com/blog/2023/11/10/spreadsheets-and-small-software) for the full background. [This talk](https://www.youtube.com/watch?v=0yKf8TrLUOw) is a great introduction to the problem.
 
+[Play around with it](https://bean.nilenso.com) (it's super early).
+
 ## State of affairs
 
 **Updated on:** 31-Oct-2023
 
-Bean has these basics in place: a grid, a parser, an interpreter for a small formula language and reactive recalculation (with dynamic arrays). The formula language (Leaf) is documented [here](formula-language.md).
+Bean has these basics in place: a grid, a parser, an interpreter for a small formula language and reactive recalculation (with dynamic arrays).
 
 Please shoot us an email at bean @ nilenso dot com and we'd be happy to walk you through.
 
