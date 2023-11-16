@@ -26,15 +26,15 @@
                                             set-eval-state)))}
      "▶"]
     [:div {:class :scratch-error} (:code-error @sheet)]
-    [:button {:class [:small-btn :help-btn]
+    [:button {:class [:small-btn :dark-mode-btn]
+              :on-click #(.setAttribute js/document.documentElement "data-theme" "dark")}
+     "☾"]
+    [:button {:class [:small-btn :light-mode-btn]
+              :on-click #(.setAttribute js/document.documentElement "data-theme" "light")}
+     "☀"]
+     [:button {:class [:small-btn :help-btn]
               :on-click #(swap! ui-state (fn [s] (assoc s :help-display "block")))}
-     "?"]
-    #_[:button {:class [:small-btn :dark-mode-btn]
-                :on-click #(.setAttribute js/document.documentElement "data-theme" "dark")}
-       "☾"]
-    #_[:button {:class [:small-btn :light-mode-btn]
-                :on-click #(.setAttribute js/document.documentElement "data-theme" "light")}
-       "☀"]]
+     "?"]]
    [:div {:class :scratch-thick-lines}]
    [:div {:class :scratch-body}
     [:div {:class :scratch-margin}]

@@ -1,17 +1,19 @@
 :root {
     --sheet-background: #fffefc;
     --sheet-foreground: #111;
-    --sheet-error: #802525;
+    --sheet-error: #b93333;
     --sheet-label-background: #f2f2f1;
     --sheet-label-foreground: #666;
     --cell-background: white;
     --corner-background: #ddd;
     --scratch-background: #fff;
     --scratch-foreground: #111;
-    --scratch-sidebar: #cb4b16;
+    --scratch-sidebar: rgba(255, 0, 0, 0.4);
+    --scratch-pending: #f0c2b0;
     --sheet-border: #dedbd7;
     --label-border: #8a868440;
     --scratch-lines: #90b1ccaa;
+    --btn-foreground: #666;
     --btn-background: #e9e9ed;
     --cell-selector: #666;
     --cell-height: 30px;
@@ -35,6 +37,7 @@
     --scratch-background: #073642;
     --scratch-foreground: #93a1a1;
     --scratch-sidebar: #cb4b16;
+    --scratch-pending: #73402c;
     --sheet-border: #002b36;
     --sheet-header-border: #002b36;
     --label-border: #073642;
@@ -111,7 +114,6 @@ body {
 
 .bean-corner {
     background-color: var(--corner-background);
-    color: #859900;
     width: var(--label-left-width);
     border-bottom: var(--cell-border) solid var(--sheet-border);
     border-right: var(--cell-border) solid var(--sheet-border);
@@ -235,22 +237,14 @@ body {
 .scratch::before {
     position: absolute;
     content: '';
-    left: 30px;
+    left: 32px;
     height: 100%;
     width: 2px;
     background: 2px var(--scratch-sidebar);
 }
 
-.scratch.scratch-state-evaluated::before {
-    background: 2px #859900;
-}
-
-.scratch.scratch-state-pending::before {
-    background: 2px #6c71c4;
-}
-
-.scratch.scratch-state-error::before {
-    background: 2px #dc322f;
+.scratch-state-pending {
+    background-color: var(--scratch-pending) !important;
 }
 
 .scratch-header {
@@ -268,7 +262,9 @@ body {
     display: inline;
     font-family: monospace;
     font-size: 9px;
+    line-height: var(--cell-height);
     color: var(--sheet-error);
+    margin-left: 10px;
 }
 
 .scratch-header-btn {
@@ -303,18 +299,20 @@ body {
     padding-bottom: 4px;
 }
 
+.scratch-header .help-btn {
+    margin-left: 10px;
+}
+
 [data-theme='dark'] .light-mode-btn {
     display: block !important;
-.scratch-header .help-btn {
-    margin-left: auto;
 }
 
 [data-theme='dark'] .dark-mode-btn {
     display: none;
 }
 
-[data-theme='light'] .light-mode-btn {
-    display: none;
+[data-theme='light'] .dark-mode-btn {
+    display: block !important;
 }
 
 .help-container {
