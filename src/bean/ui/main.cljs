@@ -3,6 +3,7 @@
             [bean.ui.provenance :as provenance]
             [bean.ui.sheet :as sheet]
             [bean.ui.scratch :as scratch]
+            [bean.ui.help :as help]
             [reagent.core :as rc]
             [reagent.dom :as r]))
 
@@ -51,22 +52,11 @@
     :resize-col resize-col
     :resize-row resize-row}])
 
-(defn help []
-  [:div {:id :help-container
-         :class :help-container
-         :style {:display (:help-display @ui-state)}
-         :on-click #(swap! ui-state (fn [s] (assoc s :help-display "none")))}
-   [:div {:class :help
-          :on-click #(.stopPropagation %)}
-    ""
-    [:button {:class [:small-btn :close-help]
-              :on-click #(swap! ui-state (fn [s] (assoc s :help-display "none")))} "×"]]])
-
 (defn container []
   [:div {:class [:container
                  (when (= (:help-display @ui-state) "block")
                    "help-open")]}
-   [help]
+   [help/help ui-state]
    [:div {:class :sheet-container}
     [scratch/text-area sheet1 ui-state]
     [active-sheet]]])
