@@ -47,6 +47,11 @@
     --cell-selector: #666;
 }
 
+@font-face {
+    font-family: SpaceGrotesk;
+    src: url(/fonts/SpaceGrotesk.ttf);
+}
+
 body {
     margin: 0;
     background: var(--sheet-background);
@@ -82,6 +87,8 @@ body {
     color: var(--sheet-label-foreground);
     padding: var(--cell-padding);
     box-sizing: border-box;
+    font-family: SpaceGrotesk;
+    font-size: 0.8rem;
 }
 
 .bean-labels-top {
