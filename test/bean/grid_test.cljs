@@ -2,7 +2,7 @@
   (:require [bean.grid :refer [parse-grid
                                eval-sheet
                                eval-code
-                               eval-address
+                               eval-cell
                                new-sheet]]
             [bean.deps :refer [make-depgraph]]
             [bean.util :as util]
@@ -174,7 +174,7 @@
   (testing "Basic incremental evaluation given a pre-evaluated grid and a depgraph"
     (let [sheet (eval-sheet (new-sheet [["10" "=A1" "=A1+B1" "100" "=C1" "=A1"]]
                                        ""))
-          {evaluated-grid :grid depgraph :depgraph} (eval-address [:cell [0 1]] sheet "=A1+D1")]
+          {evaluated-grid :grid depgraph :depgraph} (eval-cell [0 1] sheet "=A1+D1")]
       (is (= 10 (:value (util/get-cell evaluated-grid [0 0]))))
       (is (= 110 (:value (util/get-cell evaluated-grid [0 1]))))
       (is (= 120 (:value (util/get-cell evaluated-grid [0 2]))))
@@ -189,7 +189,7 @@
   (testing "Older dependencies are removed in an incremental evaluation"
     (let [sheet (eval-sheet (new-sheet [["10" "=A1" "=A1+B1" "100"]]
                                        ""))
-          {depgraph :depgraph} (eval-address [:cell [0 1]] sheet "=D1")]
+          {depgraph :depgraph} (eval-cell [0 1] sheet "=D1")]
       (is (= depgraph
              {[:cell [0 0]] #{[:cell [0 2]]}
               [:cell [0 1]] #{[:cell [0 2]]}
@@ -200,7 +200,7 @@
                                         ["20" ""]
                                         ["30" ""]]
                                        ""))
-          {evaluated-grid :grid depgraph :depgraph} (eval-address [:cell [0 1]] sheet "=A1:A3")]
+          {evaluated-grid :grid depgraph :depgraph} (eval-cell [0 1] sheet "=A1:A3")]
       (is (= (util/map-on-matrix :representation evaluated-grid)
              [["10" "10"]
               ["20" "20"]
@@ -216,7 +216,7 @@
                                         ["" ""]
                                         ["=B2" ""]]
                                        ""))
-          {evaluated-grid :grid depgraph :depgraph} (eval-address [:cell [1 0]] sheet "20")]
+          {evaluated-grid :grid depgraph :depgraph} (eval-cell [1 0] sheet "20")]
       (is (= (util/map-on-matrix :representation evaluated-grid)
              [["10" "10"]
               ["20" "20"]
@@ -228,7 +228,7 @@
                                         ["20" ""]
                                         ["" ""]]
                                        ""))
-          {evaluated-grid :grid} (eval-address [:cell [1 1]] sheet "A string")]
+          {evaluated-grid :grid} (eval-cell [1 1] sheet "A string")]
       (is (= (util/map-on-matrix :representation evaluated-grid)
              [["10" "Spill error"]
               ["20" "A string"]
@@ -240,7 +240,7 @@
                                         [""       "=C1:D2" ""   "=C2+D2"]
                                         [""       "" ""   ""]]
                                        ""))
-          {evaluated-grid :grid} (eval-address [:cell [1 2]] sheet "202")]
+          {evaluated-grid :grid} (eval-cell [1 2] sheet "202")]
       (is (= (util/map-on-matrix :representation (:grid sheet))
              [["8" "8" "6" "19"]
               ["1" "1" "2" "4"]
@@ -286,14 +286,14 @@
     (is (= [["11" "2" "20"]]
            (as-> (new-sheet [["1" "2" "=addaone(9)"]] "addaone:{x+A1}") sheet
              (eval-sheet sheet)
-             (eval-address [:cell [0 0]] sheet "=11")
+             (eval-cell [0 0] sheet "=11")
              (util/map-on-matrix :representation (:grid sheet))))))
 
   (testing "A named reference is re-evaluated when its dependency changes"
     (is (= 10
            (as-> (new-sheet [["1" "2"]] "addaone:4+A1") sheet
              (eval-sheet sheet)
-             (eval-address [:cell [0 0]] sheet "6")
+             (eval-cell [0 0] sheet "6")
              (get-in sheet [:bindings "addaone" :value])))))
 
   (testing "Depgraph is updated when a named reference's dependencies change"
@@ -307,5 +307,5 @@
     (is (= {[:named "addaone"] #{[:cell [0 1]]}}
            (as-> (new-sheet [["1" "2"]] "addaone:4") sheet
              (eval-sheet sheet)
-             (eval-address [:cell [0 1]] sheet "=addaone+20")
+             (eval-cell [0 1] sheet "=addaone+20")
              (get-in sheet [:depgraph]))))))

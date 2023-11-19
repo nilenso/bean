@@ -112,7 +112,7 @@
 (defn parse-grid [grid]
   (util/map-on-matrix value/from-cell grid))
 
-(defn- eval-cell [cell sheet]
+(defn- eval-cell* [cell sheet]
   (if (or (not (:spilled-from cell))
           (:matrix cell))
     (interpreter/eval-cell cell sheet)
@@ -127,7 +127,6 @@
 (defn- interested-spillers [addrs grid]
   (->> addrs
        (mapcat #(get-in grid (conj % :interested-spillers)))
-       (map deps/->cell-dep)
        set))
 
 (defn new-sheet [content-grid code]
@@ -138,89 +137,90 @@
      :depgraph (deps/make-depgraph parsed-grid)}))
 
 (defn- escalate-bindings-errors [sheet]
-  (reduce (fn [sheet [named {:keys [error] :as v}]]
+  (reduce (fn [sheet [named {:keys [error]}]]
             (if error
               (reduced (assoc sheet :code-error (errors/named-ref-error named error)))
               sheet))
           (dissoc sheet :code-error)
           (:bindings sheet)))
 
-(defmulti eval-address first)
-;; not a fan of making this a defmulti
-;; when we make this iterative instead of recursive, we'll have to undo this
+(declare eval-dep)
 
-(defmethod eval-address :cell
-  ([[_ cell-address :as address] {:keys [grid] :as sheet}]
-   (eval-address address sheet (util/get-cell grid cell-address) false))
+(defn eval-cell
+  ([address {:keys [grid] :as sheet}]
+   (eval-cell address sheet (util/get-cell grid address) false))
 
   ([address sheet new-content]
-   (eval-address address sheet (value/from-cell new-content) true))
+   (eval-cell address sheet (value/from-cell new-content) true))
 
-  ([[_ cell-address :as address] {:keys [grid depgraph ui] :as sheet} cell content-changed?]
-   ; todo: if cyclic dependency break with error
-   (let [existing-cell (util/get-cell grid cell-address)
-         cell* (eval-cell cell sheet)
+  ([address {:keys [grid depgraph] :as sheet} cell content-changed?]
+   (let [existing-cell (util/get-cell grid address)
+         cell* (eval-cell* cell sheet)
          unspilled-grid (-> grid
-                            (clear-matrix cell-address existing-cell)
-                            (assoc-in cell-address cell*))
+                            (clear-matrix address existing-cell)
+                            (assoc-in address cell*))
          cleared-addrs (:spilled-into existing-cell)
          [grid* evaled-addrs] (if (:matrix cell*)
-                                (spill-matrix unspilled-grid cell-address)
-                                [unspilled-grid #{cell-address}])
+                                (spill-matrix unspilled-grid address)
+                                [unspilled-grid #{address}])
          updated-addrs (set/union evaled-addrs cleared-addrs)]
-
      (as-> (-> sheet
                (assoc :grid grid*)
                (assoc :depgraph (cond-> depgraph
                                   content-changed? (deps/update-depgraph
-                                                    address
+                                                    [:cell address]
                                                     existing-cell
                                                     cell*))))
            sheet
-       (reduce #(eval-address %2 %1) sheet
-               (-> (dependents (map deps/->cell-dep updated-addrs) depgraph)
-                   (disj address)))
-       ;; The interested spillers here are re-evaluated
-       ;; to mark them as spill errors
-       (reduce #(eval-address %2 %1) sheet
+       (reduce
+        #(eval-dep %2 %1)
+        sheet
+        (-> (dependents (map deps/->cell-dep updated-addrs) depgraph)
+            (disj [:cell address])))
+            ;; The interested spillers here are re-evaluated
+            ;; to mark them as spill errors
+       (reduce #(eval-cell %2 %1) sheet
                (-> (interested-spillers updated-addrs grid)
                    (disj address)))))))
 
-(defmethod eval-address :named
-  ([[_ named :as address] {:keys [bindings] :as sheet}]
-   (if-let [v (bindings named)]
-     (eval-address address sheet v false)
-     (errors/undefined-named-ref named)))
+;; TODO use consistent names: eval-named, eval-binding
+(defn eval-named
+  ([name {:keys [bindings] :as sheet}]
+   (if-let [value (bindings name)]
+     (eval-named name sheet value)
+     (errors/undefined-named-ref name)))
 
-  ([address sheet new-content]
-  ;; TODO: This is invalid
-   (eval-address address
-                 sheet
-                 (value/from-statement (parser/statement-source (:code sheet)
-                                                                new-content)
-                                       new-content)
-                 true))
-
-  ([[_ named :as address] {:keys [bindings] :as sheet} val _content-changed?]
-   (-> (let [existing-val (bindings named)
+  ;; TODO: potentially rename bean.value/ to bean.val/
+  ([name {:keys [bindings] :as sheet} val]
+   (-> (let [existing-val (bindings name)
              val* (-> val
                       (dissoc :error)
                       (merge (interpreter/eval-ast (:ast val) sheet)))]
          (as-> sheet sheet
-           (assoc-in sheet [:bindings named] val*)
-           (update-in sheet [:depgraph] #(deps/update-depgraph % address existing-val val*))
-           (reduce #(eval-address %2 %1)
+           (assoc-in sheet [:bindings name] val*)
+           (update-in sheet [:depgraph] #(deps/update-depgraph % [:named name] existing-val val*))
+           (reduce #(eval-dep %2 %1)
                    sheet
-                   (-> (dependents [address] (:depgraph sheet))
-                       (disj address)))))
+                   (-> (dependents [[:named name]] (:depgraph sheet))
+                       (disj [:named name])))))
        escalate-bindings-errors)))
+
+(defmulti eval-dep first)
+
+(defmethod eval-dep :cell
+  [[_ address] sheet]
+  (eval-cell address sheet))
+
+(defmethod eval-dep :named
+  [[_ name] sheet]
+  (eval-named name sheet))
 
 (defn- eval-grid [sheet]
   (util/reduce-on-sheet-addressed
-   (fn [sheet address _]
-     (eval-address (deps/->cell-dep address) sheet))
+   #(eval-cell %2 %1)
    sheet))
 
+;; TODO use consistent names eval-code, eval-program, eval-statement
 (defn eval-code
   ;; Suppressing errors so we let the grid evaluate before showing any errors in the code
   ([sheet] (eval-code sheet (:code sheet) true))
@@ -229,19 +229,16 @@
                (if-let [parse-error (parser/error code-ast)]
                  (assoc sheet :code-error parse-error)
                  (-> (reduce (fn [sheet [_ [_ named] expr]]
-                               (eval-address [:named named]
-                                             sheet
-                                             (value/from-statement (parser/statement-source code expr)
-                                                                   expr)
-                                             false))
+                               (eval-named named
+                                           sheet
+                                           (value/from-statement (parser/statement-source code expr)
+                                                                 expr)))
                              (dissoc sheet :code-error)
                              (rest code-ast))
                      (assoc :code-ast code-ast))))]
      (if (true? suppress-errors)
        res
        (escalate-bindings-errors res)))))
-
-
 
 (defn eval-sheet
   ([sheet]
@@ -271,7 +268,6 @@
 
    ;; Addressing information
    :relative-address nil})
-  
 
 (comment
   :sheet
@@ -281,7 +277,4 @@
 
    ;; Evaluated fields
    :depgraph depgraph
-   :bindings bindings
-
-   ;; UI fields
-   :grid-dimensions grid-dimensions})
+   :bindings bindings})

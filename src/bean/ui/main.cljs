@@ -28,7 +28,7 @@
   (rc/atom {:help-display :none}))
 
 (defn update-cell [address content]
-  (swap! sheet1 #(grid/eval-address [:cell address] % content)))
+  (swap! sheet1 #(grid/eval-cell address % content)))
 
 (defn resize-row [row height]
   (swap! sheet1 #(assoc-in % [:ui :row-heights row] height)))
