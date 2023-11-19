@@ -127,7 +127,7 @@
 (defn- interested-spillers [addrs grid]
   (->> addrs
        (mapcat #(get-in grid (conj % :interested-spillers)))
-       (map deps/->ref-dep)
+       (map deps/->cell-dep)
        set))
 
 (defn new-sheet [content-grid code]
@@ -178,7 +178,7 @@
                                                     cell*))))
            sheet
        (reduce #(eval-address %2 %1) sheet
-               (-> (dependents (map deps/->ref-dep updated-addrs) depgraph)
+               (-> (dependents (map deps/->cell-dep updated-addrs) depgraph)
                    (disj address)))
        ;; The interested spillers here are re-evaluated
        ;; to mark them as spill errors
@@ -218,7 +218,7 @@
 (defn- eval-grid [sheet]
   (util/reduce-on-sheet-addressed
    (fn [sheet address _]
-     (eval-address (deps/->ref-dep address) sheet))
+     (eval-address (deps/->cell-dep address) sheet))
    sheet))
 
 (defn eval-code

@@ -2,7 +2,7 @@
   (:require [clojure.set :as set]
             [bean.util :as util]))
 
-(defn ->ref-dep [dep]
+(defn ->cell-dep [dep]
   [:cell dep])
 
 (defn ->named-dep [dep]
@@ -17,11 +17,11 @@
       :FunctionDefinition (ast->deps arg)
       :Name (if (#{"x" "y" "z"} arg) #{} #{(->named-dep arg)})
       :CellRef (let [[_ a n] ast]
-                 #{(->ref-dep (util/a1->rc a (js/parseInt n)))})
+                 #{(->cell-dep (util/a1->rc a (js/parseInt n)))})
       :MatrixRef (->> (apply util/matrix-bounds args)
                       (apply util/addresses-matrix)
                       (mapcat identity)
-                      (map ->ref-dep)
+                      (map ->cell-dep)
                       set)
       :Expression (if (util/is-expression? arg)
                     (let [[left _ right] args]
@@ -44,7 +44,7 @@
   (->> grid
        (util/map-on-matrix-addressed
         #(for [dependency (ast->deps (:ast %2))]
-           {:parent dependency :child (->ref-dep %1)}))
+           {:parent dependency :child (->cell-dep %1)}))
        flatten
        (reduce #(depgraph-add-edge %1 (:parent %2) (:child %2)) {})))
 
