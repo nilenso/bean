@@ -278,6 +278,8 @@ a {
     line-height: var(--cell-height);
     color: var(--sheet-error);
     margin-left: 10px;
+    overflow: hidden;
+    /* This is quite useless, but cleaner than overflowing */
 }
 
 .code-header-btn {

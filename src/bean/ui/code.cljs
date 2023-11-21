@@ -1,11 +1,12 @@
 (ns bean.ui.code
   (:require [bean.code :as code]
-            [bean.ui.util :refer [cs]]))
+            [bean.ui.util :refer [cs]]
+            [bean.code-errors :as code-errors]))
 
 (defn set-eval-state [sheet]
   (assoc-in sheet
             [:ui :code-evaluation-state]
-            (if (:errors sheet)
+            (if (code-errors/get-error sheet)
               :error
               :evaluated)))
 

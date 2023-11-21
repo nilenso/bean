@@ -138,12 +138,15 @@
      :depgraph (deps/make-depgraph parsed-grid)}))
 
 (defn- escalate-bindings-errors [sheet]
-  (reduce (fn [sheet [named {:keys [error]}]]
-            (if error
-              (reduced (assoc sheet :code-error (code-errors/named-ref-error named error)))
-              sheet))
-          (dissoc sheet :code-error)
-          (:bindings sheet)))
+  (if (code-errors/get-error sheet)
+    ;; This likely already set a parse error, return as is
+    sheet
+    (reduce (fn [sheet [named {:keys [error]}]]
+              (if error
+                (reduced (assoc sheet :code-error (code-errors/named-ref-error named error)))
+                sheet))
+            (dissoc sheet :code-error)
+            (:bindings sheet))))
 
 (declare eval-dep)
 
@@ -222,9 +225,10 @@
 (defn eval-code
   ;; Suppressing errors so we let the grid evaluate before showing any errors in the code
   ([sheet] (eval-code sheet (:code sheet) true))
-  ([sheet code & suppress-errors]
-   (let [res (let [code-ast (parser/parse-statement code)]
-               (if-let [parse-error (parser/error code-ast)]
+  ([sheet code suppress-errors]
+   (let [res (let [code-ast (parser/parse-statement code)
+                   parse-error (parser/error code-ast)]
+               (if (string? parse-error)
                  (assoc sheet :code-error parse-error)
                  (-> (reduce (fn [sheet [_ [_ named] expr]]
                                (eval-named named
