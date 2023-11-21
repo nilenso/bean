@@ -184,14 +184,12 @@
                (-> (interested-spillers updated-addrs grid)
                    (disj address)))))))
 
-;; TODO use consistent names: eval-named, eval-binding
 (defn eval-named
   ([name {:keys [bindings] :as sheet}]
    (if-let [value (bindings name)]
      (eval-named name sheet value)
      (errors/undefined-named-ref name)))
 
-  ;; TODO: potentially rename bean.value/ to bean.val/
   ([name {:keys [bindings] :as sheet} val]
    (-> (let [existing-val (bindings name)
              val* (-> val
@@ -221,7 +219,6 @@
    #(eval-cell %2 %1)
    sheet))
 
-;; TODO use consistent names eval-code, eval-program, eval-statement
 (defn eval-code
   ;; Suppressing errors so we let the grid evaluate before showing any errors in the code
   ([sheet] (eval-code sheet (:code sheet) true))
