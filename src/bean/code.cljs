@@ -1,4 +1,4 @@
-(ns bean.scratch
+(ns bean.code
   (:require [bean.grid :as grid]))
 
 (defn reevaluate [{:keys [code-in-editor] :as sheet}]

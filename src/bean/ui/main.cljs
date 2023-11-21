@@ -2,7 +2,7 @@
   (:require [bean.grid :as grid]
             [bean.ui.provenance :as provenance]
             [bean.ui.sheet :as sheet]
-            [bean.ui.scratch :as scratch]
+            [bean.ui.code :as code]
             [bean.ui.help :as help]
             [reagent.core :as rc]
             [reagent.dom :as r]))
@@ -58,7 +58,7 @@
                    "help-open")]}
    [help/help ui-state]
    [:div {:class :sheet-container}
-    [scratch/text-area sheet1 ui-state]
+    [code/text-area sheet1 ui-state]
     [active-sheet]]])
 
 (defn ^:dev/after-load ^:export main []

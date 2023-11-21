@@ -6,13 +6,13 @@
     --sheet-label-foreground: #666;
     --cell-background: white;
     --corner-background: #ddd;
-    --scratch-background: #fff;
-    --scratch-foreground: #111;
-    --scratch-sidebar: rgba(255, 0, 0, 0.4);
-    --scratch-pending: #f0c2b0;
+    --code-background: #fff;
+    --code-foreground: #111;
+    --code-sidebar: rgba(255, 0, 0, 0.4);
+    --code-pending: #f0c2b0;
     --sheet-border: #dedbd7;
     --label-border: #8a868440;
-    --scratch-lines: #90b1ccaa;
+    --code-lines: #90b1ccaa;
     --btn-foreground: #666;
     --btn-background: #e9e9ed;
     --cell-selector: #666;
@@ -23,8 +23,8 @@
     --cell-border: 1px;
     --label-left-width: 40px;
     --label-left-bottom-border: 0.1px;
-    --scratch-width: 350px;
-    --scratch-thick-line-gap: 4;
+    --code-width: 350px;
+    --code-thick-line-gap: 4;
 }
 
 [data-theme='dark'] {
@@ -35,14 +35,14 @@
     --sheet-label-background: #002b36;
     --sheet-label-foreground: #839496;
     --cell-background: #073642;
-    --scratch-background: #073642;
-    --scratch-foreground: #93a1a1;
-    --scratch-sidebar: #cb4b16;
-    --scratch-pending: #73402c;
+    --code-background: #073642;
+    --code-foreground: #93a1a1;
+    --code-sidebar: #cb4b16;
+    --code-pending: #73402c;
     --sheet-border: #002b36;
     --sheet-header-border: #002b36;
     --label-border: #073642;
-    --scratch-lines: #93a1a1;
+    --code-lines: #93a1a1;
     --btn-foreground: white;
     --btn-background: var(--sheet-background);
     --cell-selector: #666;
@@ -66,7 +66,7 @@ a {
 .sheet-container {
     position: relative;
     display: grid;
-    grid-template-columns: var(--scratch-width) auto;
+    grid-template-columns: var(--code-width) auto;
     width: min-content;
 }
 
@@ -121,7 +121,7 @@ a {
     border-bottom: 0.1px solid var(--label-border);
     border-right: var(--cell-border) solid var(--sheet-border);
     position: sticky;
-    left: var(--scratch-width);
+    left: var(--code-width);
     padding: var(--cell-padding);
 }
 
@@ -133,7 +133,7 @@ a {
     border-right: var(--cell-border) solid var(--sheet-border);
     border-left: var(--cell-border) solid var(--sheet-border);
     position: sticky;
-    left: var(--scratch-width);
+    left: var(--code-width);
     padding: var(--cell-padding);
 }
 
@@ -201,10 +201,10 @@ a {
     box-sizing: border-box;
 }
 
-.scratch {
-    background-color: var(--scratch-background);
-    color: var(--scratch-foreground);
-    background-image: linear-gradient(var(--scratch-lines) 0.7px, transparent 0.7px);
+.code {
+    background-color: var(--code-background);
+    color: var(--code-foreground);
+    background-image: linear-gradient(var(--code-lines) 0.7px, transparent 0.7px);
     background-size: 100% var(--cell-height);
     position: sticky;
     left: 0;
@@ -212,7 +212,7 @@ a {
     margin-top: -0.7px;
 }
 
-.scratch-body {
+.code-body {
     display: grid;
     grid-template-columns: 30px 1fr;
     position: absolute;
@@ -221,9 +221,9 @@ a {
     height: 100%;
 }
 
-.scratch-text {
+.code-text {
     background: none;
-    color: var(--scratch-foreground);
+    color: var(--code-foreground);
     border: none;
     padding: 0 10px 0 10px;
     height: 100%;
@@ -236,31 +236,31 @@ a {
     resize: none;
 }
 
-.scratch-thick-lines {
+.code-thick-lines {
     position: absolute;
     height: 100%;
     width: 100%;
     background-color: transparent;
     background-image: linear-gradient(#4a759987 0.9px, transparent 0.9px);
-    background-size: 100% calc(var(--cell-height) * var(--scratch-thick-line-gap));
+    background-size: 100% calc(var(--cell-height) * var(--code-thick-line-gap));
     position: sticky;
     left: 0;
 }
 
-.scratch::before {
+.code::before {
     position: absolute;
     content: '';
     left: 32px;
     height: 100%;
     width: 2px;
-    background: 2px var(--scratch-sidebar);
+    background: 2px var(--code-sidebar);
 }
 
-.scratch-state-pending {
-    background-color: var(--scratch-pending) !important;
+.code-state-pending {
+    background-color: var(--code-pending) !important;
 }
 
-.scratch-header {
+.code-header {
     position: sticky;
     top: 0;
     height: var(--cell-height);
@@ -271,7 +271,7 @@ a {
     padding-right: 3px;
 }
 
-.scratch-error {
+.code-error {
     display: inline;
     font-family: monospace;
     font-size: 9px;
@@ -280,7 +280,7 @@ a {
     margin-left: 10px;
 }
 
-.scratch-header-btn {
+.code-header-btn {
     height: 24px;
     width: 28px;
     cursor: pointer;
@@ -302,17 +302,17 @@ a {
     background-color: var(--btn-background);
 }
 
-.scratch-header .dark-mode-btn {
+.code-header .dark-mode-btn {
     margin-left: auto;
 }
 
-.scratch-header .light-mode-btn {
+.code-header .light-mode-btn {
     margin-left: auto;
     display: none;
     padding-bottom: 4px;
 }
 
-.scratch-header .help-btn {
+.code-header .help-btn {
     margin-left: 4px;
 }
 
