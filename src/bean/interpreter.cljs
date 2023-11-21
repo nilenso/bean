@@ -7,21 +7,21 @@
 (defn- ast-result [error-or-val]
   (if-let [error (:error error-or-val)]
     (errors/stringified-error error)
-    {:value error-or-val
+    {:scalar error-or-val
      :representation (str error-or-val)}))
 
 (defn- fn-result [f]
-  {:value f
+  {:scalar f
    :representation ""})
 
 (defn- cell->ast-result [cell]
-  (select-keys cell [:value :error :representation]))
+  (select-keys cell [:scalar :error :representation]))
 
 (defn- ast-result->cell [{:keys [error matrix] :as ast-result} cell]
   (merge
    {:content (:content cell)
     :ast (:ast cell)
-    :value (:value ast-result)
+    :scalar (:scalar ast-result)
     :representation (:representation ast-result)}
    (when matrix {:matrix matrix})
    (when error {:error error})))
@@ -34,15 +34,15 @@
    #(util/get-cell grid %)
    (util/addresses-matrix start-address end-address)))
 
-(defn- apply-values
+(defn- apply-results
   ([f ast-results]
    (if-let [referenced-error (first-error ast-results)]
      referenced-error
-     (ast-result (apply f (map :value ast-results)))))
+     (ast-result (apply f (map :scalar ast-results)))))
   ([f ast-results matrix]
    {:matrix
     (util/map-on-matrix
-     #(apply-values f (conj ast-results %))
+     #(apply-results f (conj ast-results %))
      matrix)}))
 
 (defn- dim [matrix]
@@ -53,7 +53,7 @@
     {:matrix
      (mapv (partial mapv
                     (fn [l-el r-el]
-                      (apply-values
+                      (apply-results
                        #(apply %1 [%2 %3])
                        [op l-el r-el])))
            lmatrix
@@ -65,18 +65,18 @@
         rmatrix (:matrix right)]
     (cond
       (and lmatrix rmatrix) (matrix-op-matrix lmatrix op rmatrix)
-      lmatrix (apply-values #(apply %1 [%2 %3]) [op right] lmatrix)
-      rmatrix (apply-values #(apply %1 [%3 %2]) [op left] rmatrix)
-      :else (apply-values #(apply %1 [%2 %3]) [op left right]))))
+      lmatrix (apply-results #(apply %1 [%2 %3]) [op right] lmatrix)
+      rmatrix (apply-results #(apply %1 [%3 %2]) [op left] rmatrix)
+      :else (apply-results #(apply %1 [%2 %3]) [op left right]))))
 
 (def global-ctx
-  {"concat" {:value functions/bean-concat
+  {"concat" {:scalar functions/bean-concat
              :representation "f"}})
 
 (declare apply-f)
 
 (defn eval-ast [ast {:keys [grid bindings] :as sheet}]
-  ; ast goes down, value or an error comes up
+  ; ast goes down, result or an error comes up
   (let [[node-type & [arg :as args]] ast
         eval-sub-ast #(eval-ast % sheet)
         eval-matrix* #(eval-matrix %1 %2 grid)]
@@ -115,9 +115,9 @@
                                "*" operators/bean-op-*)))))
 
 (defn- apply-f [sheet f params]
-  (if (fn? (:value f))
-    ((:value f) params)
-    (eval-ast (:value f)
+  (if (fn? (:scalar f))
+    ((:scalar f) params)
+    (eval-ast (:scalar f)
               (update-in sheet
                          [:bindings]
                          #(merge % (into {} (map vector ["x" "y" "z"] params)))))))

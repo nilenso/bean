@@ -17,23 +17,23 @@
                 ["=A1+A2+A3+A4+10" "" ""]]
           evaluated-sheet (eval-sheet (new-sheet grid ""))]
       (is (= (util/map-on-matrix
-              #(select-keys % [:value :content :error :representation])
+              #(select-keys % [:scalar :content :error :representation])
               (:grid evaluated-sheet))
-             [[{:content "1" :value 1 :representation "1"}
-               {:content "" :value nil :representation ""}
-               {:content "" :value nil :representation ""}]
-              [{:content "2" :value 2 :representation "2"}
-               {:content "" :value nil :representation ""}
-               {:content "" :value nil :representation ""}]
-              [{:content "=A1+A2" :value 3 :representation "3"}
-               {:content "" :value nil :representation ""}
-               {:content "" :value nil :representation ""}]
-              [{:content "=A3+1" :value 4 :representation "4"}
-               {:content "" :value nil :representation ""}
-               {:content "" :value nil :representation ""}]
-              [{:content "=A1+A2+A3+A4+10" :value 20 :representation "20"}
-               {:content "" :value nil :representation ""}
-               {:content "" :value nil :representation ""}]]))
+             [[{:content "1" :scalar 1 :representation "1"}
+               {:content "" :scalar nil :representation ""}
+               {:content "" :scalar nil :representation ""}]
+              [{:content "2" :scalar 2 :representation "2"}
+               {:content "" :scalar nil :representation ""}
+               {:content "" :scalar nil :representation ""}]
+              [{:content "=A1+A2" :scalar 3 :representation "3"}
+               {:content "" :scalar nil :representation ""}
+               {:content "" :scalar nil :representation ""}]
+              [{:content "=A3+1" :scalar 4 :representation "4"}
+               {:content "" :scalar nil :representation ""}
+               {:content "" :scalar nil :representation ""}]
+              [{:content "=A1+A2+A3+A4+10" :scalar 20 :representation "20"}
+               {:content "" :scalar nil :representation ""}
+               {:content "" :scalar nil :representation ""}]]))
       (is (= (:depgraph evaluated-sheet)
              {[:cell [0 0]] #{[:cell [2 0]] [:cell [4 0]]}
               [:cell [1 0]] #{[:cell [2 0]] [:cell [4 0]]}
@@ -46,20 +46,20 @@
                 ["=A1+A2" "=B2" ""]
                 ["=A3+1" "" ""]]]
       (is (= (util/map-on-matrix
-              #(select-keys % [:value :content :error :representation])
+              #(select-keys % [:scalar :content :error :representation])
               (:grid (eval-sheet (new-sheet grid ""))))
-             [[{:content "=1" :value 1 :representation "1"}
-               {:content "" :value nil :representation ""}
-               {:content "" :value nil :representation ""}]
-              [{:content "ABC" :value "ABC" :representation "ABC"}
-               {:content "=A1000" :value nil :error "Invalid address [999 0]" :representation "Invalid address [999 0]"}
-               {:content "" :value nil :representation ""}]
-              [{:content "=A1+A2" :value nil :error "+ only works for Integers" :representation "+ only works for Integers"}
-               {:content "=B2" :value nil :error "Invalid address [999 0]" :representation "Invalid address [999 0]"}
-               {:content "" :value nil :representation ""}]
-              [{:content "=A3+1" :value nil :error "+ only works for Integers" :representation "+ only works for Integers"}
-               {:content "" :value nil :representation ""}
-               {:content "" :value nil :representation ""}]]))))
+             [[{:content "=1" :scalar 1 :representation "1"}
+               {:content "" :scalar nil :representation ""}
+               {:content "" :scalar nil :representation ""}]
+              [{:content "ABC" :scalar "ABC" :representation "ABC"}
+               {:content "=A1000" :scalar nil :error "Invalid address [999 0]" :representation "Invalid address [999 0]"}
+               {:content "" :scalar nil :representation ""}]
+              [{:content "=A1+A2" :scalar nil :error "+ only works for Integers" :representation "+ only works for Integers"}
+               {:content "=B2" :scalar nil :error "Invalid address [999 0]" :representation "Invalid address [999 0]"}
+               {:content "" :scalar nil :representation ""}]
+              [{:content "=A3+1" :scalar nil :error "+ only works for Integers" :representation "+ only works for Integers"}
+               {:content "" :scalar nil :representation ""}
+               {:content "" :scalar nil :representation ""}]]))))
 
   (testing "Errors are not operated upon further"
     (let [grid [["=A1000+1" "=A1+100" ""]]]
@@ -87,15 +87,15 @@
           matrix (get-in evaluated-sheet [:grid 1 1 :matrix])]
       (is (= matrix [[{:content "1"
                        :ast [:CellContents [:Integer "1"]]
-                       :value 1
+                       :scalar 1
                        :representation "1"}]
                      [{:content "2"
                        :ast [:CellContents [:Integer "2"]]
-                       :value 2
+                       :scalar 2
                        :representation "2"}]]))
-      (is (= (get-in evaluated-sheet [:grid 1 1 :value]) 1))
+      (is (= (get-in evaluated-sheet [:grid 1 1 :scalar]) 1))
       (is (= (get-in evaluated-sheet [:grid 1 1 :spilled-into]) #{[1 1] [2 1]}))
-      (is (= (get-in evaluated-sheet [:grid 2 1 :value]) 2))))
+      (is (= (get-in evaluated-sheet [:grid 2 1 :scalar]) 2))))
 
   (testing "Matrix spill errors if a cell has some content"
     (let [grid [["1" ""]
@@ -104,18 +104,18 @@
           evaluated-sheet (eval-sheet (new-sheet grid ""))]
       (is (get-in evaluated-sheet [:grid 1 1 :matrix]))
       (is (= (get-in evaluated-sheet [:grid 1 1 :error]) "Spill error"))
-      (is (= (get-in evaluated-sheet [:grid 2 1 :value]) "A string"))))
+      (is (= (get-in evaluated-sheet [:grid 2 1 :scalar]) "A string"))))
 
   (testing "Matrix spill errors if there's a conflict"
     (let [grid [["1" "3"]
                 ["2" "=A1:A2"]
                 ["=A1:B1" ""]]
           evaluated-sheet (eval-sheet (new-sheet grid ""))]
-      (is (= (get-in evaluated-sheet [:grid 1 1 :value]) 1))
-      (is (= (get-in evaluated-sheet [:grid 2 1 :value]) 2))
+      (is (= (get-in evaluated-sheet [:grid 1 1 :scalar]) 1))
+      (is (= (get-in evaluated-sheet [:grid 2 1 :scalar]) 2))
       (is (= (get-in evaluated-sheet [:grid 2 0 :error]) "Spill error"))
       (is (= (get-in evaluated-sheet [:grid 2 0 :representation]) "Spill error"))
-      (is (= (get-in evaluated-sheet [:grid 2 0 :value]) nil))
+      (is (= (get-in evaluated-sheet [:grid 2 0 :scalar]) nil))
       (is (= (util/map-on-matrix :representation (:grid evaluated-sheet))
              [["1" "3"]
               ["2" "1"]
@@ -129,57 +129,57 @@
                                               ["" "" ""]
                                               ["" "" ""]]
                                              "")))]
-      (is (= (get-in grid [2 1 :value]) 2))
-      (is (= (get-in grid [3 0 :value]) 2))
-      (is (= (get-in grid [3 1 :value]) 3))
-      (is (= (get-in grid [4 1 :value]) 2))))
+      (is (= (get-in grid [2 1 :scalar]) 2))
+      (is (= (get-in grid [3 0 :scalar]) 2))
+      (is (= (get-in grid [3 1 :scalar]) 3))
+      (is (= (get-in grid [4 1 :scalar]) 2))))
 
   (testing "Function invocation"
     (is (= (util/map-on-matrix
-            #(select-keys % [:value :content :error :representation])
+            #(select-keys % [:scalar :content :error :representation])
             (:grid (eval-sheet (new-sheet [["1" "=concat(\"hello \" A1 A2)" ""]
                                            ["2" "" ""]
                                            ["=A1+A2" "" ""]
                                            ["=A3+1" "" ""]
                                            ["=A1+A2+A3+A4+10" "" ""]]
                                           ""))))
-           [[{:content "1" :value 1 :representation "1"}
-             {:content "=concat(\"hello \" A1 A2)" :value "hello 12" :representation "hello 12"}
-             {:content "" :value nil :representation ""}]
-            [{:content "2" :value 2 :representation "2"}
-             {:content "" :value nil :representation ""}
-             {:content "" :value nil :representation ""}]
-            [{:content "=A1+A2" :value 3 :representation "3"}
-             {:content "" :value nil :representation ""}
-             {:content "" :value nil :representation ""}]
-            [{:content "=A3+1" :value 4 :representation "4"}
-             {:content "" :value nil :representation ""}
-             {:content "" :value nil :representation ""}]
-            [{:content "=A1+A2+A3+A4+10" :value 20 :representation "20"}
-             {:content "" :value nil :representation ""}
-             {:content "" :value nil :representation ""}]])))
+           [[{:content "1" :scalar 1 :representation "1"}
+             {:content "=concat(\"hello \" A1 A2)" :scalar "hello 12" :representation "hello 12"}
+             {:content "" :scalar nil :representation ""}]
+            [{:content "2" :scalar 2 :representation "2"}
+             {:content "" :scalar nil :representation ""}
+             {:content "" :scalar nil :representation ""}]
+            [{:content "=A1+A2" :scalar 3 :representation "3"}
+             {:content "" :scalar nil :representation ""}
+             {:content "" :scalar nil :representation ""}]
+            [{:content "=A3+1" :scalar 4 :representation "4"}
+             {:content "" :scalar nil :representation ""}
+             {:content "" :scalar nil :representation ""}]
+            [{:content "=A1+A2+A3+A4+10" :scalar 20 :representation "20"}
+             {:content "" :scalar nil :representation ""}
+             {:content "" :scalar nil :representation ""}]])))
 
   (testing "Inlined function invocation"
     (is (= (util/map-on-matrix
-            #(select-keys % [:value :content :error :representation])
+            #(select-keys % [:scalar :content :error :representation])
             (:grid (eval-sheet (new-sheet [["1" "={x+y+z}(9 A1 A2)"]
                                            ["2" ""]]
                                           ""))))
-           [[{:content "1" :value 1 :representation "1"}
-             {:content "={x+y+z}(9 A1 A2)" :value 12 :representation "12"}]
-            [{:content "2" :value 2 :representation "2"}
-             {:content "" :value nil :representation ""}]]))))
+           [[{:content "1" :scalar 1 :representation "1"}
+             {:content "={x+y+z}(9 A1 A2)" :scalar 12 :representation "12"}]
+            [{:content "2" :scalar 2 :representation "2"}
+             {:content "" :scalar nil :representation ""}]]))))
 
 (deftest incremental-evaluate-grid
   (testing "Basic incremental evaluation given a pre-evaluated grid and a depgraph"
     (let [sheet (eval-sheet (new-sheet [["10" "=A1" "=A1+B1" "100" "=C1" "=A1"]]
                                        ""))
           {evaluated-grid :grid depgraph :depgraph} (eval-cell [0 1] sheet "=A1+D1")]
-      (is (= 10 (:value (util/get-cell evaluated-grid [0 0]))))
-      (is (= 110 (:value (util/get-cell evaluated-grid [0 1]))))
-      (is (= 120 (:value (util/get-cell evaluated-grid [0 2]))))
-      (is (= 100 (:value (util/get-cell evaluated-grid [0 3]))))
-      (is (= 120 (:value (util/get-cell evaluated-grid [0 4]))))
+      (is (= 10 (:scalar (util/get-cell evaluated-grid [0 0]))))
+      (is (= 110 (:scalar (util/get-cell evaluated-grid [0 1]))))
+      (is (= 120 (:scalar (util/get-cell evaluated-grid [0 2]))))
+      (is (= 100 (:scalar (util/get-cell evaluated-grid [0 3]))))
+      (is (= 120 (:scalar (util/get-cell evaluated-grid [0 4]))))
       (is (= depgraph
              {[:cell [0 0]] #{[:cell [0 1]] [:cell [0 2]] [:cell [0 5]]}
               [:cell [0 1]] #{[:cell [0 2]]}
@@ -294,7 +294,7 @@
            (as-> (new-sheet [["1" "2"]] "addaone:4+A1") sheet
              (eval-sheet sheet)
              (eval-cell [0 0] sheet "6")
-             (get-in sheet [:bindings "addaone" :value])))))
+             (get-in sheet [:bindings "addaone" :scalar])))))
 
   (testing "Depgraph is updated when a named reference's dependencies change"
     (is (= {[:cell [0 1]] #{[:named "addaone"]}}

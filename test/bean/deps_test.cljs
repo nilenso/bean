@@ -13,7 +13,7 @@
                            (get-in grid [0 1])
                            {:content "=A1"
                             :ast [:CellContents [:Expression [:CellRef "A" "1"]]]
-                            :value 1
+                            :scalar 1
                             :representation "1"})))))
 
   (testing "Adds an edge to the depgraph to a node that already has a dependency"
@@ -25,7 +25,7 @@
                            (get-in grid [0 1])
                            {:content "=A1"
                             :ast [:CellContents [:Expression [:CellRef "A" "1"]]]
-                            :value 1
+                            :scalar 1
                             :representation "1"})))))
 
   (testing "Removes a node from the depgraph if it has no edges after update"
@@ -37,5 +37,5 @@
                            (get-in grid [0 1])
                            {:content "2"
                             :ast [:CellContents [:Integer "2"]]
-                            :value 2
+                            :scalar 2
                             :representation "2"}))))))

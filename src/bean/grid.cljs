@@ -23,7 +23,7 @@
 (defn- clear-spilled-cell [cell address]
   (-> cell
       errors/reset
-      (dissoc :value :spilled-from)
+      (dissoc :scalar :spilled-from)
       (update :interested-spillers disj address)
       (assoc :representation "")))
 
@@ -51,7 +51,7 @@
                       :spilled-from address
                       :error (:error %2)
                       :representation (:representation %2)
-                      :value (:value %2)}
+                      :scalar (:scalar %2)}
                (= %1 [0 0]) (merge {:matrix matrix
                                     :content (:content cell)
                                     :ast (:ast cell)})))
@@ -254,7 +254,7 @@
    :ast nil
 
    ;; Evaluation results
-   :value nil
+   :scalar nil
    :representation nil
    :error nil
    :matrix nil
