@@ -5,6 +5,7 @@
             [bean.value :as value]
             [bean.deps :as deps]
             [bean.errors :as errors]
+            [bean.code-errors :as code-errors]
             [clojure.set :as set]
             [clojure.string]))
 
@@ -14,15 +15,15 @@
 (defn- set-spilled-cell [grid address cell]
   (assoc-in grid address cell))
 
-(defn- set-spill-error [grid address]
-  (-> grid
-      (assoc-in (conj address :value) nil)
-      (assoc-in (conj address :error) "Spill error")
-      (assoc-in (conj address :representation) "Spill error")))
+(defn- set-error [grid address error]
+  (update-in grid
+             address
+             #(errors/mark % error)))
 
 (defn- clear-spilled-cell [cell address]
   (-> cell
-      (dissoc :value :error :spilled-from)
+      errors/reset
+      (dissoc :value :spilled-from)
       (update :interested-spillers disj address)
       (assoc :representation "")))
 
@@ -103,7 +104,7 @@
                             (assoc :interested-spillers (:interested-spillers cell))))
                        (conj updated-addresses address*)
                        (rest spillage))
-                [(set-spill-error initial-grid spilled-from) #{address}]))
+                [(set-error initial-grid spilled-from (errors/spill-error)) #{address}]))
             [(assoc-in spilled-grid (conj address :spilled-into) updated-addresses)
              updated-addresses]))))]
     (->> (desired-spillage (util/get-cell grid address))
@@ -139,7 +140,7 @@
 (defn- escalate-bindings-errors [sheet]
   (reduce (fn [sheet [named {:keys [error]}]]
             (if error
-              (reduced (assoc sheet :code-error (errors/named-ref-error named error)))
+              (reduced (assoc sheet :code-error (code-errors/named-ref-error named error)))
               sheet))
           (dissoc sheet :code-error)
           (:bindings sheet)))
@@ -194,7 +195,7 @@
   ([name {:keys [bindings] :as sheet} val]
    (-> (let [existing-val (bindings name)
              val* (-> val
-                      (dissoc :error)
+                      errors/reset
                       (merge (interpreter/eval-ast (:ast val) sheet)))]
          (as-> sheet sheet
            (assoc-in sheet [:bindings name] val*)

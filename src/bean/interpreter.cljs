@@ -6,7 +6,7 @@
 
 (defn- ast-result [error-or-val]
   (if-let [error (:error error-or-val)]
-    {:error error :representation (str error)}
+    (errors/stringified-error error)
     {:value error-or-val
      :representation (str error-or-val)}))
 
@@ -58,8 +58,7 @@
                        [op l-el r-el])))
            lmatrix
            rmatrix)}
-    {:error "Matrices should be same size."
-     :representation "Matrices should be same size."}))
+    (errors/matrix-size-mismatch-error)))
 
 (defn apply-op [op left right]
   (let [lmatrix (:matrix left)
@@ -87,11 +86,10 @@
                       (ast-result nil))
       :CellRef (let [[_ a n] ast
                      address (util/a1->rc a (js/parseInt n))
-                     referred-cell (util/get-cell grid address)
-                     cell-exists? (not (:error referred-cell))]
-                 (cond-> referred-cell
-                   cell-exists? cell->ast-result
-                   (not cell-exists?) ast-result))
+                     referred-cell (util/get-cell grid address)]
+                 (if (errors/get-error referred-cell)
+                   (ast-result referred-cell)
+                   (cell->ast-result referred-cell)))
       :MatrixRef {:matrix (->> args
                                (apply util/matrix-bounds)
                                (apply eval-matrix*))}

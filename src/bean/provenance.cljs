@@ -1,6 +1,7 @@
 (ns bean.provenance
   (:require [bean.util :as util]
-            [bean.interpreter :as interpreter]))
+            [bean.interpreter :as interpreter]
+            [bean.errors :as errors]))
 
 (defn- value-proof [v & args]
   (->> args
@@ -25,8 +26,8 @@
                 #(value-proof (get-in matrix (conj %1 :value)) %2 op rproof)
                 lmatrix)}
       rmatrix {:matrix (util/map-on-matrix-addressed
-                #(value-proof (get-in matrix (conj %1 :value)) lproof op %2)
-                rmatrix)}
+                        #(value-proof (get-in matrix (conj %1 :value)) lproof op %2)
+                        rmatrix)}
       :else (value-proof value lproof op rproof))))
 
 (declare cell-proof)
@@ -79,9 +80,8 @@
    A proof is a vector of the shape [proof-type proof & dependency-proofs].
   `dependency-proofs` is a list of proofs."
   [address {:keys [grid] :as sheet}]
-  (let [cell (util/get-cell grid address)
-        error? (:error cell)]
-    (when-not error?
+  (let [cell (util/get-cell grid address)]
+    (when-not (errors/get-error cell)
       (if (:spilled-from cell)
         (spilled-cell-proof address cell sheet)
         [:cell-ref
