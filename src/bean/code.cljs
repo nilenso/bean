@@ -2,7 +2,7 @@
   (:require [bean.grid :as grid]))
 
 (defn reevaluate [{:keys [code-in-editor] :as sheet}]
-  (grid/eval-code sheet code-in-editor false))
+  (grid/eval-code sheet code-in-editor))
 
 (defn set-code [sheet code]
   (assoc sheet :code-in-editor code))

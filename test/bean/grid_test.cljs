@@ -300,7 +300,7 @@
     (is (= {[:cell [0 1]] #{[:named "addaone"]}}
            (as-> (new-sheet [["1" "2"]] "addaone:4+A1") sheet
              (eval-sheet sheet)
-             (eval-code sheet "addaone:4+B1" false)
+             (eval-code sheet "addaone:4+B1")
              (get-in sheet [:depgraph])))))
 
   (testing "Depgraph is updated when a named reference's dependents change"

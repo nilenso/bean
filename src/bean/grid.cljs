@@ -145,7 +145,7 @@
               (if error
                 (reduced (assoc sheet :code-error (code-errors/named-ref-error named error)))
                 sheet))
-            (dissoc sheet :code-error)
+            (dissoc sheet :code-error) ;; reset the error from a previous evaluation
             (:bindings sheet))))
 
 (declare eval-dep)
@@ -224,8 +224,8 @@
 
 (defn eval-code
   ;; Suppressing errors so we let the grid evaluate before showing any errors in the code
-  ([sheet] (eval-code sheet (:code sheet) true))
-  ([sheet code suppress-errors]
+  ([sheet] (eval-code sheet (:code sheet)))
+  ([sheet code]
    (let [res (let [code-ast (parser/parse-statement code)
                    parse-error (parser/error code-ast)]
                (if (string? parse-error)
@@ -238,9 +238,7 @@
                              (dissoc sheet :code-error)
                              (rest code-ast))
                      (assoc :code-ast code-ast))))]
-     (if (true? suppress-errors)
-       res
-       (escalate-bindings-errors res)))))
+     (escalate-bindings-errors res))))
 
 (defn eval-sheet
   ([sheet]

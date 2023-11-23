@@ -23,4 +23,13 @@
     (is (= (-> (grid/new-sheet [["1"]] "foo: A1+\"bar\"")
                grid/eval-sheet
                :code-error)
-           "name: foo. + only works for Integers"))))
+           "name: foo. + only works for Integers")))
+
+  (testing "When the code has an error in a statement, it is escalated on initial
+            evaluation after the grid is evaluated but is cleared in a subsequent
+            evaluation where the error is resolved"
+    (is (nil? (-> (grid/new-sheet [["1"]] "foo: A1+\"bar\"")
+                  grid/eval-sheet
+                  (code/set-code "foo: A1+20")
+                  code/reevaluate
+                  :code-error)))))
