@@ -64,4 +64,15 @@
 (defn ^:dev/after-load ^:export main []
   (r/render
    [container]
-   (.getElementById js/document "app")))
+   (.getElementById js/document "app"))
+  (let [canvas (.getElementById js/document "bean-canvas")
+        ctx (.getContext canvas "2d")] 
+    (set! (.-width canvas) 1000)
+    (set! (.-height canvas) 1000) 
+    (set! (.. canvas -style -width) "1000px")
+    (set! (.. canvas -style -height) "1000px") 
+    (def dpi (.-devicePixelRatio js/window)) 
+
+    (.scale (.getContext canvas "2d") dpi dpi))
+   (sheet/draw-rect 0 0 150 100)
+   (sheet/draw-rect 0 0 150 100))

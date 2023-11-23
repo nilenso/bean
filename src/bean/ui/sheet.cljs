@@ -69,6 +69,15 @@
               :height (get row-heights r)
               :width (get col-widths c)}}]))
 
+(defn draw-rect [x y h w]
+  (let [canvas (.getElementById js/document "bean-canvas")
+        ctx (.getContext canvas "2d")]
+    (set! (.-lineWidth ctx) 1.5)
+    (set! (.-strokeStyle ctx) "#777")
+    (.beginPath ctx)
+    (.rect ctx x y h w)
+    (.stroke ctx)))
+
 (defn sheet [{:keys [grid ui]} state-fns]
   [:div
    {:class :bean-sheet
@@ -84,4 +93,5 @@
                   [row state-fns %1 %2]) grid)
    [:div {:id :bean-resize-indicator-v}]
    [:div {:id :bean-resize-indicator-h}]
+   [:canvas {:id :bean-canvas :height 1000 :width 1000}]
    (when (:selected-cell ui) [cell-selector ui])])

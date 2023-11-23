@@ -79,6 +79,14 @@ a {
     position: relative;
 }
 
+#bean-canvas {
+    z-index: 0;
+    position: absolute;
+    top: var(--cell-height);
+    left: var(--label-left-width);
+    background: transparent;
+}
+
 .bean-cell {
     background: var(--cell-background);
     outline: 0.5px solid var(--sheet-border);
