@@ -1,5 +1,5 @@
 (ns bean.value
-  (:require [bean.parser :as parser]))
+  (:require [bean.parser.parser :as parser]))
 
 (defn from-statement
   [content ast]

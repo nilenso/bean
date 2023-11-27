@@ -1,6 +1,6 @@
 (ns bean.grid
   (:require [bean.interpreter :as interpreter]
-            [bean.parser :as parser]
+            [bean.parser.parser :as parser]
             [bean.util :as util]
             [bean.value :as value]
             [bean.deps :as deps]

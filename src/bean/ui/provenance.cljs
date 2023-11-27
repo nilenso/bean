@@ -1,7 +1,7 @@
 (ns bean.ui.provenance
   (:require [bean.ui.util :as util]
             [bean.provenance :as provenance]
-            [bean.parser :as parser]
+            [bean.parser.parser :as parser]
             [clojure.string :as string]))
 
 (defn subtree-proof-sentence

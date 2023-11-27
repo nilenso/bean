@@ -1,4 +1,4 @@
-(ns bean.parser
+(ns bean.parser.parser
   (:require [instaparse.core :as insta]))
 
 (def ^:private statement-grammer

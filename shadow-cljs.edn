@@ -11,7 +11,7 @@
  :builds
  {:engine {:target :node-library
            :output-to "output.js"
-           :exports {:parse bean.parser/parse}}
+           :exports {:parse bean.parser.parser/parse}}
   :ui {:target :browser
        :output-dir "public/js"
        :asset-path "/js"

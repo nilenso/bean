@@ -1,5 +1,6 @@
 (ns bean.parser-test
-  (:require [bean.parser :refer [parse parse-statement]]
+  (:require [bean.parser.parser :refer [parse parse-statement statement-source]]
+            [instaparse.core :as insta]
             [clojure.test :refer [deftest testing is]]))
 
 (deftest parser-test
@@ -37,4 +38,9 @@
                                           [:Expression [:CellRef "A" "1"]]
                                           [:Operation "+"]
                                           [:Expression [:Value [:Integer "9"]]]]]]
-           (parse-statement "foo:99\n\n\nbar   :A1+9")))))
+           (parse-statement "foo:99\n\n\nbar   :A1+9"))))
+  (let [src "foo:99\n\n\nbar   :A1+9"
+        evald (parse-statement src)]
+
+    (map #(statement-source src %)
+         (rest evald))))
