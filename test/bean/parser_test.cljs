@@ -1,6 +1,5 @@
 (ns bean.parser-test
   (:require [bean.parser.parser :refer [parse parse-statement statement-source]]
-            [instaparse.core :as insta]
             [clojure.test :refer [deftest testing is]]))
 
 (deftest parser-test
@@ -27,6 +26,15 @@
                             [:Expression [:CellRef "A" "3"]]
                             [:Expression [:CellRef "A" "4"]]]]]
            (parse "=concat(\"hello\" A3 A4)")))))
+
+(deftest string-parsing-test
+  (testing "Empty strings are parsed"
+    (is (= [:CellContents [:String ""]]
+           (parse ""))))
+
+  (testing "Unicode strings are parsed"
+    (is (= [:CellContents [:String "😀🥲🤪🤑"]]
+           (parse "😀🥲🤪🤑")))))
 
 (deftest parse-statement-test
   (testing "Statement parsing"

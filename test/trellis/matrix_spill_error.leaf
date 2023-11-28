@@ -1,0 +1,11 @@
+
+%
+
+1,,
+2,=A1:A2,
+,A string,
+
+%
+
+error(B2) = "Spill error"
+B3 = "A string"

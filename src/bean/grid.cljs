@@ -7,7 +7,8 @@
             [bean.errors :as errors]
             [bean.code-errors :as code-errors]
             [clojure.set :as set]
-            [clojure.string]))
+            [clojure.string]
+            [bean.parser.trellis-parser :as trellis-parser]))
 
 (defn- offset [[start-row start-col] [offset-rows offset-cols]]
   [(+ start-row offset-rows) (+ start-col offset-cols)])
@@ -130,12 +131,16 @@
        (mapcat #(get-in grid (conj % :interested-spillers)))
        set))
 
-(defn new-sheet [content-grid code]
-  (let [parsed-grid (parse-grid content-grid)]
-    {:grid parsed-grid
-     :code code
-     :bindings {}
-     :depgraph (deps/make-depgraph parsed-grid)}))
+(defn new-sheet
+  ([content-grid code]
+   (new-sheet content-grid code ""))
+  ([content-grid code tests]
+   (let [parsed-grid (parse-grid content-grid)]
+     {:grid parsed-grid
+      :code code
+      :tests tests
+      :bindings {}
+      :depgraph (deps/make-depgraph parsed-grid)})))
 
 (defn- escalate-bindings-errors [sheet]
   (if (code-errors/get-error sheet)
@@ -239,6 +244,22 @@
                              (rest code-ast))
                      (assoc :code-ast code-ast))))]
      (escalate-bindings-errors res))))
+
+(defn eval-test [{:keys [tests] :as sheet}]
+  (let [tests-ast (trellis-parser/parse-tests tests)]
+    (doall
+     (map (fn [[_ left-expr right-expr]]
+            (let [left-val (interpreter/eval-ast left-expr sheet)
+                  right-val (interpreter/eval-ast right-expr sheet)]
+              [(= (:scalar left-val)
+                  (:scalar right-val))
+               (merge {:ast left-expr
+                       :content (trellis-parser/trellis-subs tests left-expr)}
+                      left-val)
+               (merge {:ast right-expr
+                       :content (trellis-parser/trellis-subs tests right-expr)}
+                      right-val)]))
+          (rest tests-ast)))))
 
 (defn eval-sheet
   ([sheet]

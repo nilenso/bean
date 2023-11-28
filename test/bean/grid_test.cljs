@@ -20,20 +20,20 @@
               #(select-keys % [:scalar :content :error :representation])
               (:grid evaluated-sheet))
              [[{:content "1" :scalar 1 :representation "1"}
-               {:content "" :scalar nil :representation ""}
-               {:content "" :scalar nil :representation ""}]
+               {:content "" :scalar "" :representation ""}
+               {:content "" :scalar "" :representation ""}]
               [{:content "2" :scalar 2 :representation "2"}
-               {:content "" :scalar nil :representation ""}
-               {:content "" :scalar nil :representation ""}]
+               {:content "" :scalar "" :representation ""}
+               {:content "" :scalar "" :representation ""}]
               [{:content "=A1+A2" :scalar 3 :representation "3"}
-               {:content "" :scalar nil :representation ""}
-               {:content "" :scalar nil :representation ""}]
+               {:content "" :scalar "" :representation ""}
+               {:content "" :scalar "" :representation ""}]
               [{:content "=A3+1" :scalar 4 :representation "4"}
-               {:content "" :scalar nil :representation ""}
-               {:content "" :scalar nil :representation ""}]
+               {:content "" :scalar "" :representation ""}
+               {:content "" :scalar "" :representation ""}]
               [{:content "=A1+A2+A3+A4+10" :scalar 20 :representation "20"}
-               {:content "" :scalar nil :representation ""}
-               {:content "" :scalar nil :representation ""}]]))
+               {:content "" :scalar "" :representation ""}
+               {:content "" :scalar "" :representation ""}]]))
       (is (= (:depgraph evaluated-sheet)
              {[:cell [0 0]] #{[:cell [2 0]] [:cell [4 0]]}
               [:cell [1 0]] #{[:cell [2 0]] [:cell [4 0]]}
@@ -49,17 +49,17 @@
               #(select-keys % [:scalar :content :error :representation])
               (:grid (eval-sheet (new-sheet grid ""))))
              [[{:content "=1" :scalar 1 :representation "1"}
-               {:content "" :scalar nil :representation ""}
-               {:content "" :scalar nil :representation ""}]
+               {:content "" :scalar "" :representation ""}
+               {:content "" :scalar "" :representation ""}]
               [{:content "ABC" :scalar "ABC" :representation "ABC"}
                {:content "=A1000" :scalar nil :error "Invalid address [999 0]" :representation "Invalid address [999 0]"}
-               {:content "" :scalar nil :representation ""}]
+               {:content "" :scalar "" :representation ""}]
               [{:content "=A1+A2" :scalar nil :error "+ only works for Integers" :representation "+ only works for Integers"}
                {:content "=B2" :scalar nil :error "Invalid address [999 0]" :representation "Invalid address [999 0]"}
-               {:content "" :scalar nil :representation ""}]
+               {:content "" :scalar "" :representation ""}]
               [{:content "=A3+1" :scalar nil :error "+ only works for Integers" :representation "+ only works for Integers"}
-               {:content "" :scalar nil :representation ""}
-               {:content "" :scalar nil :representation ""}]]))))
+               {:content "" :scalar "" :representation ""}
+               {:content "" :scalar "" :representation ""}]]))))
 
   (testing "Errors are not operated upon further"
     (let [grid [["=A1000+1" "=A1+100" ""]]]
@@ -145,19 +145,19 @@
                                           ""))))
            [[{:content "1" :scalar 1 :representation "1"}
              {:content "=concat(\"hello \" A1 A2)" :scalar "hello 12" :representation "hello 12"}
-             {:content "" :scalar nil :representation ""}]
+             {:content "" :scalar "" :representation ""}]
             [{:content "2" :scalar 2 :representation "2"}
-             {:content "" :scalar nil :representation ""}
-             {:content "" :scalar nil :representation ""}]
+             {:content "" :scalar "" :representation ""}
+             {:content "" :scalar "" :representation ""}]
             [{:content "=A1+A2" :scalar 3 :representation "3"}
-             {:content "" :scalar nil :representation ""}
-             {:content "" :scalar nil :representation ""}]
+             {:content "" :scalar "" :representation ""}
+             {:content "" :scalar "" :representation ""}]
             [{:content "=A3+1" :scalar 4 :representation "4"}
-             {:content "" :scalar nil :representation ""}
-             {:content "" :scalar nil :representation ""}]
+             {:content "" :scalar "" :representation ""}
+             {:content "" :scalar "" :representation ""}]
             [{:content "=A1+A2+A3+A4+10" :scalar 20 :representation "20"}
-             {:content "" :scalar nil :representation ""}
-             {:content "" :scalar nil :representation ""}]])))
+             {:content "" :scalar "" :representation ""}
+             {:content "" :scalar "" :representation ""}]])))
 
   (testing "Inlined function invocation"
     (is (= (util/map-on-matrix
@@ -168,7 +168,7 @@
            [[{:content "1" :scalar 1 :representation "1"}
              {:content "={x+y+z}(9 A1 A2)" :scalar 12 :representation "12"}]
             [{:content "2" :scalar 2 :representation "2"}
-             {:content "" :scalar nil :representation ""}]]))))
+             {:content "" :scalar "" :representation ""}]]))))
 
 (deftest incremental-evaluate-grid
   (testing "Basic incremental evaluation given a pre-evaluated grid and a depgraph"

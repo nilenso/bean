@@ -1,20 +1,20 @@
 (ns bean.parser.parser
   (:require [instaparse.core :as insta]))
 
-(def ^:private statement-grammer
+(def statement-grammer
   "
     Program = Statement? { <'\n'+> Statement }
     <Statement> = LetStatement
     LetStatement = Name <{' '}> <':'> <{' '}> Expression
    ")
 
-(def ^:private expression-grammer
+(def expression-grammer
   ;; TODO: Integers are currently just natural numbers
   "
     CellContents = <'='> Expression / RawValue / Epsilon
     <RawValue> =  Integer / String
     Integer = #'[0-9]+'
-    String = #'.+'
+    String = #'.*'
 
     CellRef = #'[A-Z]+' #'[1-9][0-9]*'
     MatrixRef = CellRef <':'> CellRef

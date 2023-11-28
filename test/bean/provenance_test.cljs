@@ -9,8 +9,8 @@
                        (grid/new-sheet [["" "1" "=1+2" "=1+2+3"]] ""))]
       (is (= (provenance/cell-proof [0 0] evaled-grid)
              [:cell-ref
-              {:address [0 0] :scalar nil :content ""}
-              []]))
+              {:address [0 0] :scalar "" :content ""}
+              [:scalar "" :self-evident]]))
       (is (= (provenance/cell-proof [0 1] evaled-grid)
              [:cell-ref
               {:address [0 1] :scalar 1 :content "1"}

@@ -6,3 +6,8 @@
                              params)]
     {:scalar concated-str
      :representation concated-str}))
+
+(defn bean-error [params]
+  (let [str-err (str (:error (first params)))]
+    {:scalar str-err
+     :representation str-err}))

@@ -1,0 +1,14 @@
+
+%
+
+=1,,
+ABC,=A99991000,
+=A1+A2,=B2,
+=A3+1,,
+
+%
+
+error(B2)="Invalid address [99990999 0]"
+error(B3)="Invalid address [99990999 0]"
+error(A3)="+ only works for Integers"
+error(A4)="+ only works for Integers"

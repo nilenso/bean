@@ -71,7 +71,9 @@
 
 (def global-ctx
   {"concat" {:scalar functions/bean-concat
-             :representation "f"}})
+             :representation "f"}
+   "error" {:scalar functions/bean-error
+            :representation "f"}})
 
 (declare apply-f)
 
