@@ -22,7 +22,7 @@
    (assoc (grid/eval-sheet (start-sheet))
           :ui {:row-heights (vec (repeat num-rows 30))
                :col-widths (vec (repeat num-cols 110))
-               :selected-cell nil})))
+               :selections []})))
 
 (defonce ui-state
   (rc/atom {:help-display :none}))
@@ -38,7 +38,8 @@
 
 (defn set-mode [[r c] mode]
   (swap! sheet1 #(update-in % [:grid r c :mode] (constantly mode)))
-  (when (= mode :edit) (swap! sheet1 #(assoc-in % [:ui :selected-cell] [r c]))))
+  (when (= mode :edit) (swap! sheet1 #(assoc-in % [:ui :selections] [{:start [r c]
+                                                                      :end [r c]}]))))
 
 (defn explain [expression]
   (println (provenance/sentence-proof expression @sheet1)))
@@ -64,15 +65,4 @@
 (defn ^:dev/after-load ^:export main []
   (r/render
    [container]
-   (.getElementById js/document "app"))
-  (let [canvas (.getElementById js/document "bean-canvas")
-        ctx (.getContext canvas "2d")] 
-    (set! (.-width canvas) 1000)
-    (set! (.-height canvas) 1000) 
-    (set! (.. canvas -style -width) "1000px")
-    (set! (.. canvas -style -height) "1000px") 
-    (def dpi (.-devicePixelRatio js/window)) 
-
-    (.scale (.getContext canvas "2d") dpi dpi))
-   (sheet/draw-rect 0 0 150 100)
-   (sheet/draw-rect 0 0 150 100))
+   (.getElementById js/document "app")))

@@ -1,6 +1,7 @@
 (ns bean.ui.sheet
   (:require [bean.ui.drawing :as drawing]
-            [bean.ui.util :refer [px cs] :as util]))
+            [bean.ui.util :refer [px cs] :as util]
+            [reagent.core :as rc]))
 
 (defn- cell-dom-el
   [[row col]]
@@ -59,24 +60,32 @@
                   [cell state-fns i %1 %2])
                 cells)])
 
-(defn cell-selector [{:keys [selected-cell row-heights col-widths]}]
-  (let [[r c] selected-cell]
-    [:div
-     {:id :cell-selector
-      :style {:top (px (+ 30 (apply + (take r row-heights))))
-              :left (px (+ 40 (apply + (take c col-widths))))
-              :display :block
-              :height (get row-heights r)
-              :width (get col-widths c)}}]))
-
 (defn draw-rect [x y h w]
   (let [canvas (.getElementById js/document "bean-canvas")
         ctx (.getContext canvas "2d")]
-    (set! (.-lineWidth ctx) 1.5)
-    (set! (.-strokeStyle ctx) "#777")
+    (.clearRect ctx 0 0 1000 1000)
+    (set! (.-lineWidth ctx) 1)
     (.beginPath ctx)
     (.rect ctx x y h w)
     (.stroke ctx)))
+
+(defn canvas [ui]
+  (rc/create-class
+   {:display-name "bean-canvas"
+    :component-did-update
+    (fn [this]
+      (let [[_ {:keys [selections row-heights col-widths]}] (rc/argv this)]
+        (doall (for [{:keys [start end]} selections]
+                 (let [[start-r start-c] start]
+                   (draw-rect
+                    (apply + (take start-c col-widths))
+                    (apply + (take start-r row-heights))
+                    (get col-widths start-c)
+                    (get row-heights start-r)))))))
+
+    :reagent-render
+    (fn [ui]
+      [:canvas {:id :bean-canvas :height 1000 :width 1000}])}))
 
 (defn sheet [{:keys [grid ui]} state-fns]
   [:div
@@ -93,5 +102,4 @@
                   [row state-fns %1 %2]) grid)
    [:div {:id :bean-resize-indicator-v}]
    [:div {:id :bean-resize-indicator-h}]
-   [:canvas {:id :bean-canvas :height 1000 :width 1000}]
-   (when (:selected-cell ui) [cell-selector ui])])
+   [canvas ui]])

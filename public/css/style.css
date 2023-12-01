@@ -80,11 +80,12 @@ a {
 }
 
 #bean-canvas {
-    z-index: 0;
+    z-index: 100;
     position: absolute;
     top: var(--cell-height);
     left: var(--label-left-width);
     background: transparent;
+    pointer-events: none;
 }
 
 .bean-cell {
