@@ -20,26 +20,26 @@
 (defonce sheet1
   (rc/atom
    (assoc (grid/eval-sheet (start-sheet))
-          :ui {:row-heights (vec (repeat num-rows 30))
-               :col-widths (vec (repeat num-cols 110))
-               :selections []})))
+          :presentation {:row-heights (vec (repeat num-rows 30))
+                         :col-widths (vec (repeat num-cols 110))})))
 
 (defonce ui-state
-  (rc/atom {:help-display :none}))
+  (rc/atom {:help-display :none
+            :selections []}))
 
 (defn update-cell [address content]
   (swap! sheet1 #(grid/eval-cell address % content)))
 
 (defn resize-row [row height]
-  (swap! sheet1 #(assoc-in % [:ui :row-heights row] height)))
+  (swap! sheet1 #(assoc-in % [:presentation :row-heights row] height)))
 
 (defn resize-col [col width]
-  (swap! sheet1 #(assoc-in % [:ui :col-widths col] width)))
+  (swap! sheet1 #(assoc-in % [:presentation :col-widths col] width)))
 
 (defn set-mode [[r c] mode]
   (swap! sheet1 #(update-in % [:grid r c :mode] (constantly mode)))
-  (when (= mode :edit) (swap! sheet1 #(assoc-in % [:ui :selections] [{:start [r c]
-                                                                      :end [r c]}]))))
+  (when (= mode :edit)
+    (swap! ui-state #(assoc % :selections [{:start [r c] :end [r c]}]))))
 
 (defn explain [expression]
   (println (provenance/sentence-proof expression @sheet1)))
@@ -47,6 +47,7 @@
 (defn active-sheet []
   [sheet/sheet
    @sheet1
+   @ui-state
    {:update-cell update-cell
     :set-mode set-mode
     :edit-mode #(set-mode % :edit)
