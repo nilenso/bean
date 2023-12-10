@@ -1,7 +1,6 @@
 (ns bean.ui.sheet
   (:require [bean.ui.drawing :as drawing]
-            [bean.ui.util :refer [px cs] :as util]
-            [bean.ui.canvas :as canvas]))
+            [bean.ui.util :refer [px cs] :as util]))
 
 (defn- cell-dom-el
   [[row col]]
@@ -13,11 +12,11 @@
   (reduce #(str %1 (px %2) " ") "" sizes))
 
 (defn- cell [{:keys [set-mode edit-mode update-cell]} row col {:keys [mode error content representation] :as cell}]
-  [:div {:content-editable true
+  [:div {:id (str "cell-" row "-" col)
+         :content-editable true
          :suppressContentEditableWarning true
          :data-row row
          :data-col col
-         :on-focus (fn [_] (edit-mode [row col])) ; Relies on edit mode getting reset on grid evaluation
          :on-key-down #(when (= (.-keyCode %) 13)
                          (.preventDefault %)
                          (-> % .-target .blur)
@@ -75,4 +74,4 @@
                   [row state-fns %1 %2]) grid)
    [:div {:id :bean-resize-indicator-v}]
    [:div {:id :bean-resize-indicator-h}]
-   [canvas/canvas presentation ui-state state-fns]])
+   [drawing/canvas presentation ui-state state-fns]])

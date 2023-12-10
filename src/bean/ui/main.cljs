@@ -39,6 +39,7 @@
 (defn set-mode [[r c] mode]
   (swap! sheet1 #(update-in % [:grid r c :mode] (constantly mode)))
   (when (= mode :edit)
+    (.focus (js/document.getElementById (str "cell-" r "-" c)))
     (swap! ui-state #(assoc % :selections [{:start [r c] :end [r c]}]))))
 
 (defn explain [expression]
