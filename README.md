@@ -25,7 +25,7 @@ A repository with the accompanying research work will be put up soon.
 
 ## Setting up
 
-Bean is written in [ClojureScript](https://clojurescript.org/). You'll need [npm and nodejs](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installed. Then run
+Bean is written in [ClojureScript](https://clojurescript.org/). You'll need [java](https://www.java.com/en/download/), [npm and nodejs](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installed. Then run
 
 ```
 npm install
