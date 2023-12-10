@@ -34,6 +34,8 @@ npx shadow-cljs watch ui
 
 You can access Bean running locally at http://localhost:8090.
 
+Installation instructions for Java can be found [here](https://github.com/supertokens/supertokens-core/wiki/Installing-OpenJDK-for-Mac-and-Linux).
+
 #### Tests
 ```
 npx shadow-cljs compile test && node tests.js
