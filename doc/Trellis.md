@@ -62,7 +62,7 @@ namedfifty: 50
 
 %
 
-0,1,=A1+B1,A1+B1+C1
+0,1,=A1+B1,=A1+B1+C1
 4,5,6,7
 
 %
@@ -70,7 +70,7 @@ namedfifty: 50
 A1 = 0
 B1 = C1
 C1 = 1
-D1 = "A1+B1+C1"
+D1 = 2
 ```
 
 Note that the parser is currently quite unforgiving and you'll need to be
