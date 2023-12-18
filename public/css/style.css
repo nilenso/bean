@@ -15,7 +15,7 @@
     --scratch-lines: #90b1ccaa;
     --btn-foreground: #666;
     --btn-background: #e9e9ed;
-    --cell-selector: #999;
+    --cell-selector: #777;
     --link-color: rgb(63, 129, 215);
     --cell-height: 30px;
     --cell-width: 110px;
@@ -107,8 +107,7 @@ a {
 
 .bean-cell.edit-mode {
     z-index: 2;
-    border: 1px solid var(--cell-selector);
-    outline: 2px solid #c8c1c1;
+    outline: 2px solid var(--cell-selector);
 }
 
 .bean-label {
@@ -134,7 +133,6 @@ a {
     left: 0;
     padding: var(--cell-padding);
     height: var(--cell-height);
-    pointer-events: hover;
 }
 
 .bean-label-left {

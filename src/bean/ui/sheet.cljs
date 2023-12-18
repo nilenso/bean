@@ -11,7 +11,7 @@
 (defn- sizes->pxs [sizes]
   (reduce #(str %1 (px %2) " ") "" sizes))
 
-(defn- cell [{:keys [set-mode edit-mode update-cell]} row col {:keys [mode error content representation] :as cell}]
+(defn- cell [{:keys [set-mode edit-mode update-cell update-selections]} row col {:keys [mode error content representation] :as cell}]
   [:div {:id (str "cell-" row "-" col)
          :content-editable true
          :suppressContentEditableWarning true
@@ -23,6 +23,9 @@
                          (let [below [(inc row) col]]
                            (.focus (cell-dom-el below))
                            (edit-mode below)))
+         :on-mouse-down #(update-selections [])
+         :on-mouse-up #(drawing/on-mouse-up)
+         :on-focus #(set-mode [row col] :edit)
          :on-blur (fn [e]
                     (set-mode [row col] :view)
                     (let [input (.-textContent (.-target e))]

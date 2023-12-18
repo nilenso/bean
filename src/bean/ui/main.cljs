@@ -37,10 +37,10 @@
   (swap! sheet1 #(assoc-in % [:presentation :col-widths col] width)))
 
 (defn set-mode [[r c] mode]
-  (swap! sheet1 #(update-in % [:grid r c :mode] (constantly mode)))
-  (when (= mode :edit)
-    (.focus (js/document.getElementById (str "cell-" r "-" c)))
-    (swap! ui-state #(assoc % :selections [{:start [r c] :end [r c]}]))))
+  (swap! sheet1 #(update-in % [:grid r c :mode] (constantly mode))))
+
+(defn update-selections [selection]
+  (swap! ui-state assoc :selections selection))
 
 (defn explain [expression]
   (println (provenance/sentence-proof expression @sheet1)))
@@ -53,7 +53,8 @@
     :set-mode set-mode
     :edit-mode #(set-mode % :edit)
     :resize-col resize-col
-    :resize-row resize-row}])
+    :resize-row resize-row
+    :update-selections update-selections}])
 
 (defn container []
   [:div {:class [:container
