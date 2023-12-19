@@ -25,7 +25,7 @@
   :ui {:target :browser
        :output-dir "public/js"
        :asset-path "/js"
-       :devtools {:preloads [day8.re-frame-10x.preload]}
+       :devtools {:preloads [day8.re-frame-10x.preload.react-18]}
        :dev {:compiler-options
              {:closure-defines
               {re-frame.trace.trace-enabled?        true
