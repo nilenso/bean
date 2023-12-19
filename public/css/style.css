@@ -15,7 +15,7 @@
     --code-lines: #90b1ccaa;
     --btn-foreground: #666;
     --btn-background: #e9e9ed;
-    --cell-selector: #666;
+    --cell-selector: #777;
     --link-color: rgb(63, 129, 215);
     --cell-height: 30px;
     --cell-width: 110px;
@@ -49,6 +49,10 @@
     --link-color: rgb(164, 183, 146);
 }
 
+/* z-index ordering
+bean-cell < bean-canvas < bean-cell.edit-mode < bean-labels-top = bean-labels-left < bean-corner < code
+*/
+
 @font-face {
     font-family: SpaceGrotesk;
     src: url(/fonts/SpaceGrotesk.ttf);
@@ -79,13 +83,28 @@ a {
     position: relative;
 }
 
+#bean-canvas {
+    z-index: 1;
+    position: absolute;
+    top: var(--cell-height);
+    left: var(--label-left-width);
+    background: transparent;
+    cursor: cell;
+}
+
 .bean-cell {
+    z-index: 0;
     background: var(--cell-background);
     outline: 0.5px solid var(--sheet-border);
     padding: var(--cell-padding);
     overflow: hidden;
     cursor: cell;
     box-sizing: border-box;
+}
+
+.bean-cell.edit-mode {
+    z-index: 2;
+    outline: 2px solid var(--cell-selector);
 }
 
 .bean-label {
@@ -98,7 +117,7 @@ a {
 }
 
 .bean-labels-top {
-    z-index: 1;
+    z-index: 3;
     position: sticky;
     top: 0;
 }
@@ -111,11 +130,10 @@ a {
     left: 0;
     padding: var(--cell-padding);
     height: var(--cell-height);
-    pointer-events: hover;
 }
 
 .bean-label-left {
-    z-index: 1;
+    z-index: 3;
     width: var(--label-left-width);
     text-align: center;
     border-bottom: 0.1px solid var(--label-border);
@@ -126,7 +144,7 @@ a {
 }
 
 .bean-corner {
-    z-index: 2;
+    z-index: 4;
     background-color: var(--corner-background);
     width: var(--label-left-width);
     border-bottom: var(--cell-border) solid var(--sheet-border);
@@ -162,24 +180,24 @@ a {
 }
 
 #bean-resize-indicator-v {
+    z-index: 100;
     height: 100%;
     width: 1px;
     display: block;
     position: absolute;
     background: #00000055;
     top: 0;
-    z-index: 100;
     display: none;
 }
 
 #bean-resize-indicator-h {
+    z-index: 100;
     width: 100%;
     height: 1px;
     display: block;
     position: absolute;
     background: #00000055;
     top: 0;
-    z-index: 100;
     display: none;
 }
 
@@ -188,27 +206,14 @@ a {
     color: var(--sheet-error);
 }
 
-#cell-selector {
-    position: absolute;
-    top: -100px;
-    left: 10px;
-    width: var(--cell-width);
-    height: var(--cell-height);
-    border: 2px solid var(--cell-selector);
-    transition: 100ms;
-    pointer-events: none;
-    display: none;
-    box-sizing: border-box;
-}
-
 .code {
+    z-index: 3;
     background-color: var(--code-background);
     color: var(--code-foreground);
     background-image: linear-gradient(var(--code-lines) 0.7px, transparent 0.7px);
     background-size: 100% var(--cell-height);
     position: sticky;
     left: 0;
-    z-index: 3;
     margin-top: -0.7px;
 }
 
@@ -331,12 +336,12 @@ a {
 }
 
 .help-overlay {
+    z-index: 10000;
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 10000;
     background: #0003;
 }
 

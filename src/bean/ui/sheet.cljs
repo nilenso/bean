@@ -5,28 +5,30 @@
             [bean.ui.subs :as subs]
             [bean.ui.util :refer [px cs] :as util]))
 
-(defn- cell-dom-el
-  [[row col]]
-  (.querySelector
-   js/document
-   (str "[data-row=\"" row "\"][data-col=\"" col "\"]")))
-
 (defn- sizes->pxs [sizes]
   (reduce #(str %1 (px %2) " ") "" sizes))
+
+;; TODO: use the reframe keyboard library here
+(defn- handle-cell-navigation [e [row col]]
+  (let [move-to-cell (cond
+                       (and (= (.-keyCode e) 13) (.-shiftKey e)) [(dec row) col]
+                       (and (= (.-keyCode e) 9) (.-shiftKey e)) [row (dec col)]
+                       (= (.-keyCode e) 13) [(inc row) col]
+                       (= (.-keyCode e) 9) [row (inc col)])]
+    ;; TODO: These side-effects need to move to an rf event handler
+    (when move-to-cell
+      (.preventDefault e)
+      (-> e .-target .blur)
+      (rf/dispatch [::events/edit-mode move-to-cell]))))
 
 (defn- cell [row col {:keys [mode error content representation] :as cell}]
   [:div {:content-editable true
          :suppressContentEditableWarning true
          :data-row row
          :data-col col
-         :on-focus #(rf/dispatch [::events/set-mode [row col] :edit]) ; Relies on edit mode getting reset on grid evaluation
-         :on-key-down #(when (= (.-keyCode %) 13)
-                         ;; TODO: These side-effects need to move to an rf event handler
-                         (.preventDefault %)
-                         (-> % .-target .blur)
-                         (let [below [(inc row) col]]
-                           (.focus (cell-dom-el below))
-                           (rf/dispatch [::events/set-mode below :edit])))
+         :on-mouse-up #(rf/dispatch [::events/finish-selection])
+         :on-mouse-down #(rf/dispatch [::events/clear-selections])
+         :on-key-down #(handle-cell-navigation % [row col])
          :on-blur (fn [e]
                     (rf/dispatch [::events/set-mode [row col] :view])
                     ;; TODO: Move more of this into the event handler?
@@ -65,16 +67,6 @@
                   [cell i %1 %2])
                 cells)])
 
-(defn cell-selector [{:keys [selected-cell row-heights col-widths]}]
-  (let [[r c] selected-cell]
-    [:div
-     {:id :cell-selector
-      :style {:top (px (+ 30 (apply + (take r row-heights))))
-              :left (px (+ 40 (apply + (take c col-widths))))
-              :display :block
-              :height (get row-heights r)
-              :width (get col-widths c)}}]))
-
 (defn sheet []
   (let [sheet (rf/subscribe [::subs/sheet])]
     [:div
@@ -91,4 +83,4 @@
                     [row %1 %2]) (:grid @sheet))
      [:div {:id :bean-resize-indicator-v}]
      [:div {:id :bean-resize-indicator-h}]
-     (when (:selected-cell (:ui @sheet)) [cell-selector (:ui @sheet)])]))
+     [drawing/canvas]]))

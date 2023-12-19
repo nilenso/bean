@@ -44,11 +44,45 @@
  (fn resize-col [{:keys [db]} [_ col width]]
    {:db (assoc-in db [:sheet :ui :col-widths col] width)}))
 
+(rf/reg-fx
+ ::focus-cell
+ (fn [[r c]]
+   (.focus
+    (.querySelector
+     js/document
+     (str "[data-row=\"" r "\"][data-col=\"" c "\"]")))))
+
 (rf/reg-event-fx
  ::set-mode
  (fn set-mode [{:keys [db]} [_ [r c] mode]]
-   {:db (cond-> (assoc-in db [:sheet :grid r c :mode] mode)
-          (= mode :edit) (assoc-in [:sheet :ui :selected-cell] [r c]))}))
+   (merge
+    {:db (assoc-in db [:sheet :grid r c :mode] mode)}
+    (when (= mode :edit) {::focus-cell [r c]}))))
+
+(rf/reg-event-fx
+ ::edit-mode
+ (fn edit-mode [{:keys [db]} [_ [r c]]]
+   {:fx [[:dispatch [::set-mode [r c] :edit]]]}))
+
+(rf/reg-event-db
+ ::start-selection
+ (fn [db [_ rc]]
+   (assoc-in db [:ui :selection-start] rc)))
+
+(rf/reg-event-db
+ ::finish-selection
+ (fn [db [_]]
+   (assoc-in db [:ui :selection-start] nil)))
+
+(rf/reg-event-db
+ ::make-selection
+ (fn [db [_ selection]]
+   (update-in db [:ui :selections] conj selection)))
+
+(rf/reg-event-db
+ ::clear-selections
+ (fn [db [_]]
+   (assoc-in db [:ui :selections] [])))
 
 (rf/reg-event-fx
  ::explain
