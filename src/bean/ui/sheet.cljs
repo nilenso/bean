@@ -50,7 +50,7 @@
       [:div {:key (str "label" i)
              :data-col i
              :class (cs :bean-label :bean-label-top)
-             :on-mouse-down #(drawing/resize-top %1 (fn [col width] (rf/dispatch [::events/resize-col col width])))}
+             :on-mouse-down #(drawing/resize-top %1)}
        (util/i->a i)])
     (first rows))])
 
@@ -59,7 +59,7 @@
    [:div {:key (str "label" i)
           :data-row i
           :class (cs :bean-label :bean-label-left)
-          :on-mouse-down #(drawing/resize-left %1   (fn [row height] (rf/dispatch [::events/resize-row row height])))}
+          :on-mouse-down #(drawing/resize-left %1)}
     (inc i)]
    (map-indexed #(do ^{:key %1}
                   [cell i %1 %2])
