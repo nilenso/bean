@@ -1,4 +1,4 @@
-(ns bean.ui.code
+(ns bean.ui.views.code
   (:require [bean.code :as code]
             [re-frame.core :as rf]
             [bean.ui.events :as events]

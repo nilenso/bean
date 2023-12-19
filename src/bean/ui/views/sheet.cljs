@@ -1,5 +1,5 @@
-(ns bean.ui.sheet
-  (:require [bean.ui.drawing :as drawing]
+(ns bean.ui.views.sheet
+  (:require [bean.ui.views.drawing :as drawing]
             [re-frame.core :as rf]
             [bean.ui.events :as events]
             [bean.ui.subs :as subs]

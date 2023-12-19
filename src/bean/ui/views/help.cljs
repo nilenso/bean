@@ -1,4 +1,4 @@
-(ns bean.ui.help
+(ns bean.ui.views.help
   (:require [re-frame.core :as rf]
             [bean.ui.events :as events]
             [bean.ui.subs :as subs]))

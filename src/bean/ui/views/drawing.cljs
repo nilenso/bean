@@ -1,4 +1,4 @@
-(ns bean.ui.drawing
+(ns bean.ui.views.drawing
   (:require [bean.ui.util :refer [px]]
             [re-frame.core :as rf]
             [bean.ui.subs :as subs]

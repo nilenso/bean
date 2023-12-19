@@ -1,12 +1,12 @@
-(ns bean.ui.views
+(ns bean.ui.views.root
   (:require
    [re-frame.core :as rf]
    [bean.ui.subs :as subs]
-   [bean.ui.code :as code]
-   [bean.ui.help :as help]
-   [bean.ui.sheet :as sheet]))
+   [bean.ui.views.code :as code]
+   [bean.ui.views.help :as help]
+   [bean.ui.views.sheet :as sheet]))
 
-(defn main-panel []
+(defn root-page []
   (let [ui (rf/subscribe [::subs/ui])]
     [:div {:class [:container
                    (when (= (:help-display @ui) "block")
