@@ -2,6 +2,7 @@
   (:require
    [re-frame.core :as re-frame]))
 
+;; TODO: should we make more granular subs?
 (re-frame/reg-sub
  ::sheet
  (fn [db]

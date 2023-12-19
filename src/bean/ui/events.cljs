@@ -11,6 +11,7 @@
  (fn [_ _]
    (db/initial-app-db)))
 
+;; TODO: think most of these should be reg-event-db instead of reg-event-fx
 (rf/reg-event-fx
  ::update-code
  (fn update-code [{:keys [db]} [_ code]]
