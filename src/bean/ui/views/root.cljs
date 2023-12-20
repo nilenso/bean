@@ -15,3 +15,8 @@
      [:div {:class :sheet-container}
       [code/text-area]
       [sheet/sheet]]]))
+
+(defn routed []
+  (let [route (rf/subscribe [::subs/route])]
+    (case (:handler @route)
+      :root [root-page])))

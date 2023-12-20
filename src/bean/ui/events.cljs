@@ -95,3 +95,8 @@
  ::display-help
  (fn display-help [db [_ flag]]
    (assoc-in db [:ui :help-display] flag)))
+
+(rf/reg-event-db
+ ::set-route
+ (fn set-route [db [_ match]]
+   (assoc-in db [:route] match)))

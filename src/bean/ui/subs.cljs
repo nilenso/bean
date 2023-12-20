@@ -11,3 +11,8 @@
  ::ui
  (fn [db]
    (:ui db)))
+
+(re-frame/reg-sub
+ ::route
+ (fn [db]
+   (:route db)))
