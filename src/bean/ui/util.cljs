@@ -1,5 +1,6 @@
 (ns bean.ui.util
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [bean.util :as util]))
 
 (defn px [int]
   (str int "px"))
@@ -17,7 +18,10 @@
          (cons (char (+ 64 m)) a))))))
 
 (defn rc->a1 [r c]
-  (str (i->a c) (inc r)))
+  (util/rc->a1 r c))
+
+(defn a1->rc [a n]
+  (util/a1->rc a n))
 
 (defn cs [& classes]
   (->> classes

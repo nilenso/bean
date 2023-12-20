@@ -274,6 +274,7 @@ a {
     display: flex;
     padding-left: 3px;
     padding-right: 3px;
+    align-items: center;
 }
 
 .code-error {
@@ -368,7 +369,11 @@ a {
     padding-bottom: 35px;
 }
 
-.help-container h1, h3, h4, h5, p {
+.help-container h1,
+h3,
+h4,
+h5,
+p {
     margin-top: 5px;
     margin-bottom: 5px;
 }
@@ -422,4 +427,13 @@ a {
 
 [data-theme='light'] .help-dark {
     display: none;
+}
+
+input {
+    border: var(--sheet-foreground) 1px solid;
+    width: 50px;
+}
+
+input:focus {
+    outline: var(--sheet-foreground) 1px solid;
 }

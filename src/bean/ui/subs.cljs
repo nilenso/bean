@@ -16,3 +16,8 @@
  ::route
  (fn [db]
    (:route db)))
+
+(re-frame/reg-sub
+ ::ui-selections
+ (fn [db]
+   (get-in db [:ui :selections])))
