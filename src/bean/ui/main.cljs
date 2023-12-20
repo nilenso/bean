@@ -10,6 +10,5 @@
 (defn ^:dev/after-load ^:export main []
   (rf/dispatch-sync [::events/initialize-db])
   (r/render
-  ;;  TODO: why extract only the main panel to views
    [views/main-panel]
    (.getElementById js/document "app")))
