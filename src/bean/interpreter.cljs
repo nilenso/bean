@@ -30,9 +30,7 @@
   (->> ast-results (filter :error) first))
 
 (defn- eval-matrix [start-address end-address grid]
-  (util/map-on-matrix
-   #(util/get-cell grid %)
-   (util/addresses-matrix start-address end-address)))
+  (util/sub-grid grid start-address end-address))
 
 (defn- apply-results
   ([f ast-results]

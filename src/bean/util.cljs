@@ -51,5 +51,16 @@
     (for [c (range start-col (inc end-col))]
       [r c])))
 
+(defn sub-grid
+  [grid start end]
+  (map-on-matrix
+   #(get-cell grid %)
+   (addresses-matrix start end)))
+
+(defn top-addresses
+  [[start-row start-col] [_ end-col]]
+  (for [c (range start-col (inc end-col))]
+    [start-row c]))
+
 (defn is-expression? [[node-type & _]]
   (= node-type :Expression))
