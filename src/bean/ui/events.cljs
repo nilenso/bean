@@ -2,9 +2,12 @@
   (:require [bean.grid :as grid]
             [bean.ui.provenance :as provenance]
             [bean.ui.db :as db]
+            [bean.table :as table]
             [re-frame.core :as rf]
             [bean.code :as code]
-            [bean.code-errors :as code-errors]))
+            [bean.code-errors :as code-errors]
+            [bean.ui.util :as util]
+            [clojure.string :as str]))
 
 (rf/reg-event-db
  ::initialize-db
@@ -100,3 +103,21 @@
  ::set-route
  (fn set-route [db [_ match]]
    (assoc-in db [:route] match)))
+
+(defn- rect-bounds [corner opposite-corner]
+  (let [[r1 c1] corner
+        [r2 c2] opposite-corner]
+    [[(min r1 r2) (min c1 c2)]
+     [(max r1 r2) (max c1 c2)]]))
+
+(rf/reg-event-db
+ ::make-table
+ (fn make-table [db [_ typ]]
+   (if-let [{:keys [start end]} (get-in db [:ui :selections 0])]
+     (->> (rect-bounds start end)
+          (apply (case typ
+                   :vtab table/make-vtable
+                   :htab table/make-htable
+                   :xtab table/make-xtable) (:sheet db))
+          (assoc db :sheet))
+     db)))

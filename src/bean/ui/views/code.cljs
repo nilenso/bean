@@ -47,22 +47,19 @@
       [:button (cond-> {:class (cs
                                 :small-btn
                                 :table-create-crosstab)
-                        :on-click (fn [_]
-                                    (prn "Create HTab" (str selection)))}
+                        :on-click #(rf/dispatch [::events/make-table :htab])}
                  (nil? selection) (assoc :disabled true))
        "▤"]
       [:button (cond-> {:class (cs
                                 :small-btn
                                 :table-create-crosstab)
-                        :on-click (fn [_]
-                                    (prn "Create VTab" (str selection)))}
+                        :on-click #(rf/dispatch [::events/make-table :vtab])}
                  (nil? selection) (assoc :disabled true))
        "▥"]
       [:button (cond-> {:class (cs
                                 :small-btn
                                 :table-create-crosstab)
-                        :on-click (fn [_]
-                                    (prn "Create XTab" (str selection)))}
+                        :on-click #(rf/dispatch [::events/make-table :xtab])}
                  (nil? selection) (assoc :disabled true))
        "▦"]
       [:button {:class [:small-btn :dark-mode-btn]
