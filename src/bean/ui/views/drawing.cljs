@@ -129,17 +129,50 @@
 (defn on-mouse-up []
   (rf/dispatch [::events/finish-selection]))
 
-(defn paint [{:keys [row-heights col-widths]} {:keys [selections]}]
+(defn paint1 [{:keys [row-heights col-widths]} {:keys [selections]}]
   (let [canvas (.getElementById js/document "bean-canvas")
         ctx (.getContext canvas "2d")]
     (.clearRect ctx 0 0 canvas-width canvas-height)
     (doall (for [{:keys [start end]} selections]
              (selection->rect ctx start end row-heights col-widths)))))
 
-(defn- draw-line [g width color [start-x start-y] [end-x end-y]]
+(defn- draw-line [g width color sx sy ex ey]
   (.lineStyle g width color 1 0.5 true)
-  (.moveTo g start-x start-y)
-  (.lineTo g end-x end-y))
+  (.moveTo g sx sy)
+  (.lineTo g ex ey)
+  (.lineStyle g 0 color 1 0.5 true))
+
+(defn- corner [viewport]
+  (let [g (new pixi/Graphics)]
+    (.beginFill g (:corner-background styles/colors))
+    (.drawRect g 0 0 (:heading-left-width styles/sizes) (:cell-height styles/sizes))
+    (.on viewport "moved" #(set! (.. g -position -x) (.-left viewport)))
+    (.on viewport "moved" #(set! (.. g -position -y) (.-top viewport)))
+    g))
+
+(defn- top-heading [row-heights viewport]
+  (let [g (new pixi/Graphics)]
+    (.beginFill g (:heading-background styles/colors))
+    (.drawRect g 0 0 (:heading-left-width styles/sizes) 10000)
+    (->> row-heights
+         (reductions +)
+         (map #(draw-line g 0.5 (:heading-border styles/colors) 0 % (:heading-left-width styles/sizes) %))
+         dorun)
+    (set! (.. g -position -y) (:cell-height styles/sizes))
+    (.on viewport "moved" #(set! (.. g -position -x) (.-left viewport)))
+    g))
+
+(defn- left-heading [col-widths viewport]
+  (let [g (new pixi/Graphics)]
+    (.beginFill g (:heading-background styles/colors))
+    (.drawRect g 0 0 10000 (:cell-height styles/sizes))
+    (->> col-widths
+         (reductions +)
+         (map #(draw-line g 0.5 (:heading-border styles/colors) % 0 % (:cell-height styles/sizes)))
+         dorun)
+    (set! (.. g -position -x) (:heading-left-width styles/sizes))
+    (.on viewport "moved" #(set! (.. g -position -y) (.-top viewport)))
+    g))
 
 (defn- grid [row-heights col-widths]
   (let [g (new pixi/Graphics)]
@@ -147,21 +180,23 @@
               [sx sy ex ey]
               (draw-line g
                          (:grid-line styles/sizes)
-                         (:grid-line styles/colors)
-                         [sx sy]
-                         [ex ey]))
+                         (:grid-line styles/colors) sx sy ex ey))
             (draw-horizontal [y] (draw-line* 0 y 10000 y))
             (draw-vertical [x] (draw-line* x 0 x 10000))]
-      (set! (.. g -position -x) (:label-left-width styles/sizes))
+      (set! (.. g -position -x) (:heading-left-width styles/sizes))
       (set! (.. g -position -y) (:cell-height styles/sizes))
       (dorun (->> row-heights (reductions +) (map draw-horizontal)))
       (dorun (->> col-widths (reductions +) (map draw-vertical))))
     g))
 
 (defn paint [{:keys [row-heights col-widths]} {:keys [pixi selections]}]
-  (let [container (new pixi/Container)]
-    (.addChild (:viewport pixi) container)
-    (.addChild container (grid row-heights col-widths))))
+  (let [v (:viewport pixi)
+        c (:container pixi)]
+    (.removeChildren c)
+    (.addChild c (grid row-heights col-widths))
+    (.addChild c (top-heading row-heights v))
+    (.addChild c (left-heading col-widths v))
+    (.addChild c (corner v))))
 
 (defn- make-app []
   (new
@@ -184,8 +219,7 @@
 (defn setup []
   (let [app (make-app)
         viewport (make-viewport app)]
-    (rf/dispatch [::events/set-pixi-app app])
-    (rf/dispatch [::events/set-pixi-viewport app viewport])))
+    (rf/dispatch [::events/set-pixi-container app viewport (new pixi/Container)])))
 
 (defn- canvas* []
   (rc/create-class
@@ -195,7 +229,8 @@
     :component-did-update
     (fn [this _]
       (let [[_ sheet ui] (rc/argv this)]
-        (paint (:grid-dimensions sheet) ui)))
+        (when (:pixi ui)
+          (paint (:grid-dimensions sheet) ui))))
 
     :reagent-render
     (fn [])}))
