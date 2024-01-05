@@ -57,7 +57,7 @@
    (case mode
      :view {:db (assoc-in db [:sheet :grid r c :mode] mode)}
      :edit {:db (assoc-in db [:sheet :grid r c :mode] mode)
-            ::focus-cell [r c]})))
+            :fx [[::focus-cell [r c]]]})))
 
 (rf/reg-event-fx
  ::edit-mode
