@@ -68,19 +68,5 @@
                 cells)])
 
 (defn sheet []
-  (let [sheet (rf/subscribe [::subs/sheet])]
-    [:div
-     {:class :bean-sheet
-      :id :bean-sheet
-      :style {:grid-template-columns (str
-                                      "var(--label-left-width) "
-                                      (sizes->pxs (get-in @sheet [:grid-dimensions :col-widths])))
-              :grid-template-rows (str
-                                   "var(--cell-height) "
-                                   (sizes->pxs (get-in @sheet [:grid-dimensions :row-heights])))}}
-     [labels-top (:grid @sheet)]
-     (map-indexed #(do ^{:key %1}
-                    [row %1 %2]) (:grid @sheet))
-     [:div {:id :bean-resize-indicator-v}]
-     [:div {:id :bean-resize-indicator-h}]
-     [drawing/canvas]]))
+  [:div {:id "canvas-container"}
+   [drawing/canvas]])
