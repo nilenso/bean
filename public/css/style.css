@@ -61,6 +61,7 @@ bean-cell < bean-canvas < bean-cell.edit-mode < bean-labels-top = bean-labels-le
 body {
     margin: 0;
     background: var(--sheet-background);
+    overflow: hidden;
 }
 
 a {
@@ -71,7 +72,8 @@ a {
     position: relative;
     display: grid;
     grid-template-columns: var(--code-width) auto;
-    width: min-content;
+    height: 100vh;
+    width: 100vw;
 }
 
 .bean-sheet {
@@ -85,9 +87,6 @@ a {
 
 #bean-canvas {
     z-index: 1;
-    position: absolute;
-    top: var(--cell-height);
-    left: var(--label-left-width);
     background: transparent;
     cursor: cell;
 }
@@ -208,22 +207,22 @@ a {
 
 .code {
     z-index: 3;
+    position: relative;
     background-color: var(--code-background);
     color: var(--code-foreground);
     background-image: linear-gradient(var(--code-lines) 0.7px, transparent 0.7px);
     background-size: 100% var(--cell-height);
-    position: sticky;
-    left: 0;
     margin-top: -0.7px;
+    height: 100vh;
 }
 
 .code-body {
+    position: absolute;
     display: grid;
     grid-template-columns: 30px 1fr;
-    position: absolute;
     top: 30px;
     width: 100%;
-    height: 100%;
+    height: calc(100% - 30px);
 }
 
 .code-text {
@@ -242,13 +241,11 @@ a {
 }
 
 .code-thick-lines {
-    position: absolute;
-    height: 100%;
+    height: calc(100% - 30px);
     width: 100%;
     background-color: transparent;
     background-image: linear-gradient(#4a759987 0.9px, transparent 0.9px);
     background-size: 100% calc(var(--cell-height) * var(--code-thick-line-gap));
-    position: sticky;
     left: 0;
 }
 
@@ -266,7 +263,6 @@ a {
 }
 
 .code-header {
-    position: sticky;
     top: 0;
     height: var(--cell-height);
     width: 100%;

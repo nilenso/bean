@@ -3,6 +3,7 @@
             [re-frame.core :as rf]
             [bean.ui.subs :as subs]
             [bean.ui.events :as events]
+            [pixi.js :as pixi]
             [reagent.core :as rc]))
 
 (def selection-fill "rgba(0, 0, 0, 0.03)")
@@ -132,23 +133,36 @@
     (.clearRect ctx 0 0 canvas-width canvas-height)
     (doall (for [{:keys [start end]} selections]
              (selection->rect ctx start end row-heights col-widths)))))
+(def app (atom nil))
 
 (defn- canvas* []
   (rc/create-class
    {:display-name "bean-canvas"
+    :constructor
+    (fn []
+      (reset! app
+              #(new
+                pixi/Application
+                #js
+                 {:autoResize true
+                  :resizeTo (.getElementById js/document "canvas-container")
+                  :resolution (.-devicePixelRatio js/window),
+                  :backgroundColor 0xffffff
+                  :autoDensity true})))
+
+    :component-did-mount
+    (fn []
+      (.appendChild
+       (.getElementById js/document "canvas-container")
+       (.-view (@app))))
+
     :component-did-update
     (fn [this _]
       (let [[_ sheet ui] (rc/argv this)]
         (paint (:grid-dimensions sheet) ui)))
 
     :reagent-render
-    (fn [sheet ui]
-      [:canvas {:id :bean-canvas
-                :height 600
-                :width 1500
-                :on-mouse-down #(on-mouse-down %1 (:grid-dimensions sheet))
-                :on-mouse-move #(on-mouse-move %1 ui (:grid-dimensions sheet))
-                :on-mouse-up on-mouse-up}])}))
+    (fn [])}))
 
 (defn canvas []
   (let [sheet (rf/subscribe [::subs/sheet])
