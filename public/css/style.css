@@ -2,8 +2,8 @@
     --sheet-background: #fffefc;
     --sheet-foreground: #111;
     --sheet-error: #b93333;
-    --sheet-label-background: #f2f2f1;
-    --sheet-label-foreground: #666;
+    --label-background: #f2f2f1;
+    --label-foreground: #666;
     --cell-background: white;
     --corner-background: #ddd;
     --code-background: #fff;
@@ -30,10 +30,10 @@
 [data-theme='dark'] {
     --sheet-background: #073642;
     --sheet-foreground: #93a1a1;
-    --corner-background: var(--sheet-label-background);
+    --corner-background: var(--label-background);
     --sheet-error: #dc322f;
-    --sheet-label-background: #002b36;
-    --sheet-label-foreground: #839496;
+    --label-background: #002b36;
+    --label-foreground: #839496;
     --cell-background: #073642;
     --code-background: #073642;
     --code-foreground: #93a1a1;
@@ -68,6 +68,7 @@ a {
     color: var(--link-color)
 }
 
+/* TODO: Fix code margin z index */
 .sheet-container {
     position: relative;
     display: grid;
@@ -107,8 +108,8 @@ a {
 }
 
 .bean-label {
-    background-color: var(--sheet-label-background);
-    color: var(--sheet-label-foreground);
+    background-color: var(--label-background);
+    color: var(--label-foreground);
     padding: var(--cell-padding);
     box-sizing: border-box;
     font-family: SpaceGrotesk;
@@ -211,8 +212,9 @@ a {
     background-color: var(--code-background);
     color: var(--code-foreground);
     background-image: linear-gradient(var(--code-lines) 0.7px, transparent 0.7px);
+    background-position-y: var(--cell-height);
     background-size: 100% var(--cell-height);
-    margin-top: -0.7px;
+    margin-top: -0.1px;
     height: 100vh;
 }
 
@@ -247,9 +249,11 @@ a {
     background-image: linear-gradient(#4a759987 0.9px, transparent 0.9px);
     background-size: 100% calc(var(--cell-height) * var(--code-thick-line-gap));
     left: 0;
+    margin-top: -0.2px;
 }
 
 .code::before {
+    z-index: -1;
     position: absolute;
     content: '';
     left: 32px;
