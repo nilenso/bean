@@ -43,6 +43,33 @@
  (fn resize-col [db [_ col width]]
    (assoc-in db [:sheet :grid-dimensions :col-widths col] width)))
 
+(rf/reg-event-db
+ ::set-pixi-app
+ (fn init-pixi-app [db [_ app]]
+   (assoc-in db [:ui :pixi :app] app)))
+
+(rf/reg-event-fx
+ ::set-pixi-viewport
+ (fn init-pixi-viewport [{:keys [db]} [_ app viewport]]
+   {:db (assoc-in db [:ui :pixi :viewport] viewport)
+    :fx [[::setup-canvas [app viewport]]]}))
+
+;; TODO: this canvas interaction should probably be in drawing.cljs but
+;; it's also an effect. Shoud move this elsewhere.
+(rf/reg-fx
+ ::setup-canvas
+ (fn [[app viewport]]
+   (.appendChild
+    (.getElementById js/document "canvas-container")
+    (.-view app))
+   (set! (.-__PIXI_APP__ js/globalThis) app)
+   (.addEventListener js/window "wheel" #(.preventDefault %1) #js {:passive false})
+   (.addChild (.-stage app) viewport)
+   (-> viewport
+       (.pinch)
+       (.drag #js {:clampWheel true})
+       (.wheel #js {:trackpadPinch true :wheelZoom false})
+       (.clamp #js {:direction "all"}))))
 
 (rf/reg-fx
  ::focus-cell
