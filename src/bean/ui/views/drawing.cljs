@@ -3,7 +3,9 @@
             [re-frame.core :as rf]
             [bean.ui.subs :as subs]
             [bean.ui.events :as events]
+            [bean.ui.styles :as styles]
             [pixi.js :as pixi]
+            [pixi-viewport :as pixi-viewport]
             [reagent.core :as rc]))
 
 (def selection-fill "rgba(0, 0, 0, 0.03)")
@@ -133,28 +135,62 @@
     (.clearRect ctx 0 0 canvas-width canvas-height)
     (doall (for [{:keys [start end]} selections]
              (selection->rect ctx start end row-heights col-widths)))))
-(def app (atom nil))
+
+(defn- draw-line [g width color [start-x start-y] [end-x end-y]]
+  (.lineStyle g width color 1 0.5 true)
+  (.moveTo g start-x start-y)
+  (.lineTo g end-x end-y))
+
+(defn- grid [row-heights col-widths]
+  (let [g (new pixi/Graphics)]
+    (letfn [(draw-line*
+              [sx sy ex ey]
+              (draw-line g
+                         (:grid-line styles/sizes)
+                         (:grid-line styles/colors)
+                         [sx sy]
+                         [ex ey]))
+            (draw-horizontal [y] (draw-line* 0 y 10000 y))
+            (draw-vertical [x] (draw-line* x 0 x 10000))]
+      (set! (.. g -position -x) (:label-left-width styles/sizes))
+      (set! (.. g -position -y) (:cell-height styles/sizes))
+      (dorun (->> row-heights (reductions +) (map draw-horizontal)))
+      (dorun (->> col-widths (reductions +) (map draw-vertical))))
+    g))
+
+(defn paint [{:keys [row-heights col-widths]} {:keys [pixi selections]}]
+  (let [container (new pixi/Container)]
+    (.addChild (:viewport pixi) container)
+    (.addChild container (grid row-heights col-widths))))
+
+(defn- make-app []
+  (new
+   pixi/Application
+   #js {:autoResize true
+        :resizeTo (.getElementById js/document "canvas-container")
+        :resolution (.-devicePixelRatio js/window),
+        :backgroundColor (:sheet-background styles/colors)
+        :autoDensity true}))
+
+(defn- make-viewport [app]
+  (new
+   pixi-viewport/Viewport
+   #js {:events (.. app -renderer -events)
+        :screenWidth (.-offsetWidth (.getElementById js/document "canvas-container"))
+        :screenHeight (.-offsetHeight (.getElementById js/document "canvas-container"))
+        :worldWidth 10000
+        :worldHeight 10000}))
+
+(defn setup []
+  (let [app (make-app)
+        viewport (make-viewport app)]
+    (rf/dispatch [::events/set-pixi-app app])
+    (rf/dispatch [::events/set-pixi-viewport app viewport])))
 
 (defn- canvas* []
   (rc/create-class
    {:display-name "bean-canvas"
-    :constructor
-    (fn []
-      (reset! app
-              #(new
-                pixi/Application
-                #js
-                 {:autoResize true
-                  :resizeTo (.getElementById js/document "canvas-container")
-                  :resolution (.-devicePixelRatio js/window),
-                  :backgroundColor 0xffffff
-                  :autoDensity true})))
-
-    :component-did-mount
-    (fn []
-      (.appendChild
-       (.getElementById js/document "canvas-container")
-       (.-view (@app))))
+    :component-did-mount setup
 
     :component-did-update
     (fn [this _]
