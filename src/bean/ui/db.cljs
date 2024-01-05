@@ -1,10 +1,7 @@
 (ns bean.ui.db
   (:require [bean.grid :as grid]))
 
-(def num-rows 20)
-(def num-cols 12)
-
-(defn- start-sheet []
+(defn- start-sheet [num-rows num-cols]
   (grid/new-sheet
    (vec
     (for [_ (range num-rows)]
@@ -44,13 +41,14 @@
          [:selection-start [:vector nat-int?]]]]])
 
 (defn initial-app-db []
-  (let [num-rows 20
-        num-cols 12]
-    {:sheet (-> (grid/eval-sheet (start-sheet))
+  (let [num-rows 50
+        num-cols 20]
+    {:sheet (-> (grid/eval-sheet (start-sheet num-rows num-cols))
                 (assoc :grid-dimensions {:num-rows num-rows
                                          :num-cols num-cols
                                          :row-heights (vec (repeat num-rows 30))
                                          :col-widths (vec (repeat num-cols 110))}))
      :ui {:help-display false
+          :pixi {}
           :selections []
           :selection-start nil}}))
