@@ -25,11 +25,9 @@
    [:sheet [:map
             [:grid-dimensions [:map
                                [:num-rows pos-int?]
-                               [:num-cols pos-int?]]]
-            [:ui [:map
-                  [:row-heights [:vector pos-int?]]
-                  [:col-widths [:vector pos-int?]]]]
-
+                               [:num-cols pos-int?]
+                               [:row-heights [:vector pos-int?]]
+                               [:col-widths [:vector pos-int?]]]]
             [:grid [:vector [:vector any?]]]
             [:code string?]
 
@@ -38,7 +36,6 @@
             [:code-in-editor {:optional true} [:maybe string?]]
             [:code-error {:optional true} [:maybe string?]]
             [:code-ast {:optional true} [:maybe vector?]]]]
-   ;; TODO: Maybe the [:sheet :ui] path key needs to be renamed
    [:ui [:map
          [:help-display boolean?]
          [:selections [:vector [:map
@@ -51,9 +48,9 @@
         num-cols 12]
     {:sheet (-> (grid/eval-sheet (start-sheet))
                 (assoc :grid-dimensions {:num-rows num-rows
-                                         :num-cols num-cols})
-                (assoc :ui {:row-heights (vec (repeat num-rows 30))
-                            :col-widths (vec (repeat num-cols 110))}))
+                                         :num-cols num-cols
+                                         :row-heights (vec (repeat num-rows 30))
+                                         :col-widths (vec (repeat num-cols 110))}))
      :ui {:help-display false
           :selections []
           :selection-start nil}}))

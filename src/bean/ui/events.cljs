@@ -16,14 +16,14 @@
  (fn update-code [db [_ code]]
    (update-in db [:sheet] #(-> %
                                (code/set-code code)
-                               (assoc-in [:ui :code-evaluation-state] :pending)))))
+                               (assoc :code-evaluation-state :pending)))))
 
 (rf/reg-event-db
  ::evaluate-code
  (fn evaluate-code [db _]
    (-> db
        (update-in [:sheet] code/reevaluate)
-       (assoc-in [:sheet :ui :code-evaluation-state]
+       (assoc-in [:sheet :code-evaluation-state]
                  (if (code-errors/get-error (:sheet db))
                    :error
                    :evaluated)))))
@@ -36,12 +36,13 @@
 (rf/reg-event-db
  ::resize-row
  (fn resize-row [db [_ row height]]
-   (assoc-in db [:sheet :ui :row-heights row] height)))
+   (assoc-in db [:sheet :grid-dimensions :row-heights row] height)))
 
 (rf/reg-event-db
  ::resize-col
  (fn resize-col [db [_ col width]]
-   (assoc-in db [:sheet :ui :col-widths col] width)))
+   (assoc-in db [:sheet :grid-dimensions :col-widths col] width)))
+
 
 (rf/reg-fx
  ::focus-cell

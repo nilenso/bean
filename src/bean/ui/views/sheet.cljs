@@ -74,10 +74,10 @@
       :id :bean-sheet
       :style {:grid-template-columns (str
                                       "var(--label-left-width) "
-                                      (sizes->pxs (:col-widths (:ui @sheet))))
+                                      (sizes->pxs (get-in @sheet [:grid-dimensions :col-widths])))
               :grid-template-rows (str
                                    "var(--cell-height) "
-                                   (sizes->pxs (:row-heights (:ui @sheet))))}}
+                                   (sizes->pxs (get-in @sheet [:grid-dimensions :row-heights])))}}
      [labels-top (:grid @sheet)]
      (map-indexed #(do ^{:key %1}
                     [row %1 %2]) (:grid @sheet))

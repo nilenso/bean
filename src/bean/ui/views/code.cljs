@@ -12,7 +12,7 @@
       [:button {:class (cs
                         :small-btn
                         (str "code-state-"
-                             (name (or (get-in @sheet [:ui :code-evaluation-state])
+                             (name (or (:code-evaluation-state @sheet)
                                        :evaluated))))
                 :on-click #(rf/dispatch [::events/evaluate-code])}
        "▶"]

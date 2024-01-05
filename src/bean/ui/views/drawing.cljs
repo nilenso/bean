@@ -139,15 +139,15 @@
     :component-did-update
     (fn [this _]
       (let [[_ sheet ui] (rc/argv this)]
-        (paint (:ui sheet) ui)))
+        (paint (:grid-dimensions sheet) ui)))
 
     :reagent-render
     (fn [sheet ui]
       [:canvas {:id :bean-canvas
                 :height 600
                 :width 1500
-                :on-mouse-down #(on-mouse-down %1 (:ui sheet))
-                :on-mouse-move #(on-mouse-move %1 ui (:ui sheet))
+                :on-mouse-down #(on-mouse-down %1 (:grid-dimensions sheet))
+                :on-mouse-move #(on-mouse-move %1 ui (:grid-dimensions sheet))
                 :on-mouse-up on-mouse-up}])}))
 
 (defn canvas []
