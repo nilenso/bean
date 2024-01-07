@@ -162,8 +162,8 @@
   (let [g (new pixi/Graphics)]
     (.beginFill g (:corner-background styles/colors))
     (.drawRect g 0 0 (:heading-left-width styles/sizes) (:cell-h styles/sizes))
-    (.on viewport "moved" #(set! (.. g -position -x) (.-left viewport)))
-    (.on viewport "moved" #(set! (.. g -position -y) (.-top viewport)))
+    (.on viewport "moved" #(do (set! (.. g -position -x) (.-left viewport))
+                               (set! (.. g -position -y) (.-top viewport))))
     g))
 
 (defn- left-heading [row-heights viewport]
@@ -242,10 +242,10 @@
   (new
    pixi-viewport/Viewport
    #js {:events (.. app -renderer -events)
-        :screenWidth (.-offsetWidth (.getElementById js/document "canvas-container"))
         :screenHeight (.-offsetHeight (.getElementById js/document "canvas-container"))
-        :worldWidth 10000
-        :worldHeight 10000}))
+        :screenWidth (.-offsetWidth (.getElementById js/document "canvas-container"))
+        :worldHeight (:world-h styles/sizes)
+        :worldWidth (:world-w styles/sizes)}))
 
 (defn setup []
   (let [app (make-app)
@@ -259,14 +259,11 @@
    {:display-name "bean-canvas"
     :component-did-mount setup
 
-    :component-did-update
-    (fn [this _]
-      (let [[_ sheet ui] (rc/argv this)]
-        (when (:pixi ui)
-          (paint (:grid-dimensions sheet) ui))))
-
     :reagent-render
-    (fn [])}))
+    (fn [sheet ui]
+      (when (:pixi ui)
+        (paint (:grid-dimensions sheet) ui)
+        [:div]))}))
 
 (defn canvas []
   (let [sheet (rf/subscribe [::subs/sheet])

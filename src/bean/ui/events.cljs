@@ -64,7 +64,7 @@
    (.addChild (.-stage app) viewport)
    (.addChild viewport container)
    (-> viewport
-       (.pinch)
+       (.clampZoom #js {:maxHeight 10000 :maxWidth 10000})
        (.drag #js {:clampWheel true})
        (.wheel #js {:trackpadPinch true :wheelZoom false})
        (.clamp #js {:direction "all"}))))
