@@ -136,17 +136,19 @@
     (doall (for [{:keys [start end]} selections]
              (selection->rect ctx start end row-heights col-widths)))))
 
-(defn- heading-text [g text x y h w]
-  (let [bitmap-text (new
-                     pixi/BitmapText text
-                     #js {:fontName "SpaceGrotesk"
-                          :tint (:heading-color styles/colors)
-                          :fontSize (:heading-font styles/sizes)})
-        text-h (.-height bitmap-text)
+(defn- center-text! [bitmap-text x y h w]
+  (let [text-h (.-height bitmap-text)
         text-w (.-width bitmap-text)]
     (set! (.-x bitmap-text) (- (+ x (/ w 2)) (/ text-w 2)))
-    (set! (.-y bitmap-text) (- (+ y (/ h 2)) text-h))
-    (.addChild g bitmap-text)))
+    (set! (.-y bitmap-text) (- (+ y (/ h 2)) text-h)))
+  bitmap-text)
+
+(defn- heading-text [g text x y h w]
+  (let [bitmap (new pixi/BitmapText text
+                    #js {:fontName "SpaceGrotesk"
+                         :tint (:heading-color styles/colors)
+                         :fontSize (:heading-font styles/sizes)})]
+    (->> (center-text! bitmap x y h w) (.addChild g))))
 
 (defn- native-line [g color sx sy ex ey]
    ;; native lines can be 1px wide only.
