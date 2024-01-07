@@ -144,10 +144,12 @@
   bitmap-text)
 
 (defn- heading-text [g text x y h w]
-  (let [bitmap (new pixi/BitmapText text
-                    #js {:fontName "SpaceGrotesk"
-                         :tint (:heading-color styles/colors)
-                         :fontSize (:heading-font styles/sizes)})]
+  (let [bitmap (new
+                pixi/BitmapText
+                text
+                #js {:fontName "SpaceGrotesk"
+                     :tint (:heading-color styles/colors)
+                     :fontSize (:heading-font styles/sizes)})]
     (->> (center-text! bitmap x y h w) (.addChild g))))
 
 (defn- native-line [g color sx sy ex ey]
@@ -177,12 +179,13 @@
         offset-l (:heading-left-width styles/sizes)]
     ;; draw the background
     (.beginFill g (:heading-background styles/colors))
+    ;; this should be relative to viewport x and y, not 0 0
     (.drawRect g 0 0 offset-l (:world-h styles/sizes))
     (heading-line g offset-l 0 offset-l (:world-h styles/sizes))
     ;; draw individual label borders
     (->> row-heights
-         (reductions +)
-         (map #(heading-line g 0 (+ % offset-t) offset-l (+ % offset-t)))
+         (reductions + offset-t)
+         (map #(heading-line g 0 % offset-l %))
          dorun)
     ;; draw text
     (reduce
@@ -201,8 +204,8 @@
     (.drawRect g 0 0 (:world-w styles/sizes) offset-t)
     (heading-line g 0 offset-t (:world-w styles/sizes) offset-t)
     (->> col-widths
-         (reductions +)
-         (map #(heading-line g (+ % offset-l) 0 (+ % offset-l) offset-t))
+         (reductions + offset-l)
+         (map #(heading-line g % 0 % offset-t))
          dorun)
     (reduce
      (fn [x [idx w]]
