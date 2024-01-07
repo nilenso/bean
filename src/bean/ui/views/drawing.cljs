@@ -1,11 +1,11 @@
 (ns bean.ui.views.drawing
-  (:require [bean.ui.util :refer [px]]
-            [re-frame.core :as rf]
-            [bean.ui.subs :as subs]
-            [bean.ui.events :as events]
+  (:require [bean.ui.events :as events]
             [bean.ui.styles :as styles]
-            [pixi.js :as pixi]
+            [bean.ui.subs :as subs]
+            [bean.ui.util :refer [px] :as util]
             [pixi-viewport :as pixi-viewport]
+            [pixi.js :as pixi]
+            [re-frame.core :as rf]
             [reagent.core :as rc]))
 
 (def selection-fill "rgba(0, 0, 0, 0.03)")
@@ -136,55 +136,86 @@
     (doall (for [{:keys [start end]} selections]
              (selection->rect ctx start end row-heights col-widths)))))
 
-(defn- draw-line [g width color sx sy ex ey]
-  (.lineStyle g width color 1 0.5 true)
+(defn- heading-text [g text x y h w]
+  (let [bitmap-text (new
+                     pixi/BitmapText text
+                     #js {:fontName "SpaceGrotesk"
+                          :tint (:heading-color styles/colors)
+                          :fontSize (:heading-font styles/sizes)})
+        text-h (.-height bitmap-text)
+        text-w (.-width bitmap-text)]
+    (set! (.-x bitmap-text) (- (+ x (/ w 2)) (/ text-w 2)))
+    (set! (.-y bitmap-text) (- (+ y (/ h 2)) text-h))
+    (.addChild g bitmap-text)))
+
+(defn- native-line [g color sx sy ex ey]
+   ;; native lines can be 1px wide only.
+  (.lineStyle g 1 color 1 0.5 true)
   (.moveTo g sx sy)
   (.lineTo g ex ey)
   (.lineStyle g 0 color 1 0.5 true))
 
+(defn- grid-line [g sx sy ex ey]
+  (native-line g (:grid-line styles/colors) sx sy ex ey))
+
 (defn- corner [viewport]
   (let [g (new pixi/Graphics)]
     (.beginFill g (:corner-background styles/colors))
-    (.drawRect g 0 0 (:heading-left-width styles/sizes) (:cell-height styles/sizes))
+    (.drawRect g 0 0 (:heading-left-width styles/sizes) (:cell-h styles/sizes))
     (.on viewport "moved" #(set! (.. g -position -x) (.-left viewport)))
     (.on viewport "moved" #(set! (.. g -position -y) (.-top viewport)))
     g))
 
-(defn- top-heading [row-heights viewport]
-  (let [g (new pixi/Graphics)]
+(defn- left-heading [row-heights viewport]
+  (let [g (new pixi/Graphics)
+        offset-t (:cell-h styles/sizes)
+        offset-l (:heading-left-width styles/sizes)]
+    ;; draw the background
     (.beginFill g (:heading-background styles/colors))
-    (.drawRect g 0 0 (:heading-left-width styles/sizes) 10000)
+    (.drawRect g 0 0 offset-l (:world-h styles/sizes))
+    (native-line g (:heading-border styles/colors) offset-l 0 offset-l (:world-h styles/sizes))
+    ;; draw individual label borders
     (->> row-heights
          (reductions +)
-         (map #(draw-line g 0.5 (:heading-border styles/colors) 0 % (:heading-left-width styles/sizes) %))
+         (map #(grid-line g 0 (+ % offset-t) offset-l (+ % offset-t)))
          dorun)
-    (set! (.. g -position -y) (:cell-height styles/sizes))
+    ;; draw text
+    (reduce
+     (fn [y [idx w]]
+       (heading-text g (inc idx) 0 y w offset-l)
+       (+ y w))
+     offset-t (map-indexed vector row-heights))
     (.on viewport "moved" #(set! (.. g -position -x) (.-left viewport)))
     g))
 
-(defn- left-heading [col-widths viewport]
-  (let [g (new pixi/Graphics)]
+(defn- top-heading [col-widths viewport]
+  (let [g (new pixi/Graphics)
+        offset-t (:cell-h styles/sizes)
+        offset-l (:heading-left-width styles/sizes)]
     (.beginFill g (:heading-background styles/colors))
-    (.drawRect g 0 0 10000 (:cell-height styles/sizes))
+    (.drawRect g 0 0 (:world-w styles/sizes) offset-t)
+    (native-line g (:heading-border styles/colors) 0 offset-t (:world-w styles/sizes) offset-t)
     (->> col-widths
          (reductions +)
-         (map #(draw-line g 0.5 (:heading-border styles/colors) % 0 % (:cell-height styles/sizes)))
+         (map #(grid-line g (+ % offset-l) 0 (+ % offset-l) offset-t))
          dorun)
-    (set! (.. g -position -x) (:heading-left-width styles/sizes))
+    (reduce
+     (fn [x [idx w]]
+       (heading-text g (util/i->a idx) x 0 offset-t w)
+       (+ x w))
+     offset-l (map-indexed vector col-widths))
     (.on viewport "moved" #(set! (.. g -position -y) (.-top viewport)))
     g))
 
 (defn- grid [row-heights col-widths]
   (let [g (new pixi/Graphics)]
-    (letfn [(draw-line*
+    (letfn [(grid-line*
               [sx sy ex ey]
-              (draw-line g
-                         (:grid-line styles/sizes)
-                         (:grid-line styles/colors) sx sy ex ey))
-            (draw-horizontal [y] (draw-line* 0 y 10000 y))
-            (draw-vertical [x] (draw-line* x 0 x 10000))]
+              (grid-line g sx sy ex ey))
+            (draw-horizontal [y] (grid-line* 0 y (:world-w styles/sizes) y))
+            (draw-vertical [x] (grid-line* x 0 x (:world-h styles/sizes)))]
       (set! (.. g -position -x) (:heading-left-width styles/sizes))
-      (set! (.. g -position -y) (:cell-height styles/sizes))
+      (set! (.. g -position -y) (:cell-h styles/sizes))
       (dorun (->> row-heights (reductions +) (map draw-horizontal)))
       (dorun (->> col-widths (reductions +) (map draw-vertical))))
     g))
@@ -194,8 +225,8 @@
         c (:container pixi)]
     (.removeChildren c)
     (.addChild c (grid row-heights col-widths))
-    (.addChild c (top-heading row-heights v))
-    (.addChild c (left-heading col-widths v))
+    (.addChild c (top-heading col-widths v))
+    (.addChild c (left-heading row-heights v))
     (.addChild c (corner v))))
 
 (defn- make-app []
@@ -219,7 +250,9 @@
 (defn setup []
   (let [app (make-app)
         viewport (make-viewport app)]
-    (rf/dispatch [::events/set-pixi-container app viewport (new pixi/Container)])))
+    (.then
+     (.load pixi/Assets "/fonts/SpaceGrotesk.fnt")
+     #(rf/dispatch [::events/set-pixi-container app viewport (new pixi/Container)]))))
 
 (defn- canvas* []
   (rc/create-class
