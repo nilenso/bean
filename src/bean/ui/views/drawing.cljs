@@ -158,6 +158,9 @@
 (defn- grid-line [g sx sy ex ey]
   (native-line g (:grid-line styles/colors) sx sy ex ey))
 
+(defn- heading-line [g sx sy ex ey]
+  (native-line g (:heading-border styles/colors) sx sy ex ey))
+
 (defn- corner [viewport]
   (let [g (new pixi/Graphics)]
     (.beginFill g (:corner-background styles/colors))
@@ -173,11 +176,11 @@
     ;; draw the background
     (.beginFill g (:heading-background styles/colors))
     (.drawRect g 0 0 offset-l (:world-h styles/sizes))
-    (native-line g (:heading-border styles/colors) offset-l 0 offset-l (:world-h styles/sizes))
+    (heading-line g offset-l 0 offset-l (:world-h styles/sizes))
     ;; draw individual label borders
     (->> row-heights
          (reductions +)
-         (map #(grid-line g 0 (+ % offset-t) offset-l (+ % offset-t)))
+         (map #(heading-line g 0 (+ % offset-t) offset-l (+ % offset-t)))
          dorun)
     ;; draw text
     (reduce
@@ -194,10 +197,10 @@
         offset-l (:heading-left-width styles/sizes)]
     (.beginFill g (:heading-background styles/colors))
     (.drawRect g 0 0 (:world-w styles/sizes) offset-t)
-    (native-line g (:heading-border styles/colors) 0 offset-t (:world-w styles/sizes) offset-t)
+    (heading-line g 0 offset-t (:world-w styles/sizes) offset-t)
     (->> col-widths
          (reductions +)
-         (map #(grid-line g (+ % offset-l) 0 (+ % offset-l) offset-t))
+         (map #(heading-line g (+ % offset-l) 0 (+ % offset-l) offset-t))
          dorun)
     (reduce
      (fn [x [idx w]]
