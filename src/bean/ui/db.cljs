@@ -35,10 +35,15 @@
             [:code-ast {:optional true} [:maybe vector?]]]]
    [:ui [:map
          [:help-display boolean?]
-         [:selections [:vector [:map
-                                [:start nat-int?]
-                                [:end nat-int?]]]]
-         [:selection-start [:vector nat-int?]]]]])
+         [:canvas [:map
+                   [:pixi-app [:map
+                               [:app {:optional true}]
+                               [:viewport {:optional true}]
+                               [:container {:optional true}]]]
+                   [:selections [:vector [:map
+                                          [:start nat-int?]
+                                          [:end nat-int?]]]]
+                   [:selection-start [:vector nat-int?]]]]]]])
 
 (defn initial-app-db []
   (let [num-rows 50
@@ -50,5 +55,6 @@
                                          :col-widths (vec (repeat num-cols 110))}))
      :ui {:help-display false
           :canvas {:pixi-app nil
+                   :editing-cell nil
                    :selections []
                    :selection-start nil}}}))

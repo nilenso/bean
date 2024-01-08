@@ -2,7 +2,7 @@
   (:require [bean.ui.events :as events]
             [bean.ui.styles :as styles]
             [bean.ui.subs :as subs]
-            [bean.ui.util :refer [px] :as util]
+            [bean.ui.util :refer [px cs] :as util]
             [pixi-viewport :as pixi-viewport]
             [pixi.js :as pixi]
             [re-frame.core :as rf]
@@ -109,14 +109,11 @@
      selection-fill
      selection-border)))
 
-(defn on-mouse-down [e {:keys [row-heights col-widths]}]
-  (let [x (.-offsetX (.-nativeEvent e))
-        y (.-offsetY (.-nativeEvent e))
-        [r c] (xy->rc [x y] row-heights col-widths)]
-    (.preventDefault e)
+(defn on-mouse-down [interaction row-heights col-widths]
+  (let [[r c] (xy->rc [(.-x interaction) (.-y interaction)] row-heights col-widths)]
     (rf/dispatch [::events/clear-selections])
     (rf/dispatch [::events/start-selection [r c]])
-    (rf/dispatch [::events/edit-mode [r c]])))
+    (rf/dispatch [::events/edit-cell [r c]])))
 
 (defn on-mouse-move [e {:keys [selection-start]} {:keys [row-heights col-widths]}]
   (when selection-start
@@ -233,7 +230,10 @@
       (set! (.. g -position -x) (:heading-left-width styles/sizes))
       (set! (.. g -position -y) (:cell-h styles/sizes))
       (dorun (->> row-heights (reductions +) (map draw-horizontal)))
-      (dorun (->> col-widths (reductions +) (map draw-vertical))))
+      (dorun (->> col-widths (reductions +) (map draw-vertical)))
+      (set! (.-eventMode g) "static")
+      (set! (.-hitArea g) (new pixi/Rectangle 0 0 (:world-w styles/sizes) (:world-h styles/sizes)))
+      (.on g "pointerdown" #(on-mouse-down (.getLocalPosition % g) row-heights col-widths)))
     g))
 
 (defn paint [{:keys [row-heights col-widths]} {:keys [pixi-app selections]}]
@@ -270,9 +270,28 @@
      (.load pixi/Assets "/fonts/SpaceGrotesk.fnt")
      #(rf/dispatch [::events/set-pixi-container app viewport (new pixi/Container)]))))
 
+(defn cell-input []
+  (when-let [[r c] @(rf/subscribe [::subs/editing-cell])]
+    (let [sheet (rf/subscribe [::subs/sheet])
+          {:keys [row-heights col-widths]} (:grid-dimensions @sheet)
+          cell (get-in @sheet [:grid r c])
+          offset-t (:cell-h styles/sizes)
+          offset-l (:heading-left-width styles/sizes)]
+          ;; focus self on component did update
+      #_(.on viewport "moved" reposition)
+      [:span {:id :cell-input
+              :content-editable true
+              :suppressContentEditableWarning true
+            ;; TODO cleanup all these css classes
+              :style {:position :absolute
+                      :top (+ offset-t (apply + (take r row-heights)))
+                      :left (+ offset-l (apply + (take c col-widths)))}}
+       "Cell contents go here"
+       #_(:content cell)])))
+
 (defn- canvas* []
   (rc/create-class
-   {:display-name "grid-canvas"
+   {:display-name :grid-canvas
     :component-did-mount setup
 
     :reagent-render

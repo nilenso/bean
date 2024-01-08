@@ -13,6 +13,11 @@
    (:ui db)))
 
 (re-frame/reg-sub
+ ::editing-cell
+ (fn [db]
+   (get-in db [:ui :editing-cell])))
+
+(re-frame/reg-sub
  ::canvas
  (fn [db]
    (get-in db [:ui :canvas])))

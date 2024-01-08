@@ -69,26 +69,10 @@
        (.wheel #js {:trackpadPinch true :wheelZoom false})
        (.clamp #js {:direction "all"}))))
 
-(rf/reg-fx
- ::focus-cell
- (fn [[r c]]
-   (.focus
-    (.querySelector
-     js/document
-     (str "[data-row=\"" r "\"][data-col=\"" c "\"]")))))
-
-(rf/reg-event-fx
- ::set-mode
- (fn set-mode [{:keys [db]} [_ [r c] mode]]
-   (case mode
-     :view {:db (assoc-in db [:sheet :grid r c :mode] mode)}
-     :edit {:db (assoc-in db [:sheet :grid r c :mode] mode)
-            :fx [[::focus-cell [r c]]]})))
-
-(rf/reg-event-fx
- ::edit-mode
- (fn edit-mode [_ [_ [r c]]]
-   {:fx [[:dispatch [::set-mode [r c] :edit]]]}))
+(rf/reg-event-db
+ ::edit-cell
+ (fn edit-cell [db [_ rc]]
+   (assoc-in db [:ui :editing-cell] rc)))
 
 (rf/reg-event-db
  ::start-selection
