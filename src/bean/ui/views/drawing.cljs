@@ -166,20 +166,22 @@
   (native-line g (:heading-border styles/colors) sx sy ex ey))
 
 (defn- corner [viewport]
-  (let [g (new pixi/Graphics)]
+  (let [g (new pixi/Graphics)
+        reposition #(do (set! (.. g -position -x) (.-left viewport))
+                        (set! (.. g -position -y) (.-top viewport)))]
     (.beginFill g (:corner-background styles/colors))
     (.drawRect g 0 0 (:heading-left-width styles/sizes) (:cell-h styles/sizes))
-    (.on viewport "moved" #(do (set! (.. g -position -x) (.-left viewport))
-                               (set! (.. g -position -y) (.-top viewport))))
+    (reposition)
+    (.on viewport "moved" reposition)
     g))
 
 (defn- left-heading [row-heights viewport]
   (let [g (new pixi/Graphics)
         offset-t (:cell-h styles/sizes)
-        offset-l (:heading-left-width styles/sizes)]
+        offset-l (:heading-left-width styles/sizes)
+        reposition #(set! (.. g -position -x) (.-left viewport))]
     ;; draw the background
     (.beginFill g (:heading-background styles/colors))
-    ;; this should be relative to viewport x and y, not 0 0
     (.drawRect g 0 0 offset-l (:world-h styles/sizes))
     (heading-line g offset-l 0 offset-l (:world-h styles/sizes))
     ;; draw individual label borders
@@ -193,13 +195,15 @@
        (heading-text g (inc idx) 0 y w offset-l)
        (+ y w))
      offset-t (map-indexed vector row-heights))
-    (.on viewport "moved" #(set! (.. g -position -x) (.-left viewport)))
+    (reposition)
+    (.on viewport "moved" reposition)
     g))
 
 (defn- top-heading [col-widths viewport]
   (let [g (new pixi/Graphics)
         offset-t (:cell-h styles/sizes)
-        offset-l (:heading-left-width styles/sizes)]
+        offset-l (:heading-left-width styles/sizes)
+        reposition #(set! (.. g -position -y) (.-top viewport))]
     (.beginFill g (:heading-background styles/colors))
     (.drawRect g 0 0 (:world-w styles/sizes) offset-t)
     (heading-line g 0 offset-t (:world-w styles/sizes) offset-t)
@@ -212,7 +216,8 @@
        (heading-text g (util/i->a idx) x 0 offset-t w)
        (+ x w))
      offset-l (map-indexed vector col-widths))
-    (.on viewport "moved" #(set! (.. g -position -y) (.-top viewport)))
+    (reposition)
+    (.on viewport "moved" reposition)
     g))
 
 (defn- grid [row-heights col-widths]
@@ -269,11 +274,11 @@
 
     :reagent-render
     (fn [sheet ui]
-      (when (:pixi-app ui) 
+      (when (:pixi-app ui)
         (paint (:grid-dimensions sheet) ui)
         [:div]))}))
 
-(defn canvas [] 
-  [canvas* 
-   @(rf/subscribe [::subs/sheet]) 
+(defn canvas []
+  [canvas*
+   @(rf/subscribe [::subs/sheet])
    @(rf/subscribe [::subs/canvas])])
