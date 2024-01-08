@@ -247,7 +247,7 @@
   (new
    pixi/Application
    #js {:autoResize true
-        :resizeTo (.getElementById js/document "canvas-container")
+        :resizeTo (.getElementById js/document "grid-container")
         :resolution (.-devicePixelRatio js/window),
         :backgroundColor (:sheet-background styles/colors)
         :autoDensity true}))
@@ -256,8 +256,8 @@
   (new
    pixi-viewport/Viewport
    #js {:events (.. app -renderer -events)
-        :screenHeight (.-offsetHeight (.getElementById js/document "canvas-container"))
-        :screenWidth (.-offsetWidth (.getElementById js/document "canvas-container"))
+        :screenHeight (.-offsetHeight (.getElementById js/document "grid-container"))
+        :screenWidth (.-offsetWidth (.getElementById js/document "grid-container"))
         :worldHeight (:world-h styles/sizes)
         :worldWidth (:world-w styles/sizes)}))
 
@@ -270,7 +270,7 @@
 
 (defn- canvas* []
   (rc/create-class
-   {:display-name "bean-canvas"
+   {:display-name "grid-canvas"
     :component-did-mount setup
 
     :reagent-render

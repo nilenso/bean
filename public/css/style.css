@@ -2,8 +2,7 @@
     --sheet-background: #fffefc;
     --sheet-foreground: #111;
     --sheet-error: #b93333;
-    --label-background: #f2f2f1;
-    --label-foreground: #666;
+    --headings-background: #f2f2f1;
     --cell-background: white;
     --corner-background: #ddd;
     --code-background: #fff;
@@ -11,7 +10,7 @@
     --code-sidebar: rgba(255, 0, 0, 0.4);
     --code-pending: #f0c2b0;
     --sheet-border: #dedbd7;
-    --label-border: #8a868440;
+    --headings-border: #8a868440;
     --code-lines: #90b1ccaa;
     --btn-foreground: #666;
     --btn-background: #e9e9ed;
@@ -21,19 +20,15 @@
     --cell-width: 110px;
     --cell-padding: 5px;
     --cell-border: 1px;
-    --label-left-width: 40px;
-    --label-left-bottom-border: 0.1px;
     --code-width: 350px;
     --code-thick-line-gap: 4;
 }
 
 [data-theme='dark'] {
     --sheet-background: #073642;
-    --sheet-foreground: #93a1a1;
-    --corner-background: var(--label-background);
+    --corner-background: var(--headings-background);
     --sheet-error: #dc322f;
-    --label-background: #002b36;
-    --label-foreground: #839496;
+    --headings-background: #002b36;
     --cell-background: #073642;
     --code-background: #073642;
     --code-foreground: #93a1a1;
@@ -41,17 +36,13 @@
     --code-pending: #73402c;
     --sheet-border: #002b36;
     --sheet-header-border: #002b36;
-    --label-border: #073642;
+    --headings-border: #073642;
     --code-lines: #93a1a1;
     --btn-foreground: white;
     --btn-background: var(--sheet-background);
     --cell-selector: #666;
     --link-color: rgb(164, 183, 146);
 }
-
-/* z-index ordering
-bean-cell < bean-canvas < bean-cell.edit-mode < bean-labels-top = bean-labels-left < bean-corner < code
-*/
 
 @font-face {
     font-family: SpaceGrotesk;
@@ -77,22 +68,11 @@ a {
     width: 100vw;
 }
 
-.bean-sheet {
-    display: grid;
-    color: var(--sheet-foreground);
-    font-family: monospace;
-    font-size: 1.1em;
-    user-select: none;
+#grid-container {
     position: relative;
 }
 
-#bean-canvas {
-    z-index: 1;
-    background: transparent;
-    cursor: cell;
-}
-
-.bean-cell {
+.cell-input {
     z-index: 0;
     background: var(--cell-background);
     outline: 0.5px solid var(--sheet-border);
@@ -100,83 +80,8 @@ a {
     overflow: hidden;
     cursor: cell;
     box-sizing: border-box;
-}
-
-.bean-cell.edit-mode {
     z-index: 2;
     outline: 2px solid var(--cell-selector);
-}
-
-.bean-label {
-    background-color: var(--label-background);
-    color: var(--label-foreground);
-    padding: var(--cell-padding);
-    box-sizing: border-box;
-    font-family: SpaceGrotesk;
-    font-size: 0.8rem;
-}
-
-.bean-labels-top {
-    z-index: 3;
-    position: sticky;
-    top: 0;
-}
-
-.bean-label-top {
-    text-align: center;
-    border-right: var(--cell-border) solid var(--label-border);
-    border-bottom: var(--cell-border) solid var(--sheet-border);
-    position: sticky;
-    left: 0;
-    padding: var(--cell-padding);
-    height: var(--cell-height);
-}
-
-.bean-label-left {
-    z-index: 3;
-    width: var(--label-left-width);
-    text-align: center;
-    border-bottom: 0.1px solid var(--label-border);
-    border-right: var(--cell-border) solid var(--sheet-border);
-    position: sticky;
-    left: var(--code-width);
-    padding: var(--cell-padding);
-}
-
-.bean-corner {
-    z-index: 4;
-    background-color: var(--corner-background);
-    width: var(--label-left-width);
-    border-bottom: var(--cell-border) solid var(--sheet-border);
-    border-right: var(--cell-border) solid var(--sheet-border);
-    border-left: var(--cell-border) solid var(--sheet-border);
-    position: sticky;
-    left: var(--code-width);
-    padding: var(--cell-padding);
-}
-
-.bean-label-top:hover::after {
-    content: "";
-    height: var(--cell-height);
-    width: 10px;
-    display: block;
-    position: absolute;
-    right: 0;
-    top: 0;
-    cursor: ew-resize;
-    background: #00000033;
-}
-
-.bean-label-left:hover::after {
-    content: "";
-    width: var(--label-left-width);
-    height: 8px;
-    display: block;
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    cursor: ns-resize;
-    background: #00000033;
 }
 
 #bean-resize-indicator-v {
@@ -274,6 +179,8 @@ a {
     display: flex;
     padding-left: 3px;
     padding-right: 3px;
+    background-color: var(--headings-background);
+    box-sizing: border-box;
 }
 
 .code-error {
@@ -377,15 +284,6 @@ a {
     display: grid;
     grid-template-columns: 1fr 1fr;
     height: 100%;
-}
-
-.help-text-left {
-    padding-right: 10px;
-}
-
-.help-text-right {
-    padding-left: 10px;
-    border-left: 1px solid var(--label-border);
 }
 
 .container.help-open {
