@@ -49,6 +49,6 @@
                                          :row-heights (vec (repeat num-rows 30))
                                          :col-widths (vec (repeat num-cols 110))}))
      :ui {:help-display false
-          :pixi nil
-          :selections []
-          :selection-start nil}}))
+          :canvas {:pixi-app nil
+                   :selections []
+                   :selection-start nil}}}))
