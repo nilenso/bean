@@ -68,5 +68,5 @@
                 cells)])
 
 (defn sheet []
-  [:div {:id "canvas-container"}
+  [:div {:id :grid-container}
    [drawing/canvas]])

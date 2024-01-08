@@ -1,6 +1,6 @@
 (ns bean.ui.styles)
 
-(def ^:private light {:sheet-background 0xfffefc
+(def ^:private light {:sheet-background 0xffffff
                       :heading-background 0xf2f2f1
                       :heading-color 0x555555
                       :grid-line 0xdedbd7
