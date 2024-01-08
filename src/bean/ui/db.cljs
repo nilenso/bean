@@ -1,5 +1,6 @@
 (ns bean.ui.db
-  (:require [bean.grid :as grid]))
+  (:require [bean.grid :as grid]
+            [bean.ui.styles :as styles]))
 
 (defn- start-sheet [num-rows num-cols]
   (grid/new-sheet
@@ -35,20 +36,27 @@
             [:code-ast {:optional true} [:maybe vector?]]]]
    [:ui [:map
          [:help-display boolean?]
-         [:selections [:vector [:map
-                                [:start nat-int?]
-                                [:end nat-int?]]]]
-         [:selection-start [:vector nat-int?]]]]])
+         [:pixi-app [:map
+                     [:app {:optional true}]
+                     [:viewport {:optional true}]
+                     [:container {:optional true}]]]
+         [:grid [:map
+                 [:editing-cell {:optional true}]
+                 [:selections [:vector [:map
+                                        [:start nat-int?]
+                                        [:end nat-int?]]]]
+                 [:selection-start [:vector nat-int?]]]]]]])
 
 (defn initial-app-db []
-  (let [num-rows 50
-        num-cols 20]
+  (let [num-rows (:num-rows styles/sizes)
+        num-cols (:num-cols styles/sizes)]
     {:sheet (-> (grid/eval-sheet (start-sheet num-rows num-cols))
                 (assoc :grid-dimensions {:num-rows num-rows
                                          :num-cols num-cols
-                                         :row-heights (vec (repeat num-rows 30))
-                                         :col-widths (vec (repeat num-cols 110))}))
+                                         :row-heights (vec (repeat num-rows (:cell-h styles/sizes)))
+                                         :col-widths (vec (repeat num-cols (:cell-w styles/sizes)))}))
      :ui {:help-display false
-          :canvas {:pixi-app nil
-                   :selections []
-                   :selection-start nil}}}))
+          :pixi-app nil
+          :grid {:editing-cell nil
+                 :selections []
+                 :selection-start nil}}}))

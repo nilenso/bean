@@ -106,14 +106,18 @@
      selection-fill
      selection-border)))
 
-(defn on-mouse-down [e {:keys [row-heights col-widths]}]
-  (let [x (.-offsetX (.-nativeEvent e))
-        y (.-offsetY (.-nativeEvent e))
-        [r c] (xy->rc [x y] row-heights col-widths)]
-    (.preventDefault e)
+(defn- submit-cell-input []
+  (when-let [el (.getElementById js/document "cell-input")]
+    (rf/dispatch [::events/submit-cell-input (str (.-textContent el))])
+    ;; Reagent does not clear the element when input moves to a blank cell.
+    (set! (.-innerHTML el) nil)))
+
+(defn on-mouse-down [interaction row-heights col-widths]
+  (let [[r c] (xy->rc [(.-x interaction) (.-y interaction)] row-heights col-widths)]
+    (submit-cell-input)
     (rf/dispatch [::events/clear-selections])
     (rf/dispatch [::events/start-selection [r c]])
-    (rf/dispatch [::events/edit-mode [r c]])))
+    (rf/dispatch [::events/edit-cell [r c]])))
 
 (defn on-mouse-move [e {:keys [selection-start]} {:keys [row-heights col-widths]}]
   (when selection-start
@@ -136,6 +140,17 @@
     (doall (for [{:keys [start end]} selections]
              (selection->rect ctx start end row-heights col-widths)))))
 
+(defn- handle-cell-navigation [e [r c]]
+  (let [move-to-cell (cond
+                       (and (= (.-keyCode e) 13) (.-shiftKey e)) [(dec r) c]
+                       (and (= (.-keyCode e) 9) (.-shiftKey e)) [r (dec c)]
+                       (= (.-keyCode e) 13) [(inc r) c]
+                       (= (.-keyCode e) 9) [r (inc c)])]
+    (when move-to-cell
+      (.preventDefault e)
+      (submit-cell-input)
+      (rf/dispatch [::events/edit-cell move-to-cell]))))
+
 (defn- center-text! [bitmap-text x y h w]
   (let [text-h (.-height bitmap-text)
         text-w (.-width bitmap-text)]
@@ -149,8 +164,23 @@
                 text
                 #js {:fontName "SpaceGrotesk"
                      :tint (:heading-color styles/colors)
-                     :fontSize (:heading-font styles/sizes)})]
+                     :fontSize (:heading-font-size styles/sizes)})]
     (->> (center-text! bitmap x y h w) (.addChild g))))
+
+(defn- cell-text [g text x y h w]
+  (let [bitmap (new pixi/BitmapText text
+                    #js {:fontName "SpaceGrotesk"
+                         :tint (:cell-color styles/colors)
+                         :fontSize 14})
+        mask (new pixi/Graphics)]
+    (set! (.-x bitmap) (+ x (:cell-padding styles/sizes)))
+    (set! (.-y bitmap) (+ y (:cell-padding styles/sizes)))
+    (.beginFill mask 0xffffff)
+    (.drawRect mask x y w h)
+    (.endFill mask)
+    (.addChild g mask)
+    (set! (.-mask bitmap) mask)
+    (.addChild g bitmap)))
 
 (defn- native-line [g color sx sy ex ey]
    ;; native lines can be 1px wide only.
@@ -221,7 +251,22 @@
     (.on viewport "moved" reposition)
     g))
 
-(defn- grid [row-heights col-widths]
+(defn- grid-text [grid row-heights col-widths]
+  (let [g (new pixi/Graphics)
+        xs (reductions + 0 col-widths)
+        ys (reductions + 0 row-heights)]
+    (util/map-on-matrix-addressed
+     (fn [[r c] cell]
+       (let [text (:representation cell)]
+         (when-not (empty? text)
+           (cell-text
+            g text
+            (nth xs c) (nth ys r)
+            (nth row-heights r) (nth col-widths c)))))
+     grid)
+    g))
+
+(defn- draw-grid [row-heights col-widths]
   (let [g (new pixi/Graphics)]
     (letfn [(grid-line*
               [sx sy ex ey]
@@ -231,14 +276,20 @@
       (set! (.. g -position -x) (:heading-left-width styles/sizes))
       (set! (.. g -position -y) (:cell-h styles/sizes))
       (dorun (->> row-heights (reductions +) (map draw-horizontal)))
-      (dorun (->> col-widths (reductions +) (map draw-vertical))))
+      (dorun (->> col-widths (reductions +) (map draw-vertical)))
+      (set! (.-eventMode g) "static")
+      (set! (.-hitArea g) (new pixi/Rectangle 0 0 (:world-w styles/sizes) (:world-h styles/sizes)))
+      (.on g "pointerdown" #(on-mouse-down (.getLocalPosition % g) row-heights col-widths)))
     g))
 
-(defn paint [{:keys [row-heights col-widths]} {:keys [pixi-app selections]}]
-  (let [v (:viewport pixi-app)
-        c (:container pixi-app)]
+(defn paint [{:keys [grid grid-dimensions]} pixi-app]
+  (let [{:keys [row-heights col-widths]} grid-dimensions
+        v (:viewport pixi-app)
+        c (:container pixi-app)
+        g (draw-grid row-heights col-widths)]
     (.removeChildren c)
-    (.addChild c (grid row-heights col-widths))
+    (.addChild c g)
+    (.addChild g (grid-text grid row-heights col-widths))
     (.addChild c (top-heading col-widths v))
     (.addChild c (left-heading row-heights v))
     (.addChild c (corner v))))
@@ -268,18 +319,41 @@
      (.load pixi/Assets "/fonts/SpaceGrotesk.fnt")
      #(rf/dispatch [::events/set-pixi-container app viewport (new pixi/Container)]))))
 
+(defn cell-input []
+  (when-let [[r c] @(rf/subscribe [::subs/editing-cell])]
+    (let [sheet (rf/subscribe [::subs/sheet])
+          {:keys [row-heights col-widths]} (:grid-dimensions @sheet)
+          cell (get-in @sheet [:grid r c])
+          offset-t (:cell-h styles/sizes)
+          offset-l (:heading-left-width styles/sizes)]
+      [:span {:id :cell-input
+              :content-editable true
+              :suppressContentEditableWarning true
+              :spell-check false
+              :style {:top (+ offset-t (apply + (take r row-heights)))
+                      :left (+ offset-l (apply + (take c col-widths)))
+                      :minHeight (nth row-heights r)
+                      :minWidth (nth col-widths c)}
+              :on-key-down #(handle-cell-navigation % [r c])}
+       (:content cell)])))
+
 (defn- canvas* []
   (rc/create-class
-   {:display-name "grid-canvas"
+   {:display-name :grid-canvas
     :component-did-mount setup
 
-    :reagent-render
-    (fn [sheet ui]
-      (when (:pixi-app ui) 
-        (paint (:grid-dimensions sheet) ui)
-        [:div]))}))
+    :component-did-update
+    (fn [this _]
+      (let [[sheet pixi-app] (rest (rc/argv this))]
+        (when pixi-app
+          (prn "Reconstructing graphics")
+          (paint sheet pixi-app))))
 
-(defn canvas [] 
-  [canvas* 
-   @(rf/subscribe [::subs/sheet]) 
-   @(rf/subscribe [::subs/canvas])])
+    :reagent-render
+    (fn []
+      [:div])}))
+
+(defn canvas []
+  [canvas*
+   @(rf/subscribe [::subs/sheet])
+   @(rf/subscribe [::subs/pixi-app])])

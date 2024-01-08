@@ -13,9 +13,14 @@
    (:ui db)))
 
 (re-frame/reg-sub
- ::canvas
+ ::editing-cell
  (fn [db]
-   (get-in db [:ui :canvas])))
+   (get-in db [:ui :grid :editing-cell])))
+
+(re-frame/reg-sub
+ ::pixi-app
+ (fn [db]
+   (get-in db [:ui :pixi-app])))
 
 (re-frame/reg-sub
  ::route

@@ -3,6 +3,7 @@
             [bean.ui.provenance :as provenance]
             [bean.ui.db :as db]
             [re-frame.core :as rf]
+            [reagent.core :as rc]
             [bean.code :as code]
             [bean.code-errors :as code-errors]))
 
@@ -33,6 +34,11 @@
  (fn update-cell [db [_ address content]]
    (update-in db [:sheet] #(grid/eval-cell address % content))))
 
+(rf/reg-event-fx
+ ::submit-cell-input
+ (fn update-cell [{:keys [db]} [_ content]]
+   {:fx [[:dispatch [::update-cell (get-in db [:ui :grid :editing-cell]) content]]]}))
+
 (rf/reg-event-db
  ::resize-row
  (fn resize-row [db [_ row height]]
@@ -46,9 +52,9 @@
 (rf/reg-event-fx
  ::set-pixi-container
  (fn init-pixi-viewport [{:keys [db]} [_ app viewport container]]
-   {:db (-> (assoc-in db [:ui :canvas :pixi-app :app] app)
-            (assoc-in [:ui :canvas :pixi-app :viewport] viewport)
-            (assoc-in [:ui :canvas :pixi-app :container] container))
+   {:db (-> (assoc-in db [:ui :pixi-app :app] app)
+            (assoc-in [:ui :pixi-app :viewport] viewport)
+            (assoc-in [:ui :pixi-app :container] container))
     :fx [[::setup-canvas [app viewport container]]]}))
 
 ;; TODO: this canvas interaction should probably be in drawing.cljs but
@@ -70,25 +76,15 @@
        (.clamp #js {:direction "all"}))))
 
 (rf/reg-fx
- ::focus-cell
- (fn [[r c]]
-   (.focus
-    (.querySelector
-     js/document
-     (str "[data-row=\"" r "\"][data-col=\"" c "\"]")))))
+ ::focus-element
+ (fn [el-id]
+   (rc/after-render  #(some-> js/document (.getElementById el-id) .focus))))
 
 (rf/reg-event-fx
- ::set-mode
- (fn set-mode [{:keys [db]} [_ [r c] mode]]
-   (case mode
-     :view {:db (assoc-in db [:sheet :grid r c :mode] mode)}
-     :edit {:db (assoc-in db [:sheet :grid r c :mode] mode)
-            :fx [[::focus-cell [r c]]]})))
-
-(rf/reg-event-fx
- ::edit-mode
- (fn edit-mode [_ [_ [r c]]]
-   {:fx [[:dispatch [::set-mode [r c] :edit]]]}))
+ ::edit-cell
+ (fn edit-cell [{:keys [db]} [_ rc]]
+   {:db (assoc-in db [:ui :grid :editing-cell] rc)
+    :fx [[::focus-element "cell-input"]]}))
 
 (rf/reg-event-db
  ::start-selection
