@@ -1,5 +1,6 @@
 (ns bean.ui.util
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [bean.util :as util]))
 
 (defn px [int]
   (str int "px"))
@@ -24,3 +25,5 @@
        (remove nil?)
        (map name)
        (str/join " ")))
+
+(def map-on-matrix-addressed util/map-on-matrix-addressed)

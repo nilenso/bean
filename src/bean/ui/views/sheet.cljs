@@ -69,4 +69,5 @@
 
 (defn sheet []
   [:div {:id :grid-container}
-   [drawing/canvas]])
+   [drawing/canvas]
+   [drawing/cell-input]])

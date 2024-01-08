@@ -72,16 +72,19 @@ a {
     position: relative;
 }
 
-.cell-input {
+#cell-input {
     z-index: 0;
     background: var(--cell-background);
     outline: 0.5px solid var(--sheet-border);
     padding: var(--cell-padding);
+    font-family: "SpaceGrotesk";
     overflow: hidden;
     cursor: cell;
     box-sizing: border-box;
     z-index: 2;
     outline: 2px solid var(--cell-selector);
+    position: absolute;
+    font-size: 14px;
 }
 
 #bean-resize-indicator-v {
