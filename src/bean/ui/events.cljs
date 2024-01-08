@@ -46,9 +46,9 @@
 (rf/reg-event-fx
  ::set-pixi-container
  (fn init-pixi-viewport [{:keys [db]} [_ app viewport container]]
-   {:db (-> (assoc-in db [:ui :pixi :app] app)
-            (assoc-in [:ui :pixi :viewport] viewport)
-            (assoc-in [:ui :pixi :container] container))
+   {:db (-> (assoc-in db [:ui :canvas :pixi-app :app] app)
+            (assoc-in [:ui :canvas :pixi-app :viewport] viewport)
+            (assoc-in [:ui :canvas :pixi-app :container] container))
     :fx [[::setup-canvas [app viewport container]]]}))
 
 ;; TODO: this canvas interaction should probably be in drawing.cljs but
