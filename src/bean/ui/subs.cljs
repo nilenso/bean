@@ -13,6 +13,11 @@
    (:ui db)))
 
 (re-frame/reg-sub
+ ::canvas
+ (fn [db]
+   (get-in db [:ui :canvas])))
+
+(re-frame/reg-sub
  ::route
  (fn [db]
    (:route db)))

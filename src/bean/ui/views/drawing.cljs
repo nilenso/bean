@@ -234,9 +234,9 @@
       (dorun (->> col-widths (reductions +) (map draw-vertical))))
     g))
 
-(defn paint [{:keys [row-heights col-widths]} {:keys [pixi selections]}]
-  (let [v (:viewport pixi)
-        c (:container pixi)]
+(defn paint [{:keys [row-heights col-widths]} {:keys [pixi-app selections]}]
+  (let [v (:viewport pixi-app)
+        c (:container pixi-app)]
     (.removeChildren c)
     (.addChild c (grid row-heights col-widths))
     (.addChild c (top-heading col-widths v))
@@ -275,11 +275,11 @@
 
     :reagent-render
     (fn [sheet ui]
-      (when (:pixi ui)
+      (when (:pixi-app ui) 
         (paint (:grid-dimensions sheet) ui)
         [:div]))}))
 
-(defn canvas []
-  (let [sheet (rf/subscribe [::subs/sheet])
-        ui (rf/subscribe [::subs/ui])]
-    [canvas* @sheet @ui]))
+(defn canvas [] 
+  [canvas* 
+   @(rf/subscribe [::subs/sheet]) 
+   @(rf/subscribe [::subs/canvas])])
