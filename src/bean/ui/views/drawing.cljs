@@ -72,16 +72,19 @@
   (if (> px (reduce + offsets))
     -1
     (reduce
-     (fn [{:keys [index current-pixel]} next-height]
-       (if (<= (+ current-pixel next-height) px)
+     (fn [{:keys [index current-pixel]} offset]
+       (if (<= (+ current-pixel offset) px)
          {:index (inc index)
-          :current-pixel (+ current-pixel next-height)}
+          :current-pixel (+ current-pixel offset)}
          (reduced index)))
      {:index 0 :current-pixel 0}
      offsets)))
 
 (defn xy->rc [[x y] row-heights col-widths]
   [(px->index y row-heights) (px->index x col-widths)])
+
+(defn rc->xy [[r c] row-heights col-widths]
+  [(apply + (take r row-heights)) (apply + (take c col-widths))])
 
 (defn draw-rect [ctx x y h w fill border]
   (set! (.-lineWidth ctx) 1)
