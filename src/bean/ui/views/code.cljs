@@ -8,7 +8,7 @@
 (defn text-area []
   (let [sheet (rf/subscribe [::subs/sheet])]
     [:div {:class :code}
-     [:div {:class "code-header bean-label"}
+     [:div {:class "code-header"}
       [:button {:class (cs
                         :small-btn
                         (str "code-state-"

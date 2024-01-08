@@ -52,12 +52,12 @@
     :fx [[::setup-canvas [app viewport container]]]}))
 
 ;; TODO: this canvas interaction should probably be in drawing.cljs but
-;; it's also an effect. Shoud move this elsewhere.
+;; it's also an effect. Should move this elsewhere.
 (rf/reg-fx
  ::setup-canvas
  (fn [[app viewport container]]
    (.appendChild
-    (.getElementById js/document "canvas-container")
+    (.getElementById js/document "grid-container")
     (.-view app))
    (set! (.-__PIXI_APP__ js/globalThis) app)
    (.addEventListener js/window "wheel" #(.preventDefault %1) #js {:passive false})
