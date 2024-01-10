@@ -57,7 +57,7 @@
             (assoc-in [:ui :pixi-app :container] container))
     :fx [[::setup-canvas [app viewport container]]]}))
 
-;; TODO: this canvas interaction should probably be in drawing.cljs but
+;; TODO: this canvas interaction should probably be in sheet.cljs but
 ;; it's also an effect. Should move this elsewhere.
 (rf/reg-fx
  ::setup-canvas
