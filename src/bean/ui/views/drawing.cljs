@@ -3,6 +3,7 @@
             [bean.ui.styles :as styles]
             [bean.ui.subs :as subs]
             [bean.ui.util :refer [px] :as util]
+            [clojure.string :as string]
             [pixi-viewport :as pixi-viewport]
             [pixi.js :as pixi]
             [re-frame.core :as rf]
@@ -82,6 +83,9 @@
 
 (defn xy->rc [[x y] row-heights col-widths]
   [(px->index y row-heights) (px->index x col-widths)])
+
+(defn rc->xy [[r c] row-heights col-widths]
+  [(apply + (take c col-widths)) (apply + (take r row-heights))])
 
 (defn draw-rect [ctx x y h w fill border]
   (set! (.-lineWidth ctx) 1)
@@ -321,22 +325,45 @@
   (let [app (make-app)
         viewport (make-viewport app)]
     (.then
+     ;; TODO: this delays the grid rendering by a bit
      (.load pixi/Assets "/fonts/SpaceGrotesk.fnt")
      #(rf/dispatch [::events/set-pixi-container app viewport (new pixi/Container)]))))
+
+(defn input-transform-css [rc viewport row-heights col-widths]
+  (let [offset-t (:cell-h styles/sizes)
+        offset-l (:heading-left-width styles/sizes)
+        world-transform (.-worldTransform viewport)
+        [cell-x cell-y] (rc->xy rc row-heights col-widths)
+        scaled-xy (.toScreen viewport
+                             (+ offset-l cell-x)
+                             (+ offset-t cell-y))
+        over-headings? (or (< (.-x scaled-xy) offset-l)
+                           (< (.-y scaled-xy) offset-t))]
+    (str "matrix("
+         (string/join "," [(if over-headings? 0
+                               (.-a world-transform))
+                           0 0
+                           (.-d world-transform)
+                           (.-x scaled-xy)
+                           (.-y scaled-xy)])
+         ")")))
 
 (defn cell-input []
   (when-let [[r c] @(rf/subscribe [::subs/editing-cell])]
     (let [sheet (rf/subscribe [::subs/sheet])
           {:keys [row-heights col-widths]} (:grid-dimensions @sheet)
           cell (get-in @sheet [:grid r c])
-          offset-t (:cell-h styles/sizes)
-          offset-l (:heading-left-width styles/sizes)]
+          viewport (:viewport @(rf/subscribe [::subs/pixi-app]))
+          transform-css #(input-transform-css [r c] viewport row-heights col-widths)
+          reposition #(let [el (.getElementById js/document "cell-input")]
+                        (set! (.. el -style -transform) (transform-css)))]
+      (.on viewport "moved" reposition)
+      (.on viewport "moved-end" reposition)
       [:span {:id :cell-input
               :content-editable true
               :suppressContentEditableWarning true
               :spell-check false
-              :style {:top (+ offset-t (apply + (take r row-heights)))
-                      :left (+ offset-l (apply + (take c col-widths)))
+              :style {:transform (transform-css)
                       :minHeight (nth row-heights r)
                       :minWidth (nth col-widths c)}
               :on-key-down #(handle-cell-navigation % [r c])}

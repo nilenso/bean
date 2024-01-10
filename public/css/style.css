@@ -80,10 +80,12 @@ a {
     overflow: hidden;
     cursor: cell;
     box-sizing: border-box;
-    z-index: 2;
     outline: 2px solid var(--cell-selector);
     position: absolute;
     font-size: 14px;
+    top: 0;
+    left: 0;
+    transform-origin: top left;
 }
 
 #bean-resize-indicator-v {
