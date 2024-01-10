@@ -167,11 +167,15 @@
                      :fontSize (:heading-font-size styles/sizes)})]
     (->> (center-text! bitmap x y h w) (.addChild g))))
 
-(defn- cell-text [g text x y h w]
+(defn- cell-text [g text x y h w error?]
   (let [bitmap (new pixi/BitmapText text
                     #js {:fontName "SpaceGrotesk"
-                         :tint (:cell-color styles/colors)
-                         :fontSize 14})
+                         :tint (if error?
+                                 (:cell-error-color styles/colors)
+                                 (:cell-color styles/colors))
+                         :fontSize (if error?
+                                     (:error-font-size styles/sizes)
+                                     (:cell-font-size styles/sizes))})
         mask (new pixi/Graphics)]
     (set! (.-x bitmap) (+ x (:cell-padding styles/sizes)))
     (set! (.-y bitmap) (+ y (:cell-padding styles/sizes)))
@@ -262,7 +266,8 @@
            (cell-text
             g text
             (nth xs c) (nth ys r)
-            (nth row-heights r) (nth col-widths c)))))
+            (nth row-heights r) (nth col-widths c)
+            (:error cell)))))
      grid)
     g))
 

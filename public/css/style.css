@@ -1,6 +1,5 @@
 :root {
     --sheet-background: #fffefc;
-    --sheet-foreground: #111;
     --sheet-error: #b93333;
     --headings-background: #f2f2f1;
     --cell-background: white;
@@ -107,11 +106,6 @@ a {
     background: #00000055;
     top: 0;
     display: none;
-}
-
-.cell-error:not(.edit-mode) {
-    font-size: 9px;
-    color: var(--sheet-error);
 }
 
 .code {
