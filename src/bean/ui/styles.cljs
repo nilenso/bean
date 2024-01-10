@@ -6,7 +6,8 @@
                       :grid-line 0xdedbd7
                       :heading-border 0xcccccc
                       :corner-background 0xdddddd
-                      :cell-color 0x000000})
+                      :cell-color 0x000000
+                      :cell-error-color 0xb93333})
 
 (def colors light)
 
@@ -18,5 +19,6 @@
             :cell-w 110
             :cell-padding 5
             :cell-font-size 13
+            :error-font-size 9
             :heading-left-width 40
             :heading-font-size 13})
