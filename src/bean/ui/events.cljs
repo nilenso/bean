@@ -61,7 +61,7 @@
 ;; it's also an effect. Should move this elsewhere.
 (rf/reg-fx
  ::setup-canvas
- (fn [[app viewport container]]
+ (fn [[^js app ^js viewport container]]
    (.appendChild
     (.getElementById js/document "grid-container")
     (.-view app))

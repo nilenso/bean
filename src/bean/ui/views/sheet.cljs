@@ -59,7 +59,7 @@
     (set! (.-y bitmap-text) (- (+ y (/ h 2)) text-h)))
   bitmap-text)
 
-(defn- heading-text [g text x y h w]
+(defn- heading-text [^js g text x y h w]
   (let [bitmap (new
                 pixi/BitmapText
                 text
@@ -68,7 +68,7 @@
                      :fontSize (:heading-font-size styles/sizes)})]
     (->> (center-text! bitmap x y h w) (.addChild g))))
 
-(defn- cell-text [g text x y h w error?]
+(defn- cell-text [^js g text x y h w error?]
   (let [bitmap (new pixi/BitmapText text
                     #js {:fontName "SpaceGrotesk"
                          :tint (if error?
@@ -184,14 +184,14 @@
       (dorun (->> col-widths (reductions +) (map draw-vertical)))
       (set! (.-eventMode g) "static")
       (set! (.-hitArea g) (new pixi/Rectangle 0 0 (:world-w styles/sizes) (:world-h styles/sizes)))
-      (.on g "pointerdown" #(on-mouse-down (.getLocalPosition % g) row-heights col-widths)))
+      (.on g "pointerdown" #(on-mouse-down (.getLocalPosition ^js % g) row-heights col-widths)))
     g))
 
 (defn paint [{:keys [grid grid-dimensions]} pixi-app]
   (let [{:keys [row-heights col-widths]} grid-dimensions
         v (:viewport pixi-app)
-        c (:container pixi-app)
-        g (draw-grid row-heights col-widths)]
+        c ^js (:container pixi-app)
+        g ^js (draw-grid row-heights col-widths)]
     (.removeChildren c)
     (.addChild c g)
     (.addChild g (grid-text grid row-heights col-widths))
@@ -225,7 +225,7 @@
      (.load pixi/Assets "/fonts/SpaceGrotesk.fnt")
      #(rf/dispatch [::events/set-pixi-container app viewport (new pixi/Container)]))))
 
-(defn- input-transform-css [rc viewport row-heights col-widths]
+(defn- input-transform-css [rc ^js viewport row-heights col-widths]
   (let [offset-t (:cell-h styles/sizes)
         offset-l (:heading-left-width styles/sizes)
         world-transform (.-worldTransform viewport)
