@@ -128,12 +128,14 @@
           (.off viewport "pointermove" on-drag-move)
           (.off viewport "pointerup" on-drag-end)
           (.off viewport "pointerleave" on-drag-end)
+          (set! (.-interactiveChildren g) true)
           (let [y (pos-fn i2)
                 distance (- y start-y)
                 new-h (+ row-h distance)]
             (when (pos? new-h)
               (rf/dispatch [::events/resize-row row new-h]))
-            (.clear resizer-g)))]
+            (.destroy resizer-g)))]
+    (set! (.-interactiveChildren g) false)
     (.addChild g resizer-g)
     (draw-resizers start-y)
     (.on viewport "pointermove" on-drag-move)
@@ -176,12 +178,14 @@
           (.off viewport "pointermove" on-drag-move)
           (.off viewport "pointerup" on-drag-end)
           (.off viewport "pointerleave" on-drag-end)
+          (set! (.-interactiveChildren g) true)
           (let [x (pos-fn i2)
                 distance (- x start-x)
                 new-w (+ col-w distance)]
             (when (pos? new-w)
               (rf/dispatch [::events/resize-col col new-w]))
-            (.clear resizer-g)))]
+            (.destroy resizer-g)))]
+    (set! (.-interactiveChildren g) false)
     (.addChild g resizer-g)
     (draw-resizers start-x)
     (.on viewport "pointermove" on-drag-move)
