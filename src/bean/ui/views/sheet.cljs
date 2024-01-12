@@ -103,8 +103,59 @@
 (defn- col-resizer-line [g sx]
   (native-line g (:resizer-line styles/colors) sx 0 sx (:world-h styles/sizes)))
 
+(defn- row-resizer-line [g sy]
+  (native-line g (:resizer-line styles/colors) 0 sy (:world-w styles/sizes) sy))
+
 (defn- heading-line [g sx sy ex ey]
   (native-line g (:heading-border styles/colors) sx sy ex ey))
+
+(defn- row-resize-start [i ^js g row-heights viewport]
+  (let [pos-fn #(.-y (.getLocalPosition ^js % g))
+        row (px->index (- (pos-fn i) (/ (:resizer-handle styles/sizes) 2)) row-heights)
+        start-y (index->px (inc row) row-heights)
+        row-h (nth row-heights row)
+        resizer-g (new pixi/Graphics)
+        draw-resizers
+        (fn [y]
+          (.clear resizer-g)
+          (row-resizer-line resizer-g (- start-y row-h))
+          (row-resizer-line resizer-g y))
+        on-drag-move #(draw-resizers (pos-fn %))
+        on-drag-end
+        (fn on-drag-end [i2]
+          (.off viewport "pointermove" on-drag-move)
+          (.off viewport "pointerup" on-drag-end)
+          (.off viewport "pointerleave" on-drag-end)
+          (let [y (pos-fn i2)
+                distance (- y start-y)
+                new-h (+ row-h distance)]
+            (when (pos? new-h)
+              (rf/dispatch [::events/resize-row row new-h]))
+            (.clear resizer-g)))]
+    (.addChild g resizer-g)
+    (draw-resizers start-y)
+    (.on viewport "pointermove" on-drag-move)
+    (.on viewport "pointerup" on-drag-end)
+    (.on viewport "pointerleave" on-drag-end)))
+
+(defn- row-resizers [row-heights viewport]
+  (let [g (new pixi/Graphics)]
+    (dorun
+     (map
+      (fn [offset]
+        (let [g2 (new pixi/Graphics)]
+          (.addChild g g2)
+          (set! (.-hitArea g2) (new pixi/Rectangle
+                                    0
+                                    (- offset (/ (:resizer-handle styles/sizes) 2))
+                                    (:cell-w styles/sizes)
+                                    (:resizer-handle styles/sizes)))))
+      (reductions + row-heights)))
+    (set! (.-eventMode g) "static")
+    (set! (.-cursor g) "ns-resize")
+    (set! (.. g -position -y) (:cell-h styles/sizes))
+    (.on g "pointerdown" #(row-resize-start % g row-heights viewport))
+    g))
 
 (defn- col-resize-start [i ^js g col-widths viewport]
   (let [pos-fn #(.-x (.getLocalPosition ^js % g))
@@ -186,6 +237,7 @@
      offset-t (map-indexed vector row-heights))
     (reposition)
     (.on viewport "moved" reposition)
+    (.addChild g (row-resizers row-heights viewport))
     g))
 
 (defn- top-heading [col-widths viewport]
