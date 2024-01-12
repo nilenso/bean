@@ -21,6 +21,9 @@
      {:index 0 :current-pixel 0}
      offsets)))
 
+(defn- index->px [index offsets]
+  (apply + (take index offsets)))
+
 (defn xy->rc [[x y] row-heights col-widths]
   [(px->index y row-heights) (px->index x col-widths)])
 
@@ -33,7 +36,7 @@
     ;; Reagent does not clear the element when input moves to a blank cell.
     (set! (.-innerHTML el) nil)))
 
-(defn on-mouse-down [interaction row-heights col-widths]
+(defn- grid-pointer-down [interaction row-heights col-widths]
   (let [[r c] (xy->rc [(.-x interaction) (.-y interaction)] row-heights col-widths)]
     (submit-cell-input)
     (rf/dispatch [::events/clear-selections])
@@ -97,8 +100,59 @@
 (defn- grid-line [g sx sy ex ey]
   (native-line g (:grid-line styles/colors) sx sy ex ey))
 
+(defn- col-resizer-line [g sx]
+  (native-line g (:resizer-line styles/colors) sx 0 sx (:world-h styles/sizes)))
+
 (defn- heading-line [g sx sy ex ey]
   (native-line g (:heading-border styles/colors) sx sy ex ey))
+
+(defn- col-resize-start [i ^js g col-widths viewport]
+  (let [pos-fn #(.-x (.getLocalPosition ^js % g))
+        col (px->index (- (pos-fn i) (/ (:resizer-handle styles/sizes) 2)) col-widths)
+        start-x (index->px (inc col) col-widths)
+        col-w (nth col-widths col)
+        resizer-g (new pixi/Graphics)
+        draw-resizers
+        (fn [x]
+          (.clear resizer-g)
+          (col-resizer-line resizer-g (- start-x col-w))
+          (col-resizer-line resizer-g x))
+        on-drag-move #(draw-resizers (pos-fn %))
+        on-drag-end
+        (fn on-drag-end [i2]
+          (.off viewport "pointermove" on-drag-move)
+          (.off viewport "pointerup" on-drag-end)
+          (.off viewport "pointerleave" on-drag-end)
+          (let [x (pos-fn i2)
+                distance (- x start-x)
+                new-w (+ col-w distance)]
+            (when (pos? new-w)
+              (rf/dispatch [::events/resize-col col new-w]))
+            (.clear resizer-g)))]
+    (.addChild g resizer-g)
+    (draw-resizers start-x)
+    (.on viewport "pointermove" on-drag-move)
+    (.on viewport "pointerup" on-drag-end)
+    (.on viewport "pointerleave" on-drag-end)))
+
+(defn- col-resizers [col-widths viewport]
+  (let [g (new pixi/Graphics)]
+    (dorun
+     (map
+      (fn [offset]
+        (let [g2 (new pixi/Graphics)]
+          (.addChild g g2)
+          (set! (.-hitArea g2) (new pixi/Rectangle
+                                    (- offset (/ (:resizer-handle styles/sizes) 2))
+                                    0
+                                    (:resizer-handle styles/sizes)
+                                    (:cell-h styles/sizes)))))
+      (reductions + col-widths)))
+    (set! (.-eventMode g) "static")
+    (set! (.-cursor g) "ew-resize")
+    (set! (.. g -position -x) (:heading-left-width styles/sizes))
+    (.on g "pointerdown" #(col-resize-start % g col-widths viewport))
+    g))
 
 (defn- corner [viewport]
   (let [g (new pixi/Graphics)
@@ -153,6 +207,7 @@
      offset-l (map-indexed vector col-widths))
     (reposition)
     (.on viewport "moved" reposition)
+    (.addChild g (col-resizers col-widths viewport))
     g))
 
 (defn- grid-text [grid row-heights col-widths]
@@ -184,7 +239,7 @@
       (dorun (->> col-widths (reductions +) (map draw-vertical)))
       (set! (.-eventMode g) "static")
       (set! (.-hitArea g) (new pixi/Rectangle 0 0 (:world-w styles/sizes) (:world-h styles/sizes)))
-      (.on g "pointerdown" #(on-mouse-down (.getLocalPosition ^js % g) row-heights col-widths)))
+      (.on g "pointerdown" #(grid-pointer-down (.getLocalPosition ^js % g) row-heights col-widths)))
     g))
 
 (defn paint [{:keys [grid grid-dimensions]} pixi-app]

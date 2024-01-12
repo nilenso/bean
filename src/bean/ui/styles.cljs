@@ -4,6 +4,7 @@
                       :heading-background 0xf2f2f1
                       :heading-color 0x555555
                       :grid-line 0xdedbd7
+                      :resizer-line 0x999999
                       :heading-border 0xcccccc
                       :corner-background 0xdddddd
                       :cell-color 0x000000
@@ -21,4 +22,5 @@
             :cell-font-size 13
             :error-font-size 9
             :heading-left-width 40
-            :heading-font-size 13})
+            :heading-font-size 13
+            :resizer-handle 20})
