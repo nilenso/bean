@@ -68,8 +68,12 @@
                 text
                 #js {:fontName "SpaceGrotesk"
                      :tint (:heading-color styles/colors)
-                     :fontSize (:heading-font-size styles/sizes)})]
-    (->> (center-text! bitmap x y h w) (.addChild g))))
+                     :fontSize (:heading-font-size styles/sizes)})
+        mask (new pixi/Graphics)]
+    (->> (center-text! bitmap x y h w) (.addChild g))
+    (-> mask (.beginFill 0xffffff) (.drawRect x y w h) .endFill)
+    (.addChild g mask)
+    (set! (.-mask bitmap) mask)))
 
 (defn- cell-text [^js g text x y h w error?]
   (let [bitmap (new pixi/BitmapText text
@@ -83,10 +87,8 @@
         mask (new pixi/Graphics)]
     (set! (.-x bitmap) (+ x (:cell-padding styles/sizes)))
     (set! (.-y bitmap) (+ y (:cell-padding styles/sizes)))
-    (.beginFill mask 0xffffff)
-    (.drawRect mask x y w h)
-    (.endFill mask)
     (.addChild g mask)
+    (-> mask (.beginFill 0xffffff) (.drawRect x y w h) .endFill)
     (set! (.-mask bitmap) mask)
     (.addChild g bitmap)))
 
