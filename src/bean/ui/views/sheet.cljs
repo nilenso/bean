@@ -115,13 +115,14 @@
   (let [pos-fn #(.-y (.getLocalPosition ^js % g))
         row (px->index (- (pos-fn i) (/ (:resizer-handle styles/sizes) 2)) row-heights)
         start-y (index->px (inc row) row-heights)
+        start-click-y (pos-fn i)
         row-h (nth row-heights row)
         resizer-g (new pixi/Graphics)
         draw-resizers
         (fn [y]
           (.clear resizer-g)
           (row-resizer-line resizer-g (- start-y row-h))
-          (row-resizer-line resizer-g y))
+          (row-resizer-line resizer-g (+ start-y (- y start-click-y))))
         on-drag-move #(draw-resizers (pos-fn %))
         on-drag-end
         (fn on-drag-end [i2]
@@ -137,7 +138,7 @@
             (.destroy resizer-g)))]
     (set! (.-interactiveChildren g) false)
     (.addChild g resizer-g)
-    (draw-resizers start-y)
+    (draw-resizers start-click-y)
     (.on viewport "pointermove" on-drag-move)
     (.on viewport "pointerup" on-drag-end)
     (.on viewport "pointerleave" on-drag-end)))
@@ -165,13 +166,14 @@
   (let [pos-fn #(.-x (.getLocalPosition ^js % g))
         col (px->index (- (pos-fn i) (/ (:resizer-handle styles/sizes) 2)) col-widths)
         start-x (index->px (inc col) col-widths)
+        start-click-x (pos-fn i)
         col-w (nth col-widths col)
         resizer-g (new pixi/Graphics)
         draw-resizers
         (fn [x]
           (.clear resizer-g)
           (col-resizer-line resizer-g (- start-x col-w))
-          (col-resizer-line resizer-g x))
+          (col-resizer-line resizer-g (+ start-x (- x start-click-x))))
         on-drag-move #(draw-resizers (pos-fn %))
         on-drag-end
         (fn on-drag-end [i2]
@@ -187,7 +189,7 @@
             (.destroy resizer-g)))]
     (set! (.-interactiveChildren g) false)
     (.addChild g resizer-g)
-    (draw-resizers start-x)
+    (draw-resizers start-click-x)
     (.on viewport "pointermove" on-drag-move)
     (.on viewport "pointerup" on-drag-end)
     (.on viewport "pointerleave" on-drag-end)))
