@@ -5,9 +5,12 @@
             [re-frame.core :as rf]
             [reagent.dom :as r]))
 
-(defn ^:dev/after-load ^:export main []
-  (rf/dispatch-sync [::events/initialize-db])
+(defn ^:dev/after-load main* []
   (routes/start)
   (r/render
    [root/routed]
    (.getElementById js/document "app")))
+
+(defn  ^:export main []
+  (rf/dispatch-sync [::events/initialize-db])
+  (main*))
