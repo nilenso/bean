@@ -63,22 +63,17 @@
 (rf/reg-event-db
  ::start-selection
  (fn [db [_ rc]]
-   (assoc-in db [:ui :selection-start] rc)))
+   (assoc-in db [:ui :grid :selection-start] rc)))
 
 (rf/reg-event-db
- ::finish-selection
- (fn [db [_]]
-   (assoc-in db [:ui :selection-start] nil)))
-
-(rf/reg-event-db
- ::make-selection
+ ::set-selection
  (fn [db [_ selection]]
-   (update-in db [:ui :selections] conj selection)))
+   (assoc-in db [:ui :grid :selection] selection)))
 
 (rf/reg-event-db
- ::clear-selections
+ ::clear-selection
  (fn [db [_]]
-   (assoc-in db [:ui :selections] [])))
+   (assoc-in db [:ui :grid :selection] nil)))
 
 (rf/reg-event-db
  ::explain

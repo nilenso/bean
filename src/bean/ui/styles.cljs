@@ -8,7 +8,10 @@
                       :heading-border 0xcccccc
                       :corner-background 0xdddddd
                       :cell-color 0x000000
-                      :cell-error-color 0xb93333})
+                      :cell-error-color 0xb93333
+                      :selection-fill 0x000000
+                      :selection-alpha 0.1
+                      :selection-border 0x999999})
 
 (def colors light)
 
@@ -23,4 +26,5 @@
             :error-font-size 9
             :heading-left-width 40
             :heading-font-size 13
-            :resizer-handle 20})
+            :resizer-handle 20
+            :selection-border 1.5})

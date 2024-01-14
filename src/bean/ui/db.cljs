@@ -38,9 +38,9 @@
          [:help-display boolean?]
          [:grid [:map
                  [:editing-cell {:optional true}]
-                 [:selections [:vector [:map
-                                        [:start nat-int?]
-                                        [:end nat-int?]]]]
+                 [:selection [:vector [:map
+                                       [:start nat-int?]
+                                       [:end nat-int?]]]]
                  [:selection-start [:vector nat-int?]]]]]]])
 
 (defn initial-app-db []
@@ -53,5 +53,5 @@
                                          :col-widths (vec (repeat num-cols (:cell-w styles/sizes)))}))
      :ui {:help-display false
           :grid {:editing-cell nil
-                 :selections []
+                 :selection nil
                  :selection-start nil}}}))

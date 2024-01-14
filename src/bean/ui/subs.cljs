@@ -18,6 +18,11 @@
    (get-in db [:ui :grid :editing-cell])))
 
 (re-frame/reg-sub
+ ::selection
+ (fn [db]
+   (get-in db [:ui :grid :selection])))
+
+(re-frame/reg-sub
  ::route
  (fn [db]
    (:route db)))
