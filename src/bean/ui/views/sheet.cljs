@@ -153,7 +153,7 @@
           (set! (.-hitArea g2) (new pixi/Rectangle
                                     0
                                     (- offset (/ (:resizer-handle styles/sizes) 2))
-                                    (:cell-w styles/sizes)
+                                    (:heading-left-width styles/sizes)
                                     (:resizer-handle styles/sizes)))))
       (reductions + row-heights)))
     (set! (.-eventMode g) "static")
