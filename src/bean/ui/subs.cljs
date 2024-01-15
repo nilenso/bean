@@ -18,11 +18,6 @@
    (get-in db [:ui :grid :editing-cell])))
 
 (re-frame/reg-sub
- ::pixi-app
- (fn [db]
-   (get-in db [:ui :pixi-app])))
-
-(re-frame/reg-sub
  ::route
  (fn [db]
    (:route db)))

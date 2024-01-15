@@ -9,6 +9,12 @@
             [re-frame.core :as rf]
             [reagent.core :as rc]))
 
+(defn- reset-listener! [name g event f pixi-app]
+  (when-let [old-listener (get-in @pixi-app [:listeners name])]
+    (.off g event old-listener))
+  (.on g event f)
+  (swap! pixi-app assoc-in [:listeners name] f))
+
 (defn px->index [px offsets]
   (if (> px (reduce + offsets))
     -1
@@ -62,21 +68,25 @@
     (set! (.-y bitmap-text) (- (+ y (/ h 2)) text-h)))
   bitmap-text)
 
-(defn- heading-text [^js g text x y h w]
-  (let [bitmap (new
+(defn- heading-text [text x y h w]
+  (let [g (new pixi/Graphics)
+        bitmap (new
                 pixi/BitmapText
                 text
                 #js {:fontName "SpaceGrotesk"
                      :tint (:heading-color styles/colors)
                      :fontSize (:heading-font-size styles/sizes)})
         mask (new pixi/Graphics)]
-    (->> (center-text! bitmap x y h w) (.addChild g))
+    (center-text! bitmap x y h w)
     (-> mask (.beginFill 0xffffff) (.drawRect x y w h) .endFill)
+    (set! (.-mask bitmap) mask)
     (.addChild g mask)
-    (set! (.-mask bitmap) mask)))
+    (.addChild g bitmap)
+    g))
 
-(defn- cell-text [^js g text x y h w error?]
-  (let [bitmap (new pixi/BitmapText text
+(defn- cell-text [text x y h w error?]
+  (let [g (new pixi/Graphics)
+        bitmap (new pixi/BitmapText text
                     #js {:fontName "SpaceGrotesk"
                          :tint (if error?
                                  (:cell-error-color styles/colors)
@@ -87,10 +97,11 @@
         mask (new pixi/Graphics)]
     (set! (.-x bitmap) (+ x (:cell-padding styles/sizes)))
     (set! (.-y bitmap) (+ y (:cell-padding styles/sizes)))
-    (.addChild g mask)
     (-> mask (.beginFill 0xffffff) (.drawRect x y w h) .endFill)
     (set! (.-mask bitmap) mask)
-    (.addChild g bitmap)))
+    (.addChild g mask)
+    (.addChild g bitmap)
+    g))
 
 (defn- native-line [g color sx sy ex ey]
    ;; native lines can be 1px wide only.
@@ -213,132 +224,172 @@
     (.on g "pointerdown" #(col-resize-start % g col-widths viewport))
     g))
 
-(defn- corner [viewport]
-  (let [g (new pixi/Graphics)
-        reposition #(do (set! (.. g -position -x) (.-left viewport))
-                        (set! (.. g -position -y) (.-top viewport)))]
-    (.beginFill g (:corner-background styles/colors))
-    (.drawRect g 0 0 (:heading-left-width styles/sizes) (:cell-h styles/sizes))
-    (reposition)
-    (.on viewport "moved" reposition)
-    g))
+(defn- draw-corner
+  ([viewport]
+   (let [g (new pixi/Graphics)
+         reposition #(do (set! (.. g -position -x) (.-left viewport))
+                         (set! (.. g -position -y) (.-top viewport)))]
+     (.on viewport "moved" reposition)
+     (reposition)
+     (.beginFill g (:corner-background styles/colors))
+     (.drawRect g 0 0 (:heading-left-width styles/sizes) (:cell-h styles/sizes))
+     g))
+  ([g _viewport] g))
 
-(defn- left-heading [row-heights viewport]
-  (let [g (new pixi/Graphics)
-        offset-t (:cell-h styles/sizes)
-        offset-l (:heading-left-width styles/sizes)
-        reposition #(set! (.. g -position -x) (.-left viewport))]
+(defn- draw-left-heading
+  ([viewport]
+   (let [g (new pixi/Graphics)
+         reposition #(set! (.. g -position -x) (.-left viewport))]
+     (.on viewport "moved" reposition)
+     (reposition)
+     g))
+  ([^js g row-heights viewport]
+   (let [offset-t (:cell-h styles/sizes)
+         offset-l (:heading-left-width styles/sizes)]
+     (.removeChildren g)
     ;; draw the background
-    (.beginFill g (:heading-background styles/colors))
-    (.drawRect g 0 0 offset-l (:world-h styles/sizes))
-    (heading-line g offset-l 0 offset-l (:world-h styles/sizes))
+     (.beginFill g (:heading-background styles/colors))
+     (.drawRect g 0 0 offset-l (:world-h styles/sizes))
+     (heading-line g offset-l 0 offset-l (:world-h styles/sizes))
     ;; draw individual heading borders
-    (->> row-heights
-         (reductions + offset-t)
-         (map #(heading-line g 0 % offset-l %))
-         dorun)
+     (->> row-heights
+          (reductions + offset-t)
+          (map #(heading-line g 0 % offset-l %))
+          dorun)
     ;; draw text
-    (reduce
-     (fn [y [idx w]]
-       (heading-text g (inc idx) 0 y w offset-l)
-       (+ y w))
-     offset-t (map-indexed vector row-heights))
-    (reposition)
-    (.on viewport "moved" reposition)
-    (.addChild g (row-resizers row-heights viewport))
-    g))
+     (reduce
+      (fn [y [idx w]]
+        (.addChild g (heading-text (inc idx) 0 y w offset-l))
+        (+ y w))
+      offset-t (map-indexed vector row-heights))
+     (.addChild g (row-resizers row-heights viewport))
+     g)))
 
-(defn- top-heading [col-widths viewport]
-  (let [g (new pixi/Graphics)
-        offset-t (:cell-h styles/sizes)
-        offset-l (:heading-left-width styles/sizes)
-        reposition #(set! (.. g -position -y) (.-top viewport))]
-    (.beginFill g (:heading-background styles/colors))
-    (.drawRect g 0 0 (:world-w styles/sizes) offset-t)
-    (heading-line g 0 offset-t (:world-w styles/sizes) offset-t)
-    (->> col-widths
-         (reductions + offset-l)
-         (map #(heading-line g % 0 % offset-t))
-         dorun)
-    (reduce
-     (fn [x [idx w]]
-       (heading-text g (util/i->a idx) x 0 offset-t w)
-       (+ x w))
-     offset-l (map-indexed vector col-widths))
-    (reposition)
-    (.on viewport "moved" reposition)
-    (.addChild g (col-resizers col-widths viewport))
-    g))
+(defn- draw-top-heading
+  ([viewport]
+   (let [g (new pixi/Graphics)
+         reposition #(set! (.. g -position -y) (.-top viewport))]
+     (.on viewport "moved" reposition)
+     (reposition)
+     g))
+  ([^js g col-widths viewport]
+   (let [offset-t (:cell-h styles/sizes)
+         offset-l (:heading-left-width styles/sizes)]
+     (.removeChildren g)
+     (.beginFill g (:heading-background styles/colors))
+     (.drawRect g 0 0 (:world-w styles/sizes) offset-t)
+     (heading-line g 0 offset-t (:world-w styles/sizes) offset-t)
+     (->> col-widths
+          (reductions + offset-l)
+          (map #(heading-line g % 0 % offset-t))
+          dorun)
+     (reduce
+      (fn [x [idx w]]
+        (.addChild g (heading-text (util/i->a idx) x 0 offset-t w))
+        (+ x w))
+      offset-l (map-indexed vector col-widths))
+     (.addChild g (col-resizers col-widths viewport))
+     g)))
 
-(defn- grid-text [grid row-heights col-widths]
-  (let [g (new pixi/Graphics)
-        xs (reductions + 0 col-widths)
-        ys (reductions + 0 row-heights)]
-    (util/map-on-matrix-addressed
-     (fn [[r c] cell]
-       (let [text (:representation cell)]
-         (when-not (empty? text)
-           (cell-text
-            g text
-            (nth xs c) (nth ys r)
-            (nth row-heights r) (nth col-widths c)
-            (:error cell)))))
-     grid)
-    g))
+(defn- draw-grid-text
+  ([] (new pixi/Graphics))
+  ([^js g grid row-heights col-widths]
+   (.removeChildren g)
+   (let [xs (reductions + 0 col-widths)
+         ys (reductions + 0 row-heights)]
+     (util/map-on-matrix-addressed
+      (fn [[r c] cell]
+        (let [text (:representation cell)]
+          (when-not (empty? text)
+            (.addChild g
+                       (cell-text
+                        text
+                        (nth xs c) (nth ys r)
+                        (nth row-heights r) (nth col-widths c)
+                        (:error cell))))))
+      grid)
+     g)))
 
-(defn- draw-grid [row-heights col-widths]
-  (let [g (new pixi/Graphics)]
-    (letfn [(grid-line*
-              [sx sy ex ey]
-              (grid-line g sx sy ex ey))
-            (draw-horizontal [y] (grid-line* 0 y (:world-w styles/sizes) y))
-            (draw-vertical [x] (grid-line* x 0 x (:world-h styles/sizes)))]
-      (set! (.. g -position -x) (:heading-left-width styles/sizes))
-      (set! (.. g -position -y) (:cell-h styles/sizes))
-      (dorun (->> row-heights (reductions +) (map draw-horizontal)))
-      (dorun (->> col-widths (reductions +) (map draw-vertical)))
-      (set! (.-eventMode g) "static")
-      (set! (.-hitArea g) (new pixi/Rectangle 0 0 (:world-w styles/sizes) (:world-h styles/sizes)))
-      (.on g "pointerdown" #(grid-pointer-down (.getLocalPosition ^js % g) row-heights col-widths)))
-    g))
-
-(defn paint [{:keys [grid grid-dimensions]} pixi-app]
-  (let [{:keys [row-heights col-widths]} grid-dimensions
-        v (:viewport pixi-app)
-        c ^js (:container pixi-app)
-        g ^js (draw-grid row-heights col-widths)]
-    (.removeChildren c)
-    (.addChild c g)
-    (.addChild g (grid-text grid row-heights col-widths))
-    (.addChild c (top-heading col-widths v))
-    (.addChild c (left-heading row-heights v))
-    (.addChild c (corner v))))
+(defn- draw-grid
+  ([]
+   (let [g (new pixi/Graphics)]
+     (set! (.-eventMode g) "static")
+     (set! (.-hitArea g) (new pixi/Rectangle 0 0 (:world-w styles/sizes) (:world-h styles/sizes)))
+     (set! (.. g -position -x) (:heading-left-width styles/sizes))
+     (set! (.. g -position -y) (:cell-h styles/sizes))
+     g))
+  ([g row-heights col-widths pixi-app]
+   (letfn [(grid-line*
+             [sx sy ex ey]
+             (grid-line g sx sy ex ey))
+           (draw-horizontal [y] (grid-line* 0 y (:world-w styles/sizes) y))
+           (draw-vertical [x] (grid-line* x 0 x (:world-h styles/sizes)))]
+     (.clear g)
+     (reset-listener!
+      :grid-pointerdown g "pointerdown"
+      #(grid-pointer-down (.getLocalPosition ^js % g) row-heights col-widths)
+      pixi-app)
+     (dorun (->> row-heights (reductions +) (map draw-horizontal)))
+     (dorun (->> col-widths (reductions +) (map draw-vertical)))
+     g)))
 
 (defn- make-app []
-  (new
-   pixi/Application
-   #js {:autoResize true
-        :resizeTo (.getElementById js/document "grid-container")
-        :resolution (.-devicePixelRatio js/window),
-        :backgroundColor (:sheet-background styles/colors)
-        :autoDensity true}))
+  (let [app (new
+             pixi/Application
+             #js {:autoResize true
+                  :resizeTo (.getElementById js/document "grid-container")
+                  :resolution (.-devicePixelRatio js/window),
+                  :backgroundColor (:sheet-background styles/colors)
+                  :autoDensity true})]
+    (.appendChild
+     (.getElementById js/document "grid-container")
+     (.-view app))
+    (set! (.-__PIXI_APP__ js/globalThis) app)
+    (.addEventListener js/window "wheel" #(.preventDefault %1) #js {:passive false})
+    app))
 
 (defn- make-viewport [app]
-  (new
-   pixi-viewport/Viewport
-   #js {:events (.. app -renderer -events)
-        :screenHeight (.-offsetHeight (.getElementById js/document "grid-container"))
-        :screenWidth (.-offsetWidth (.getElementById js/document "grid-container"))
-        :worldHeight (:world-h styles/sizes)
-        :worldWidth (:world-w styles/sizes)}))
+  (let [v (new
+           pixi-viewport/Viewport
+           #js {:events (.. app -renderer -events)
+                :screenHeight (.-offsetHeight (.getElementById js/document "grid-container"))
+                :screenWidth (.-offsetWidth (.getElementById js/document "grid-container"))
+                :worldHeight (:world-h styles/sizes)
+                :worldWidth (:world-w styles/sizes)})]
+    (-> v
+        (.clampZoom #js {:maxHeight 10000 :maxWidth 10000})
+        (.drag #js {:clampWheel true :pressDrag false})
+        (.wheel #js {:trackpadPinch true :wheelZoom false})
+        (.clamp #js {:direction "all"}))))
 
-(defn- setup []
-  (let [app (make-app)
-        viewport (make-viewport app)]
-    (.then
-     ;; TODO: this delays the grid rendering by a bit
-     (.load pixi/Assets "/fonts/SpaceGrotesk.fnt")
-     #(rf/dispatch [::events/set-pixi-container app viewport (new pixi/Container)]))))
+(defn- make-container []
+  (new pixi/Container))
+
+(defn repaint [sheet pixi-app]
+  (let [{:keys [row-heights col-widths]} (:grid-dimensions sheet)
+        v (:viewport @pixi-app)]
+    (draw-grid (:grid @pixi-app) row-heights col-widths pixi-app)
+    (draw-grid-text (:grid-text @pixi-app) (:grid sheet) row-heights col-widths)
+    (draw-top-heading (:top-heading @pixi-app) col-widths v)
+    (draw-left-heading (:left-heading @pixi-app) row-heights v)
+    (draw-corner (:corner @pixi-app) v)))
+
+(defn setup [sheet pixi-app]
+  (.then
+   (.load pixi/Assets "/fonts/SpaceGrotesk.fnt")
+   #(let [app (make-app)
+          v (.addChild (.-stage app) (make-viewport app))
+          c (.addChild v (make-container))
+          grid (draw-grid)]
+      (reset! pixi-app
+              {:viewport v
+               :container c
+               :grid (.addChild c grid)
+               :grid-text (.addChild grid (draw-grid-text))
+               :top-heading (.addChild c (draw-top-heading v))
+               :left-heading (.addChild c (draw-left-heading v))
+               :corner (.addChild c (draw-corner v))})
+      (repaint sheet pixi-app))))
 
 (defn- input-transform-css [rc ^js viewport row-heights col-widths]
   (let [offset-t (:cell-h styles/sizes)
@@ -359,17 +410,17 @@
                            (.-y scaled-xy)])
          ")")))
 
-(defn- cell-input []
+(defn- cell-input [pixi-app]
   (when-let [[r c] @(rf/subscribe [::subs/editing-cell])]
     (let [sheet (rf/subscribe [::subs/sheet])
           {:keys [row-heights col-widths]} (:grid-dimensions @sheet)
           cell (get-in @sheet [:grid r c])
-          viewport (:viewport @(rf/subscribe [::subs/pixi-app]))
+          viewport (:viewport @pixi-app)
           transform-css #(input-transform-css [r c] viewport row-heights col-widths)
           reposition #(let [el (.getElementById js/document "cell-input")]
                         (set! (.. el -style -transform) (transform-css)))]
-      (.on viewport "moved" reposition)
-      (.on viewport "moved-end" reposition)
+      (reset-listener! :cell-input-reposition-move viewport "moved" reposition pixi-app)
+      (reset-listener! :cell-input-reposition-move-end viewport "moved-end" reposition pixi-app)
       [:span {:id :cell-input
               :content-editable true
               :suppressContentEditableWarning true
@@ -383,25 +434,29 @@
 (defn- canvas* []
   (rc/create-class
    {:display-name :grid-canvas
-    :component-did-mount setup
+    :component-did-mount
+    (fn [this]
+      (let [[sheet pixi-app] (rest (rc/argv this))]
+        (prn "Setting up canvas")
+        (setup sheet pixi-app)))
 
     :component-did-update
     (fn [this _]
       (let [[sheet pixi-app] (rest (rc/argv this))]
-        (when pixi-app
-          (prn "Reconstructing graphics")
-          (paint sheet pixi-app))))
+        (when @pixi-app
+          (prn "Repaint canvas")
+          (repaint sheet pixi-app))))
 
     :reagent-render
     (fn []
       [:div])}))
 
-(defn canvas []
-  [canvas*
-   @(rf/subscribe [::subs/sheet])
-   @(rf/subscribe [::subs/pixi-app])])
+(defn canvas [pixi-app]
+  [canvas* @(rf/subscribe [::subs/sheet]) pixi-app])
+
+(defonce ^:private pixi-app* (atom nil))
 
 (defn sheet []
   [:div {:id :grid-container}
-   [canvas]
-   [cell-input]])
+   [canvas pixi-app*]
+   [cell-input pixi-app*]])

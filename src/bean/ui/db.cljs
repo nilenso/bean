@@ -36,10 +36,6 @@
             [:code-ast {:optional true} [:maybe vector?]]]]
    [:ui [:map
          [:help-display boolean?]
-         [:pixi-app [:map
-                     [:app {:optional true}]
-                     [:viewport {:optional true}]
-                     [:container {:optional true}]]]
          [:grid [:map
                  [:editing-cell {:optional true}]
                  [:selections [:vector [:map
@@ -56,7 +52,6 @@
                                          :row-heights (vec (repeat num-rows (:cell-h styles/sizes)))
                                          :col-widths (vec (repeat num-cols (:cell-w styles/sizes)))}))
      :ui {:help-display false
-          :pixi-app nil
           :grid {:editing-cell nil
                  :selections []
                  :selection-start nil}}}))

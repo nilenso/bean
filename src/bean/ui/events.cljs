@@ -49,32 +49,6 @@
  (fn resize-col [db [_ col width]]
    (assoc-in db [:sheet :grid-dimensions :col-widths col] width)))
 
-(rf/reg-event-fx
- ::set-pixi-container
- (fn init-pixi-viewport [{:keys [db]} [_ app viewport container]]
-   {:db (-> (assoc-in db [:ui :pixi-app :app] app)
-            (assoc-in [:ui :pixi-app :viewport] viewport)
-            (assoc-in [:ui :pixi-app :container] container))
-    :fx [[::setup-canvas [app viewport container]]]}))
-
-;; TODO: this canvas interaction should probably be in sheet.cljs but
-;; it's also an effect. Should move this elsewhere.
-(rf/reg-fx
- ::setup-canvas
- (fn [[^js app ^js viewport container]]
-   (.appendChild
-    (.getElementById js/document "grid-container")
-    (.-view app))
-   (set! (.-__PIXI_APP__ js/globalThis) app)
-   (.addEventListener js/window "wheel" #(.preventDefault %1) #js {:passive false})
-   (.addChild (.-stage app) viewport)
-   (.addChild viewport container)
-   (-> viewport
-       (.clampZoom #js {:maxHeight 10000 :maxWidth 10000})
-       (.drag #js {:clampWheel true :pressDrag false})
-       (.wheel #js {:trackpadPinch true :wheelZoom false})
-       (.clamp #js {:direction "all"}))))
-
 (rf/reg-fx
  ::focus-element
  (fn [el-id]
