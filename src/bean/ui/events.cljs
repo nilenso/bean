@@ -34,6 +34,11 @@
  (fn update-cell [db [_ address content]]
    (update-in db [:sheet] #(grid/eval-cell address % content))))
 
+(rf/reg-event-db
+ ::set-cell-background
+ (fn set-cell-background [db [_ [r c] background]]
+   (assoc-in db [:sheet :grid r c :style :background] background)))
+
 (rf/reg-event-fx
  ::submit-cell-input
  (fn update-cell [{:keys [db]} [_ content]]

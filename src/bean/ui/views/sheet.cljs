@@ -281,6 +281,27 @@
     (.on g "pointerdown" #(col-resize-start % g col-widths viewport))
     g))
 
+(defn- draw-cell-background
+  ([] (let [g (new pixi/Graphics)]
+        (set! (.. g -position -x) (:heading-left-width styles/sizes))
+        (set! (.. g -position -y) (:cell-h styles/sizes))
+        (set! (.-interactiveChildren g) false)
+        g))
+  ([^js g grid row-heights col-widths]
+   (.clear g)
+   (let [xs (reductions + 0 col-widths)
+         ys (reductions + 0 row-heights)]
+     (util/map-on-matrix-addressed
+      (fn [[r c] cell]
+        (let [background (get-in cell [:style :background])]
+          (when background
+            (.beginFill g background 1)
+            (.drawRect g
+                       (nth xs c) (nth ys r)
+                       (nth col-widths c) (nth row-heights r)))))
+      grid)
+     g)))
+
 (defn- draw-corner
   ([viewport]
    (let [g (new pixi/Graphics)
@@ -436,6 +457,7 @@
   (let [{:keys [row-heights col-widths]} (:grid-dimensions sheet)
         v (:viewport @pixi-app)]
     (draw-grid (:grid @pixi-app) row-heights col-widths pixi-app)
+    (draw-cell-background (:cell-background @pixi-app) (:grid sheet) row-heights col-widths)
     (draw-cell-text (:cell-text @pixi-app) (:grid sheet) row-heights col-widths)
     (draw-selection (:selection @pixi-app) selection row-heights col-widths)
     (draw-top-heading (:top-heading @pixi-app) col-widths v)
@@ -448,9 +470,10 @@
    #(let [app (make-app)
           v (.addChild (.-stage app) (make-viewport app))
           c (.addChild v (make-container))
+          cell-background (.addChild c (draw-cell-background))
           grid (.addChild c (draw-grid))
-          selection (.addChild grid (draw-selection))
           cell-text (.addChild grid (draw-cell-text))
+          selection (.addChild grid (draw-selection))
           top-heading (.addChild c (draw-top-heading v))
           left-heading (.addChild c (draw-left-heading v))
           corner (.addChild c (draw-corner v))]
@@ -459,6 +482,7 @@
                :container c
                :grid grid
                :selection selection
+               :cell-background cell-background
                :cell-text cell-text
                :top-heading top-heading
                :left-heading left-heading
@@ -522,8 +546,7 @@
           (repaint sheet selection pixi-app))))
 
     :reagent-render
-    (fn []
-      [:div])}))
+    (fn [])}))
 
 (defn canvas [pixi-app]
   [canvas*
