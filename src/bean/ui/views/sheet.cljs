@@ -59,19 +59,19 @@
     (set! (.-innerHTML el) nil)))
 
 (defn- selection-rect [^js g start end row-heights col-widths]
-  (let [[start-r start-c] start
-        [end-r end-c] end
-        [top-r top-c] [(min start-r end-r) (min start-c end-c)]
-        [bottom-r bottom-c] [(max start-r end-r) (max start-c end-c)]]
-    (.clear g)
-    (.beginFill g (:selection-fill styles/colors) (:selection-alpha styles/colors))
-    (.lineStyle g (:selection-border styles/sizes) (:selection-border styles/colors) 1 1)
-    (.drawRect
-     g
-     (apply + (take top-c col-widths))
-     (apply + (take top-r row-heights))
-     (reduce + (subvec col-widths top-c (inc bottom-c)))
-     (reduce + (subvec row-heights top-r (inc bottom-r))))))
+  (when (not= start end)
+    (let [[start-r start-c] start
+          [end-r end-c] end
+          [top-r top-c] [(min start-r end-r) (min start-c end-c)]
+          [bottom-r bottom-c] [(max start-r end-r) (max start-c end-c)]]
+      (.beginFill g (:selection-fill styles/colors) (:selection-alpha styles/colors))
+      (.lineStyle g (:selection-border styles/sizes) (:selection-border styles/colors) 1 1)
+      (.drawRect
+       g
+       (apply + (take top-c col-widths))
+       (apply + (take top-r row-heights))
+       (reduce + (subvec col-widths top-c (inc bottom-c)))
+       (reduce + (subvec row-heights top-r (inc bottom-r)))))))
 
 (defn- grid-selection-end [start-rc end-rc pixi-app]
   (remove-listener! :grid-selection-move pixi-app)
@@ -80,19 +80,20 @@
   (rf/dispatch-sync [::events/set-selection {:start start-rc :end end-rc}]))
 
 (defn- grid-selection-move [start-rc end-rc row-heights col-widths pixi-app]
+  (.clear (:selection @pixi-app))
   (selection-rect (:selection @pixi-app) start-rc end-rc row-heights col-widths))
 
 (defn- grid-selection-start [start-rc grid-g row-heights col-widths pixi-app]
   (let [i->rc* #(i->rc % grid-g row-heights col-widths)]
-    (add-listener!
+    (reset-listener!
      :grid-selection-move grid-g "globalpointermove"
      #(grid-selection-move start-rc (i->rc* %) row-heights col-widths pixi-app)
      pixi-app)
-    (add-listener!
+    (reset-listener!
      :grid-selection-up grid-g "pointerup"
      #(grid-selection-end start-rc (i->rc* %) pixi-app)
      pixi-app)
-    (add-listener!
+    (reset-listener!
      :grid-selection-up-outside grid-g "pointerupoutside"
      #(grid-selection-end start-rc (i->rc* %) pixi-app)
      pixi-app)))
@@ -351,10 +352,12 @@
    (let [g (new pixi/Graphics)]
      (set! (.-eventMode g) "none")
      g))
-  ([g {:keys [start end]} row-heights col-widths]
-   (selection-rect g start end row-heights col-widths)))
+  ([g selection row-heights col-widths]
+   (.clear g)
+   (when-let [{:keys [start end]} selection]
+     (selection-rect g start end row-heights col-widths))))
 
-(defn- draw-grid-text
+(defn- draw-cell-text
   ([] (new pixi/Graphics))
   ([^js g grid row-heights col-widths]
    (.removeChildren g)
@@ -432,8 +435,8 @@
   (let [{:keys [row-heights col-widths]} (:grid-dimensions sheet)
         v (:viewport @pixi-app)]
     (draw-grid (:grid @pixi-app) row-heights col-widths pixi-app)
-    (draw-grid-text (:grid-text @pixi-app) (:grid sheet) row-heights col-widths)
-    (when selection (draw-selection (:selection @pixi-app) selection row-heights col-widths))
+    (draw-cell-text (:cell-text @pixi-app) (:grid sheet) row-heights col-widths)
+    (draw-selection (:selection @pixi-app) selection row-heights col-widths)
     (draw-top-heading (:top-heading @pixi-app) col-widths v)
     (draw-left-heading (:left-heading @pixi-app) row-heights v)
     (draw-corner (:corner @pixi-app) v)))
@@ -444,16 +447,21 @@
    #(let [app (make-app)
           v (.addChild (.-stage app) (make-viewport app))
           c (.addChild v (make-container))
-          grid (draw-grid)]
+          grid (.addChild c (draw-grid))
+          selection (.addChild grid (draw-selection))
+          cell-text (.addChild grid (draw-cell-text))
+          top-heading (.addChild c (draw-top-heading v))
+          left-heading (.addChild c (draw-left-heading v))
+          corner (.addChild c (draw-corner v))]
       (reset! pixi-app
               {:viewport v
                :container c
-               :grid (.addChild c grid)
-               :selection (.addChild grid (draw-selection))
-               :grid-text (.addChild grid (draw-grid-text))
-               :top-heading (.addChild c (draw-top-heading v))
-               :left-heading (.addChild c (draw-left-heading v))
-               :corner (.addChild c (draw-corner v))})
+               :grid grid
+               :selection selection
+               :cell-text cell-text
+               :top-heading top-heading
+               :left-heading left-heading
+               :corner corner})
       (repaint sheet nil pixi-app))))
 
 (defn- input-transform-css [rc ^js viewport row-heights col-widths]
