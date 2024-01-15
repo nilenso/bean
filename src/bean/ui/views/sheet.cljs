@@ -9,11 +9,21 @@
             [re-frame.core :as rf]
             [reagent.core :as rc]))
 
-(defn- reset-listener! [name g event f pixi-app]
-  (when-let [old-listener (get-in @pixi-app [:listeners name])]
-    (.off g event old-listener))
+(defn- add-listener! [name g event f pixi-app]
   (.on g event f)
-  (swap! pixi-app assoc-in [:listeners name] f))
+  (swap! pixi-app assoc-in [:listeners name]
+         {:object g
+          :event event
+          :handler-fn f}))
+
+(defn- remove-listener! [name pixi-app]
+  (when-let [old-listener (get-in @pixi-app [:listeners name])]
+    (let [{:keys [object event handler-fn]} old-listener]
+      (.off object event handler-fn))))
+
+(defn- reset-listener! [name g event f pixi-app]
+  (remove-listener! name pixi-app)
+  (add-listener! name g event f pixi-app))
 
 (defn px->index [px offsets]
   (if (> px (reduce + offsets))
@@ -36,18 +46,63 @@
 (defn rc->xy [[r c] row-heights col-widths]
   [(apply + (take c col-widths)) (apply + (take r row-heights))])
 
+(defn- i->point [^js i g]
+  (.getLocalPosition i g))
+
+(defn- i->rc [i g row-heights col-widths]
+  (xy->rc [(.-x (i->point i g)) (.-y (i->point i g))] row-heights col-widths))
+
 (defn- submit-cell-input []
   (when-let [el (.getElementById js/document "cell-input")]
     (rf/dispatch [::events/submit-cell-input (str (.-textContent el))])
     ;; Reagent does not clear the element when input moves to a blank cell.
     (set! (.-innerHTML el) nil)))
 
-(defn- grid-pointer-down [interaction row-heights col-widths]
-  (let [[r c] (xy->rc [(.-x interaction) (.-y interaction)] row-heights col-widths)]
+(defn- selection-rect [^js g start end row-heights col-widths]
+  (let [[start-r start-c] start
+        [end-r end-c] end
+        [top-r top-c] [(min start-r end-r) (min start-c end-c)]
+        [bottom-r bottom-c] [(max start-r end-r) (max start-c end-c)]]
+    (.clear g)
+    (.beginFill g (:selection-fill styles/colors) (:selection-alpha styles/colors))
+    (.lineStyle g (:selection-border styles/sizes) (:selection-border styles/colors) 1 1)
+    (.drawRect
+     g
+     (apply + (take top-c col-widths))
+     (apply + (take top-r row-heights))
+     (reduce + (subvec col-widths top-c (inc bottom-c)))
+     (reduce + (subvec row-heights top-r (inc bottom-r))))))
+
+(defn- grid-selection-end [start-rc end-rc pixi-app]
+  (remove-listener! :grid-selection-move pixi-app)
+  (remove-listener! :grid-selection-up pixi-app)
+  (remove-listener! :grid-selection-up-outside pixi-app)
+  (rf/dispatch-sync [::events/set-selection {:start start-rc :end end-rc}]))
+
+(defn- grid-selection-move [start-rc end-rc row-heights col-widths pixi-app]
+  (selection-rect (:selection @pixi-app) start-rc end-rc row-heights col-widths))
+
+(defn- grid-selection-start [start-rc grid-g row-heights col-widths pixi-app]
+  (let [i->rc* #(i->rc % grid-g row-heights col-widths)]
+    (add-listener!
+     :grid-selection-move grid-g "globalpointermove"
+     #(grid-selection-move start-rc (i->rc* %) row-heights col-widths pixi-app)
+     pixi-app)
+    (add-listener!
+     :grid-selection-up grid-g "pointerup"
+     #(grid-selection-end start-rc (i->rc* %) pixi-app)
+     pixi-app)
+    (add-listener!
+     :grid-selection-up-outside grid-g "pointerupoutside"
+     #(grid-selection-end start-rc (i->rc* %) pixi-app)
+     pixi-app)))
+
+(defn- grid-pointer-down [i grid-g row-heights col-widths pixi-app]
+  (let [rc (i->rc i grid-g row-heights col-widths)]
     (submit-cell-input)
     (rf/dispatch [::events/clear-selection])
-    (rf/dispatch [::events/start-selection [r c]])
-    (rf/dispatch [::events/edit-cell [r c]])))
+    (rf/dispatch [::events/edit-cell rc])
+    (grid-selection-start rc grid-g row-heights col-widths pixi-app)))
 
 ;; TODO: use the reframe keyboard library here
 (defn- handle-cell-navigation [e [r c]]
@@ -123,7 +178,7 @@
   (native-line g (:heading-border styles/colors) sx sy ex ey))
 
 (defn- row-resize-start [i ^js g row-heights viewport]
-  (let [pos-fn #(.-y (.getLocalPosition ^js % g))
+  (let [pos-fn #(.-y (i->point % g))
         row (px->index (- (pos-fn i) (/ (:resizer-handle styles/sizes) 2)) row-heights)
         start-y (index->px (inc row) row-heights)
         start-click-y (pos-fn i)
@@ -174,7 +229,7 @@
     g))
 
 (defn- col-resize-start [i ^js g col-widths viewport]
-  (let [pos-fn #(.-x (.getLocalPosition ^js % g))
+  (let [pos-fn #(.-x (i->point % g))
         col (px->index (- (pos-fn i) (/ (:resizer-handle styles/sizes) 2)) col-widths)
         start-x (index->px (inc col) col-widths)
         start-click-x (pos-fn i)
@@ -291,27 +346,13 @@
      (.addChild g (col-resizers col-widths viewport))
      g)))
 
-(defn- selection-rect* [g x y h w]
-  (.beginFill g (:selection-fill styles/colors) (:selection-alpha styles/colors))
-  (.lineStyle g (:selection-border styles/sizes) (:selection-border styles/colors) 1 1)
-  (.drawRect g x y h w))
-
 (defn- draw-selection
-  ([] (new pixi/Graphics))
-  ([g {:keys [start end]} row-heights col-widths]
-   (let [[start-r start-c] start
-         [end-r end-c] end
-         [top-r top-c] [(min start-r end-r) (min start-c end-c)]
-         [bottom-r bottom-c] [(max start-r end-r) (max start-c end-c)]]
-     (.clear g)
+  ([]
+   (let [g (new pixi/Graphics)]
      (set! (.-eventMode g) "none")
-     (selection-rect*
-      g
-      (apply + (take top-c col-widths))
-      (apply + (take top-r row-heights))
-      (reduce + (subvec col-widths top-c (inc bottom-c)))
-      (reduce + (subvec row-heights top-r (inc bottom-r))))
-     g)))
+     g))
+  ([g {:keys [start end]} row-heights col-widths]
+   (selection-rect g start end row-heights col-widths)))
 
 (defn- draw-grid-text
   ([] (new pixi/Graphics))
@@ -349,7 +390,7 @@
      (.clear g)
      (reset-listener!
       :grid-pointerdown g "pointerdown"
-      #(grid-pointer-down (.getLocalPosition ^js % g) row-heights col-widths)
+      #(grid-pointer-down % g row-heights col-widths pixi-app)
       pixi-app)
      (dorun (->> row-heights (reductions +) (map draw-horizontal)))
      (dorun (->> col-widths (reductions +) (map draw-vertical)))
@@ -360,7 +401,7 @@
              pixi/Application
              #js {:autoResize true
                   :resizeTo (.getElementById js/document "grid-container")
-                  :resolution (.-devicePixelRatio js/window),
+                  :resolution (.-devicePixelRatio js/window)
                   :backgroundColor (:sheet-background styles/colors)
                   :autoDensity true})]
     (.appendChild

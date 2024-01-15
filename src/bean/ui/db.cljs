@@ -53,5 +53,4 @@
                                          :col-widths (vec (repeat num-cols (:cell-w styles/sizes)))}))
      :ui {:help-display false
           :grid {:editing-cell nil
-                 :selection nil
-                 :selection-start nil}}}))
+                 :selection nil}}}))

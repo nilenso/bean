@@ -61,11 +61,6 @@
     :fx [[::focus-element "cell-input"]]}))
 
 (rf/reg-event-db
- ::start-selection
- (fn [db [_ rc]]
-   (assoc-in db [:ui :grid :selection-start] rc)))
-
-(rf/reg-event-db
  ::set-selection
  (fn [db [_ selection]]
    (assoc-in db [:ui :grid :selection] selection)))
