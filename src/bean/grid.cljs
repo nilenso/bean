@@ -28,6 +28,11 @@
       (update :interested-spillers disj address)
       (assoc :representation "")))
 
+(defn- empty-spilled-cell? [cell]
+  (and (:spilled-from cell)
+       (not (:matrix cell))
+       (empty? (:content cell))))
+
 (defn- clear-matrix
   [grid address {:keys [spilled-into]}]
   (->> spilled-into
@@ -115,9 +120,9 @@
   (util/map-on-matrix value/from-cell grid))
 
 (defn- eval-cell* [cell sheet]
-  (if (or (not (:spilled-from cell))
-          (:matrix cell))
-    (interpreter/eval-cell cell sheet)
+  (if-not (empty-spilled-cell? cell)
+    (let [parsed-cell (assoc cell :ast (parser/parse (:content cell)))]
+      (interpreter/eval-cell parsed-cell sheet))
     cell))
 
 (defn- dependents [addrs depgraph]
@@ -160,7 +165,8 @@
    (eval-cell address sheet (util/get-cell grid address) false))
 
   ([address sheet new-content]
-   (eval-cell address sheet (value/from-cell new-content) true))
+   (let [cell (util/get-cell (:grid sheet) address)]
+     (eval-cell address sheet (assoc cell :content new-content) true)))
 
   ([address {:keys [grid depgraph] :as sheet} cell content-changed?]
    (let [existing-cell (util/get-cell grid address)
@@ -272,6 +278,7 @@
   :cell
   {;; User input
    :content nil
+   :style {:background nil}
 
    ;; Internal representation of user input
    :ast nil

@@ -17,7 +17,7 @@
                 ["=A1+A2+A3+A4+10" "" ""]]
           evaluated-sheet (eval-sheet (new-sheet grid ""))]
       (is (= (util/map-on-matrix
-              #(select-keys % [:scalar :content :error :representation])
+              #(select-keys % [:scalar :content :error :representation :style])
               (:grid evaluated-sheet))
              [[{:content "1" :scalar 1 :representation "1"}
                {:content "" :scalar "" :representation ""}
@@ -250,7 +250,14 @@
              [["8" "8" "206" "19"]
               ["1" "1" "202" "4"]
               ["206" "206" "19" "206"]
-              ["202" "202" "4" ""]])))))
+              ["202" "202" "4" ""]]))))
+
+  (testing "Styles are preserved after evaluation"
+    (let [sheet (eval-sheet (new-sheet [["1" "=A1"]] ""))
+          style {:background 0x000000}
+          styled-sheet (assoc-in sheet [:grid 0 0 :style] style)
+          {evaluated-grid :grid} (eval-cell [0 1] styled-sheet "=A1+1")]
+      (is (= (get-in evaluated-grid [0 0 :style]) style)))))
 
 (deftest depgraph-test
   (testing "Returns a reverse dependency graph for an evaluated grid"

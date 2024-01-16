@@ -24,7 +24,8 @@
     :scalar (:scalar ast-result)
     :representation (:representation ast-result)}
    (when matrix {:matrix matrix})
-   (when error {:error error})))
+   (when error {:error error})
+   (when (:style cell) {:style (:style cell)})))
 
 (defn- first-error [ast-results]
   (->> ast-results (filter :error) first))
