@@ -111,8 +111,9 @@
                        (and (= (.-keyCode e) 13) (.-shiftKey e)) [(dec r) c]
                        (and (= (.-keyCode e) 9) (.-shiftKey e)) [r (dec c)]
                        (= (.-keyCode e) 13) [(inc r) c]
-                       (= (.-keyCode e) 9) [r (inc c)])]
-    (when move-to-cell
+                       (= (.-keyCode e) 9) [r (inc c)])
+        [move-to-r move-to-c] move-to-cell]
+    (when (and (nat-int? move-to-r) (nat-int? move-to-c))
       (.preventDefault e)
       (submit-cell-input)
       (rf/dispatch [::events/edit-cell move-to-cell]))))
