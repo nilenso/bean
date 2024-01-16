@@ -473,8 +473,8 @@
         scaled-xy (.toScreen viewport
                              (+ offset-l cell-x)
                              (+ offset-t cell-y))
-        over-headings? (or (< (.-x scaled-xy) offset-l)
-                           (< (.-y scaled-xy) offset-t))]
+        over-headings? (or (< (.-x scaled-xy) (- offset-l 10))
+                           (< (.-y scaled-xy) (- offset-t 10)))]
     (str "matrix("
          (string/join "," [(if over-headings? 0
                                (.-a world-transform))
