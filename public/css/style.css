@@ -21,6 +21,7 @@
     --cell-border: 1px;
     --code-width: 350px;
     --code-thick-line-gap: 4;
+    --headings-left-width: 40px;
 }
 
 [data-theme='dark'] {
@@ -59,7 +60,7 @@ a {
 }
 
 /* TODO: Fix code margin z index */
-.sheet-container {
+.container {
     position: relative;
     display: grid;
     grid-template-columns: var(--code-width) auto;
@@ -67,8 +68,14 @@ a {
     width: 100vw;
 }
 
+.sheet-container {
+    position: relative;
+}
+
 #grid-container {
     position: relative;
+    height: 100%;
+    width: 100%;
 }
 
 #cell-input {
@@ -76,6 +83,7 @@ a {
     background: var(--cell-background);
     outline: 0.5px solid var(--sheet-border);
     padding: var(--cell-padding);
+    padding-top: 6px;
     font-family: "SpaceGrotesk";
     overflow: hidden;
     cursor: cell;
@@ -263,7 +271,7 @@ a {
     height: 100%;
 }
 
-.container.help-open {
+.help-open {
     overflow: hidden;
 }
 
@@ -297,4 +305,23 @@ a {
 
 [data-theme='light'] .help-dark {
     display: none;
+}
+
+.controls-container {
+    position: relative;
+    display: flex;
+    height: 60px;
+}
+
+.controls-background-buttons {
+    margin: auto 0px auto var(--headings-left-width);
+}
+
+.set-background-btn {
+    width: 15px;
+    height: 15px;
+    margin-right: 5px;
+    border: 1px solid #999;
+    border-radius: 100%;
+    cursor: pointer;
 }

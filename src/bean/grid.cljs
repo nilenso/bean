@@ -158,6 +158,12 @@
             (dissoc sheet :code-error) ;; reset the error from a previous evaluation
             (:bindings sheet))))
 
+(defn- set-cell-background [[r c] sheet background]
+  (assoc-in sheet [:grid r c :style :background] background))
+
+(defn set-cell-backgrounds [addresses sheet background]
+  (reduce #(set-cell-background %2 %1 background) sheet addresses))
+
 (declare eval-dep)
 
 (defn eval-cell

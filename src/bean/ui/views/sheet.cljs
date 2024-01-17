@@ -9,6 +9,8 @@
             [re-frame.core :as rf]
             [reagent.core :as rc]))
 
+(def show-background-buttons false)
+
 (defn- add-listener! [name g event f pixi-app]
   (.on g event f)
   (swap! pixi-app assoc-in [:listeners name]
@@ -60,10 +62,8 @@
 
 (defn- selection-rect [^js g start end row-heights col-widths]
   (when (not= start end)
-    (let [[start-r start-c] start
-          [end-r end-c] end
-          [top-r top-c] [(min start-r end-r) (min start-c end-c)]
-          [bottom-r bottom-c] [(max start-r end-r) (max start-c end-c)]]
+    (let [[top-r top-c] (util/top-left start end)
+          [bottom-r bottom-c] (util/bottom-right start end)]
       (.beginFill g (:selection-fill styles/colors) (:selection-alpha styles/colors))
       (.lineStyle g (:selection-border styles/sizes) (:selection-border styles/colors) 1 1)
       (.drawRect
@@ -116,7 +116,8 @@
     (when (and (nat-int? move-to-r) (nat-int? move-to-c))
       (.preventDefault e)
       (submit-cell-input)
-      (rf/dispatch [::events/edit-cell move-to-cell]))))
+      (rf/dispatch [::events/edit-cell move-to-cell])
+      (rf/dispatch-sync [::events/set-selection {:start move-to-cell :end move-to-cell}]))))
 
 (defn- center-text! [bitmap-text x y h w]
   (let [text-h (.-height bitmap-text)
@@ -516,7 +517,8 @@
           viewport (:viewport @pixi-app)
           transform-css #(input-transform-css [r c] viewport row-heights col-widths)
           reposition #(let [el (.getElementById js/document "cell-input")]
-                        (set! (.. el -style -transform) (transform-css)))]
+                        (set! (.. el -style -transform) (transform-css)))
+          background (get-in cell [:style :background])]
       (reset-listener! :cell-input-reposition-move viewport "moved" reposition pixi-app)
       (reset-listener! :cell-input-reposition-move-end viewport "moved-end" reposition pixi-app)
       [:span {:id :cell-input
@@ -525,7 +527,8 @@
               :spell-check false
               :style {:transform (transform-css)
                       :minHeight (nth row-heights r)
-                      :minWidth (nth col-widths c)}
+                      :minWidth (nth col-widths c)
+                      :background-color (when background (util/color-int->hex background))}
               :on-key-down #(handle-cell-navigation % [r c])}
        (:content cell)])))
 
@@ -554,9 +557,26 @@
    @(rf/subscribe [::subs/selection])
    pixi-app])
 
+(defn controls []
+  (let [selection @(rf/subscribe [::subs/selection])]
+    [:div {:class :controls-container}
+     [:div {:class :controls-background-buttons}
+      (for [color styles/cell-background-colors]
+        [:button {:class :set-background-btn
+                  :key (or color "transparent")
+                  :style {:background-color (if color
+                                              (str "#" (.toString color 16))
+                                              "transparent")}
+                  :on-mouse-down #(when selection
+                                    (rf/dispatch [::events/set-cell-backgrounds
+                                                  (util/selection->addresses selection)
+                                                  color]))} ""])]]))
+
 (defonce ^:private pixi-app* (atom nil))
 
 (defn sheet []
-  [:div {:id :grid-container}
-   [canvas pixi-app*]
-   [cell-input pixi-app*]])
+  [:div {:class :sheet-container}
+   (when show-background-buttons [controls])
+   [:div {:id :grid-container}
+    [canvas pixi-app*]
+    [cell-input pixi-app*]]])

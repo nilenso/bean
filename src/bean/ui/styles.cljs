@@ -10,7 +10,7 @@
                       :cell-color 0x000000
                       :cell-error-color 0xb93333
                       :selection-fill 0x000000
-                      :selection-alpha 0.1
+                      :selection-alpha 0.06
                       :selection-border 0x999999})
 
 (def colors light)
@@ -22,9 +22,12 @@
             :cell-h 30
             :cell-w 110
             :cell-padding 5
-            :cell-font-size 13
+            :cell-font-size 14
             :error-font-size 9
             :heading-left-width 40
             :heading-font-size 13
             :resizer-handle 20
             :selection-border 1.5})
+
+(def cell-background-colors
+  [nil 0xffc9c9 0xb2f2bb 0xa5d8ff 0xffec99])

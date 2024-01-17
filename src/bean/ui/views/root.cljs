@@ -8,11 +8,10 @@
 
 (defn root-page []
   (let [ui (rf/subscribe [::subs/ui])]
-    [:div {:class [:container
-                   (when (= (:help-display @ui) "block")
-                     "help-open")]}
+    [:div {:class (when (= (:help-display @ui) "block")
+                    "help-open")}
      [help/help]
-     [:div {:class :sheet-container}
+     [:div {:class :container}
       [code/text-area]
       [sheet/sheet]]]))
 
