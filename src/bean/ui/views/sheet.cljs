@@ -548,6 +548,11 @@
           (prn "Repaint canvas")
           (repaint sheet selection pixi-app))))
 
+    :component-will-unmount
+    (fn [this]
+      (let [[_ _ pixi-app] (rest (rc/argv this))]
+        (.destroy (:viewport @pixi-app))))
+
     :reagent-render
     (fn [])}))
 
