@@ -13,9 +13,6 @@
 (defn- offset [[start-row start-col] [offset-rows offset-cols]]
   [(+ start-row offset-rows) (+ start-col offset-cols)])
 
-(defn- set-spilled-cell [grid address cell]
-  (assoc-in grid address cell))
-
 (defn- set-error [grid address error]
   (update-in grid
              address
@@ -44,25 +41,27 @@
    grid
    (:spilled-into (util/get-cell grid spiller))))
 
-(defn- spill-matrix [grid address]
+(defn- spill-matrix [grid spiller]
   (letfn
    [(desired-spillage
       [{:keys [matrix] :as cell}]
       "Returns a collection of cells that the given cell intends to spill"
       (->> matrix
            (util/map-on-matrix-addressed
-            #(cond-> {:relative-address %1
-                      :spilled-from address
-                      :error (:error %2)
-                      :representation (:representation %2)
-                      :scalar (:scalar %2)}
-               (= %1 [0 0]) (merge {:matrix matrix
-                                    :content (:content cell)
-                                    :ast (:ast cell)})))
+            #(merge
+              {:relative-address %1
+               :spilled-from spiller
+               :error (:error %2)
+               :representation (:representation %2)
+               :scalar (:scalar %2)}
+              (when (= %1 [0 0])
+                {:matrix matrix
+                 :content (:content cell)
+                 :ast (:ast cell)})))
            flatten))
 
     (express-interests
-      [grid spillage]
+      [grid* spillage]
       "Marks cells in a given grid for potential spillage. The potential spillage
       information is stored in the cell structure's `:interested-spillers` field.
 
@@ -73,46 +72,48 @@
       spill into the (previously common) cell successfully"
       (reduce
        #(let [{:keys [spilled-from relative-address]} %2
-              address (offset spilled-from relative-address)
-              cell (util/get-cell %1 address)
-              existing-spillers (get cell :interested-spillers #{})]
-          (assoc-in %1
-                    (conj address :interested-spillers)
-                    (conj existing-spillers spilled-from)))
-       grid
+              [r c] (offset spilled-from relative-address)
+              existing-spillers (get-in %1 [r c :interested-spillers] #{})
+              spillers* (conj existing-spillers spilled-from)]
+          (assoc-in %1 [r c :interested-spillers] spillers*))
+       grid*
        spillage))
+
+    (spill*
+      [grid* spillage]
+      "Update the grid with the spillage 'applied' into the grid. Returns false
+       if the spillage conflicts with existing content (or spillage)."
+      (reduce
+       #(let [{:keys [relative-address]} %2
+              address* (offset spiller relative-address)
+              cell (util/get-cell %1 address*)
+              blank? (empty? (:content cell))
+              spilled-by-other? (:spilled-from cell)
+              is-spiller? (= relative-address [0 0])
+              spilled-cell (assoc %2 :interested-spillers (:interested-spillers cell))]
+          (if (or is-spiller? (and (not spilled-by-other?) blank?))
+            (assoc-in %1 address* spilled-cell)
+            (reduced false)))
+       grid*
+       spillage))
+
+    (spilled-addrs
+      [spillage]
+      (->> spillage (map #(offset spiller (:relative-address %))) set))
 
     (spill
       [grid spillage]
-      "Update the grid with the spillage 'applied' into the grid. If the spillage
-       conflicts with existing content (or spillage), the spiller is marked as a
-       spill error and none of the spillage is applied."
-      (let [grid1 (express-interests grid spillage)]
-        (loop [initial-grid grid1
-               spilled-grid grid1
-               updated-addresses #{}
-               spillage spillage]
-          (if (first spillage)
-            (let [{:keys [spilled-from relative-address] :as spilled-cell} (first spillage)
-                  address* (offset spilled-from relative-address)
-                  cell (util/get-cell spilled-grid address*)
-                  blank? (empty? (:content cell))
-                  spilled? (:spilled-from cell)
-                  is-spiller? (= relative-address [0 0])]
-              (if (or is-spiller? (and (not spilled?) blank?))
-                (recur initial-grid
-                       (set-spilled-cell
-                        spilled-grid
-                        address*
-                        (-> spilled-cell
-                            (assoc :interested-spillers (:interested-spillers cell))))
-                       (conj updated-addresses address*)
-                       (rest spillage))
-                [(set-error initial-grid spilled-from (errors/spill-error)) #{address}]))
-            [(assoc-in spilled-grid (conj address :spilled-into) updated-addresses)
-             updated-addresses]))))]
-    (->> (desired-spillage (util/get-cell grid address))
-         (spill grid))))
+      "If the spillage was successfully applied, sets the spiller's spilled-into.
+       Otherwise it's marked as spill error."
+      (if-let [grid* (spill* grid spillage)]
+        (let [updated-addrs (spilled-addrs spillage)]
+          [(assoc-in grid* (conj spiller :spilled-into) updated-addrs) updated-addrs])
+        [(set-error grid spiller (errors/spill-error)) #{spiller}]))]
+
+    (let [spillage (desired-spillage (util/get-cell grid spiller))]
+      (-> grid
+          (express-interests spillage)
+          (spill spillage)))))
 
 (defn parse-grid [grid]
   (util/map-on-matrix value/from-cell grid))
