@@ -21,11 +21,11 @@
              address
              #(errors/mark % error)))
 
-(defn- clear-spilled-cell [cell address]
+(defn- clear-spilled-cell [cell spiller]
   (-> cell
       errors/reset
       (dissoc :scalar :spilled-from)
-      (update :interested-spillers disj address)
+      (update :interested-spillers disj spiller)
       (assoc :representation "")))
 
 (defn- empty-spilled-cell? [cell]
@@ -33,18 +33,16 @@
        (not (:matrix cell))
        (empty? (:content cell))))
 
-(defn- clear-matrix
-  [grid address {:keys [spilled-into]}]
-  (->> spilled-into
-       (reduce
-        (fn [grid* addr]
-          (if (and
-               (or (empty? (get-in grid (conj addr :content)))
-                   (= addr address))
-               (= (get-in grid (conj addr :spilled-from)) address))
-            (update-in grid* addr #(clear-spilled-cell % address))
-            grid*))
-        grid)))
+(defn- clear-spill
+  [grid spiller]
+  (reduce
+   (fn [grid* addr]
+     (if (and (empty? (get-in grid (conj addr :content)))
+              (= (get-in grid (conj addr :spilled-from)) spiller))
+       (update-in grid* addr #(clear-spilled-cell % spiller))
+       grid*))
+   grid
+   (:spilled-into (util/get-cell grid spiller))))
 
 (defn- spill-matrix [grid address]
   (letfn
@@ -127,8 +125,7 @@
 
 (defn- dependents [addrs depgraph]
   (->> addrs
-       (map depgraph)
-       (mapcat identity)
+       (mapcat depgraph)
        set))
 
 (defn- interested-spillers [addrs grid]
@@ -175,33 +172,24 @@
      (eval-cell address sheet (assoc cell :content new-content) true)))
 
   ([address {:keys [grid depgraph] :as sheet} cell content-changed?]
-   (let [existing-cell (util/get-cell grid address)
-         cell* (eval-cell* cell sheet)
-         unspilled-grid (-> grid
-                            (clear-matrix address existing-cell)
-                            (assoc-in address cell*))
-         cleared-addrs (:spilled-into existing-cell)
+   (let [cell* (eval-cell* cell sheet)
+         clear-addrs (:spilled-into cell)
+         cleared-grid (clear-spill grid address)
+         unspilled-grid (assoc-in cleared-grid address cell*)
          [grid* evaled-addrs] (if (:matrix cell*)
                                 (spill-matrix unspilled-grid address)
                                 [unspilled-grid #{address}])
-         updated-addrs (set/union evaled-addrs cleared-addrs)]
-     (as-> (-> sheet
-               (assoc :grid grid*)
-               (assoc :depgraph (cond-> depgraph
-                                  content-changed? (deps/update-depgraph
-                                                    [:cell address]
-                                                    existing-cell
-                                                    cell*))))
-           sheet
-       (reduce
-        #(eval-dep %2 %1)
-        sheet
-        (dependents (map deps/->cell-dep updated-addrs) depgraph))
-            ;; The interested spillers here are re-evaluated
-            ;; to mark them as spill errors
-       (reduce #(eval-cell %2 %1) sheet
-               (-> (interested-spillers updated-addrs grid)
-                   (disj address)))))))
+         updated-addrs (set/union evaled-addrs clear-addrs)
+         depgraph* (cond-> depgraph content-changed?
+                           (deps/update-depgraph
+                            [:cell address] cell cell*))
+         sheet* (merge sheet {:grid grid* :depgraph depgraph*})
+         other-spillers (-> (interested-spillers updated-addrs grid)
+                            (disj address))
+         deps-to-reval (concat
+                        (dependents (map deps/->cell-dep updated-addrs) depgraph)
+                        (map deps/->cell-dep other-spillers))]
+     (reduce #(eval-dep %2 %1) sheet* deps-to-reval))))
 
 (defn eval-named
   ([name {:keys [bindings] :as sheet}]
@@ -213,14 +201,12 @@
    (-> (let [existing-val (bindings name)
              val* (-> val
                       errors/reset
-                      (merge (interpreter/eval-ast (:ast val) sheet)))]
+                      (merge (interpreter/eval-ast (:ast val) sheet)))
+             deps-to-reval ((:depgraph sheet) [:named name])]
          (as-> sheet sheet
            (assoc-in sheet [:bindings name] val*)
            (update-in sheet [:depgraph] #(deps/update-depgraph % [:named name] existing-val val*))
-           (reduce #(eval-dep %2 %1)
-                   sheet
-                   (-> (dependents [[:named name]] (:depgraph sheet))
-                       (disj [:named name])))))
+           (reduce #(eval-dep %2 %1) sheet deps-to-reval)))
        escalate-bindings-errors)))
 
 (defmulti eval-dep first)

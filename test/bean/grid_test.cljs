@@ -134,6 +134,16 @@
       (is (= (get-in grid [3 1 :scalar]) 3))
       (is (= (get-in grid [4 1 :scalar]) 2))))
 
+  (testing "Spill errors are re-evaluated when conflicting value is cleared"
+    (let [sheet (eval-sheet (new-sheet [["1" "10" "20"   ""]
+                                        ["2" ""   ""       "=A1:A3"]
+                                        ["3" ""   "=A1:C1" "Cross"]]
+                                       ""))
+          evaluated-grid (:grid (eval-cell [2 3] sheet ""))]
+      (is (= (get-in evaluated-grid [1 3 :scalar]) 1))
+      (is (= (get-in evaluated-grid [2 3 :scalar]) 2))
+      (is (= (get-in evaluated-grid [2 2 :error]) "Spill error"))))
+
   (testing "Function invocation"
     (is (= (util/map-on-matrix
             #(select-keys % [:scalar :content :error :representation])
