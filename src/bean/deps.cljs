@@ -54,3 +54,13 @@
     (as-> depgraph g
       (reduce #(depgraph-remove-edge %1 %2 address) g old-dependencies)
       (reduce #(depgraph-add-edge %1 %2 address) g new-dependencies))))
+
+(defn add-spiller-dep [depgraph address spiller]
+  (depgraph-add-edge depgraph address spiller))
+
+(defn update-spiller-deps [depgraph address old-cell new-cell]
+  (let [old-spillers (set (map ->cell-dep (:interested-spillers old-cell)))
+        new-spillers (set (map ->cell-dep (:interested-spillers new-cell)))]
+    (as-> depgraph g 
+      (reduce #(depgraph-remove-edge %1 address %2) g old-spillers)
+      (reduce #(depgraph-add-edge %1 address %2) g new-spillers))))

@@ -184,10 +184,14 @@
          [grid* evaled-addrs] (if (:matrix cell*)
                                 (spill-matrix unspilled-grid address)
                                 [unspilled-grid #{address}])
-         updated-addrs (set/union evaled-addrs cleared-addrs)]
+         updated-addrs (set/union evaled-addrs cleared-addrs)
+         depgraph* (reduce
+                    #(deps/update-spiller-deps %1 [:cell %2] (get-in grid %2) (get-in grid* %2))
+                    depgraph
+                    updated-addrs)]
      (as-> (-> sheet
                (assoc :grid grid*)
-               (assoc :depgraph (cond-> depgraph
+               (assoc :depgraph (cond-> depgraph*
                                   content-changed? (deps/update-depgraph
                                                     [:cell address]
                                                     existing-cell
@@ -196,12 +200,8 @@
        (reduce
         #(eval-dep %2 %1)
         sheet
-        (dependents (map deps/->cell-dep updated-addrs) depgraph))
-            ;; The interested spillers here are re-evaluated
-            ;; to mark them as spill errors
-       (reduce #(eval-cell %2 %1) sheet
-               (-> (interested-spillers updated-addrs grid)
-                   (disj address)))))))
+        (-> (dependents (map deps/->cell-dep updated-addrs) depgraph)
+            (disj [:cell address])))))))
 
 (defn eval-named
   ([name {:keys [bindings] :as sheet}]
