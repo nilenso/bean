@@ -196,8 +196,7 @@
        (reduce
         #(eval-dep %2 %1)
         sheet
-        (-> (dependents (map deps/->cell-dep updated-addrs) depgraph)
-            (disj [:cell address])))
+        (dependents (map deps/->cell-dep updated-addrs) depgraph))
             ;; The interested spillers here are re-evaluated
             ;; to mark them as spill errors
        (reduce #(eval-cell %2 %1) sheet
