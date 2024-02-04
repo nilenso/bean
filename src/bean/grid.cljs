@@ -90,7 +90,8 @@
               blank? (empty? (:content cell))
               spilled-by-other? (:spilled-from cell)
               is-spiller? (= relative-address [0 0])
-              spilled-cell (assoc %2 :interested-spillers (:interested-spillers cell))]
+              spilled-cell (merge %2 {:interested-spillers (:interested-spillers cell)
+                                      :style (:style cell)})]
           (if (or is-spiller? (and (not spilled-by-other?) blank?))
             (assoc-in %1 address* spilled-cell)
             (reduced false)))
