@@ -315,6 +315,8 @@ a {
 
 .controls-background-buttons {
     margin: auto 0px auto var(--headings-left-width);
+    display: flex;
+    vertical-align: middle;
 }
 
 .set-background-btn {

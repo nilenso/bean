@@ -3,7 +3,7 @@
 (def ^:private light {:sheet-background 0xffffff
                       :heading-background 0xf2f2f1
                       :heading-color 0x555555
-                      :grid-line 0xdedbd7
+                      :grid-line 0x0f0f0f
                       :resizer-line 0x999999
                       :heading-border 0xcccccc
                       :corner-background 0xdddddd

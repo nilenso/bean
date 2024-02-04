@@ -161,24 +161,24 @@
     (.addChild g bitmap)
     g))
 
-(defn- native-line [g color sx sy ex ey]
+(defn- native-line [g color alpha sx sy ex ey]
    ;; native lines can be 1px wide only.
-  (.lineStyle g 1 color 1 0.5 true)
+  (.lineStyle g 1 color alpha 0.5 true)
   (.moveTo g sx sy)
   (.lineTo g ex ey)
-  (.lineStyle g 0 color 1 0.5 true))
+  (.lineStyle g 0 color alpha 0.5 true))
 
 (defn- grid-line [g sx sy ex ey]
-  (native-line g (:grid-line styles/colors) sx sy ex ey))
+  (native-line g (:grid-line styles/colors) 0.2 sx sy ex ey))
 
 (defn- col-resizer-line [g sx]
-  (native-line g (:resizer-line styles/colors) sx 0 sx (:world-h styles/sizes)))
+  (native-line g (:resizer-line styles/colors) 1 sx 0 sx (:world-h styles/sizes)))
 
 (defn- row-resizer-line [g sy]
-  (native-line g (:resizer-line styles/colors) 0 sy (:world-w styles/sizes) sy))
+  (native-line g (:resizer-line styles/colors) 1 0 sy (:world-w styles/sizes) sy))
 
 (defn- heading-line [g sx sy ex ey]
-  (native-line g (:heading-border styles/colors) sx sy ex ey))
+  (native-line g (:heading-border styles/colors) 1 sx sy ex ey))
 
 (defn- row-resize-start [i ^js g row-heights viewport]
   (let [pos-fn #(.-y (i->point % g))
