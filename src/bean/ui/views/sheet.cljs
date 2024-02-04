@@ -59,7 +59,8 @@
   (.getLocalPosition i g))
 
 (defn- i->rc [i g row-heights col-widths]
-  (xy->rc [(.-x (i->point i g)) (.-y (i->point i g))] row-heights col-widths))
+  (let [point (i->point i g)]
+    (xy->rc [(.-x point) (.-y point)] row-heights col-widths)))
 
 (defn- cell-h [r cell row-heights]
   (if-let [[bottom-r _] (get-in cell [:style :merged-until])]
