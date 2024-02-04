@@ -26,21 +26,19 @@
        (map name)
        (str/join " ")))
 
-(defn top-left [[r1 c1] [r2 c2]]
-  [(min r1 r2) (min c1 c2)])
-
-(defn bottom-right [[r1 c1] [r2 c2]]
-  [(max r1 r2) (max c1 c2)])
-
 (def map-on-matrix-addressed util/map-on-matrix-addressed)
 
 (def addresses-matrix util/addresses-matrix)
 
+(def top-left util/top-left)
+
+(def bottom-right util/bottom-right)
+
 (defn selection->address-matrix [selection]
   (let [{:keys [start end]} selection]
     (addresses-matrix
-     (top-left start end)
-     (bottom-right start end))))
+     (top-left [start end])
+     (bottom-right [start end]))))
 
 (defn selection->addresses [selection]
   (mapcat identity (selection->address-matrix selection)))

@@ -35,6 +35,11 @@
    (update-in db [:sheet] #(grid/eval-cell address % content))))
 
 (rf/reg-event-db
+ ::merge-cells
+ (fn merge-cells [db [_  start end]]
+   (update-in db [:sheet] #(grid/merge-cells % start end))))
+
+(rf/reg-event-db
  ::set-cell-backgrounds
  (fn set-cell-backgrounds [db [_ addresses background]]
    (update-in db [:sheet] #(grid/set-cell-backgrounds addresses % background))))

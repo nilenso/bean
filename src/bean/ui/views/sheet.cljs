@@ -48,11 +48,28 @@
 (defn rc->xy [[r c] row-heights col-widths]
   [(apply + (take c col-widths)) (apply + (take r row-heights))])
 
+(defn span-w-h
+  ([index1 index2 offsets]
+   (reduce + (subvec offsets index1 index2)))
+  ([[top-r top-c] [bottom-r bottom-c] row-heights col-widths]
+   [(span-w-h top-c (inc bottom-c) col-widths)
+    (span-w-h top-r (inc bottom-r) row-heights)]))
+
 (defn- i->point [^js i g]
   (.getLocalPosition i g))
 
 (defn- i->rc [i g row-heights col-widths]
   (xy->rc [(.-x (i->point i g)) (.-y (i->point i g))] row-heights col-widths))
+
+(defn- cell-h [r cell row-heights]
+  (if-let [[bottom-r _] (get-in cell [:style :merged-until])]
+    (reduce + (subvec row-heights r (inc bottom-r)))
+    (nth row-heights r)))
+
+(defn- cell-w [c cell col-widths]
+  (if-let [[_ bottom-c] (get-in cell [:style :merged-until])]
+    (reduce + (subvec col-widths c (inc bottom-c)))
+    (nth col-widths c)))
 
 (defn- submit-cell-input []
   (when-let [el (.getElementById js/document "cell-input")]
@@ -60,63 +77,68 @@
     ;; Reagent does not clear the element when input moves to a blank cell.
     (set! (.-innerHTML el) nil)))
 
-(defn- selection-rect [^js g start end row-heights col-widths]
+(defn- selection->rect [^js g {:keys [start end]} row-heights col-widths]
   (when (not= start end)
-    (let [[top-r top-c] (util/top-left start end)
-          [bottom-r bottom-c] (util/bottom-right start end)]
+    (let [top-rc (util/top-left [start end])
+          [bottom-r bottom-c] (util/bottom-right [start end])
+          [top-x top-y] (rc->xy top-rc row-heights col-widths)
+          [w h] (span-w-h top-rc [bottom-r bottom-c] row-heights col-widths)]
       (.beginFill g (:selection-fill styles/colors) (:selection-alpha styles/colors))
       (.lineStyle g (:selection-border styles/sizes) (:selection-border styles/colors) 1 1)
-      (.drawRect
-       g
-       (apply + (take top-c col-widths))
-       (apply + (take top-r row-heights))
-       (reduce + (subvec col-widths top-c (inc bottom-c)))
-       (reduce + (subvec row-heights top-r (inc bottom-r)))))))
+      (.drawRect g top-x top-y w h))))
 
-(defn- grid-selection-end [start-rc end-rc pixi-app]
+(defn- edit-cell [grid [r c]]
+  (rf/dispatch [::events/edit-cell (or (get-in grid [r c :style :merged-with]) [r c])]))
+
+(defn- grid-selection-end [{:keys [start end]} pixi-app]
   (remove-listener! :grid-selection-move pixi-app)
   (remove-listener! :grid-selection-up pixi-app)
   (remove-listener! :grid-selection-up-outside pixi-app)
-  (rf/dispatch-sync [::events/set-selection {:start start-rc :end end-rc}]))
+  (rf/dispatch-sync [::events/set-selection {:start start :end end}]))
 
-(defn- grid-selection-move [start-rc end-rc row-heights col-widths pixi-app]
+(defn- grid-selection-move [{:keys [start end]} row-heights col-widths pixi-app]
   (.clear (:selection @pixi-app))
-  (selection-rect (:selection @pixi-app) start-rc end-rc row-heights col-widths))
+  (selection->rect (:selection @pixi-app) {:start start :end end} row-heights col-widths))
 
-(defn- grid-selection-start [start-rc grid-g row-heights col-widths pixi-app]
-  (let [i->rc* #(i->rc % grid-g row-heights col-widths)]
+(defn- grid-selection-start [start grid-g row-heights col-widths pixi-app]
+  (let [i->selection #(let [rc (i->rc % grid-g row-heights col-widths)]
+                        {:start start :end rc})]
     (reset-listener!
      :grid-selection-move grid-g "globalpointermove"
-     #(grid-selection-move start-rc (i->rc* %) row-heights col-widths pixi-app)
+     #(grid-selection-move (i->selection %) row-heights col-widths pixi-app)
      pixi-app)
     (reset-listener!
      :grid-selection-up grid-g "pointerup"
-     #(grid-selection-end start-rc (i->rc* %) pixi-app)
+     #(grid-selection-end (i->selection %) pixi-app)
      pixi-app)
     (reset-listener!
      :grid-selection-up-outside grid-g "pointerupoutside"
-     #(grid-selection-end start-rc (i->rc* %) pixi-app)
+     #(grid-selection-end (i->selection %) pixi-app)
      pixi-app)))
 
-(defn- grid-pointer-down [i grid-g row-heights col-widths pixi-app]
+(defn- cell-pointer-down [rc grid-g grid row-heights col-widths pixi-app]
+  (submit-cell-input)
+  (rf/dispatch [::events/clear-selection])
+  (edit-cell grid rc)
+  (grid-selection-start rc grid-g row-heights col-widths pixi-app))
+
+(defn- grid-pointer-down [i grid-g grid row-heights col-widths pixi-app]
   (let [rc (i->rc i grid-g row-heights col-widths)]
-    (submit-cell-input)
-    (rf/dispatch [::events/clear-selection])
-    (rf/dispatch [::events/edit-cell rc])
-    (grid-selection-start rc grid-g row-heights col-widths pixi-app)))
+    (cell-pointer-down rc grid-g grid row-heights col-widths pixi-app)))
 
 ;; TODO: use the reframe keyboard library here
-(defn- handle-cell-navigation [e [r c]]
-  (let [move-to-cell (cond
+(defn- handle-cell-navigation [e grid [r c]]
+  (let [[mr mc] (get-in grid [r c :style :merged-until])
+        move-to-cell (cond
                        (and (= (.-keyCode e) 13) (.-shiftKey e)) [(dec r) c]
                        (and (= (.-keyCode e) 9) (.-shiftKey e)) [r (dec c)]
-                       (= (.-keyCode e) 13) [(inc r) c]
-                       (= (.-keyCode e) 9) [r (inc c)])
+                       (= (.-keyCode e) 13) [(if mr (inc mr) (inc r)) c]
+                       (= (.-keyCode e) 9) [r (if mc (inc mc) (inc c))])
         [move-to-r move-to-c] move-to-cell]
     (when (and (nat-int? move-to-r) (nat-int? move-to-c))
       (.preventDefault e)
       (submit-cell-input)
-      (rf/dispatch [::events/edit-cell move-to-cell])
+      (edit-cell grid move-to-cell)
       (rf/dispatch-sync [::events/set-selection {:start move-to-cell :end move-to-cell}]))))
 
 (defn- center-text! [bitmap-text x y h w]
@@ -282,7 +304,22 @@
     (.on g "pointerdown" #(col-resize-start % g col-widths viewport))
     g))
 
-(defn- draw-cell-background
+(defn- draw-merged-cells
+  ([]
+   (let [g (new pixi/Graphics)] g))
+  ([^js g grid row-heights col-widths]
+   (.clear g)
+   (util/map-on-matrix-addressed
+    (fn [rc cell]
+      (when-let [merged-until (get-in cell [:style :merged-until])]
+        (let [[top-x top-y] (rc->xy rc row-heights col-widths)
+              [bottom-x bottom-y] (span-w-h rc merged-until row-heights col-widths)]
+          (.beginFill g (or (get-in cell [:style :background]) 0xffffff) 1)
+          (.drawRect g (+ top-x 0.25) (+ top-y 0.25) (- bottom-x 0.5) (- bottom-y 0.5)))))
+    grid)
+   g))
+
+(defn- draw-cell-backgrounds
   ([] (let [g (new pixi/Graphics)]
         (set! (.. g -position -x) (:heading-left-width styles/sizes))
         (set! (.. g -position -y) (:cell-h styles/sizes))
@@ -294,12 +331,11 @@
          ys (reductions + 0 row-heights)]
      (util/map-on-matrix-addressed
       (fn [[r c] cell]
-        (let [background (get-in cell [:style :background])]
-          (when background
-            (.beginFill g background 1)
-            (.drawRect g
-                       (nth xs c) (nth ys r)
-                       (nth col-widths c) (nth row-heights r)))))
+        (when-let [background (get-in cell [:style :background])]
+          (.beginFill g background 1)
+          (.drawRect g
+                     (nth xs c) (nth ys r)
+                     (nth col-widths c) (nth row-heights r))))
       grid)
      g)))
 
@@ -377,8 +413,8 @@
      g))
   ([g selection row-heights col-widths]
    (.clear g)
-   (when-let [{:keys [start end]} selection]
-     (selection-rect g start end row-heights col-widths))))
+   (when selection
+     (selection->rect g selection row-heights col-widths))))
 
 (defn- draw-cell-text
   ([] (new pixi/Graphics))
@@ -394,7 +430,8 @@
                        (cell-text
                         text
                         (nth xs c) (nth ys r)
-                        (nth row-heights r) (nth col-widths c)
+                        (cell-h r cell row-heights)
+                        (cell-w c cell col-widths)
                         (:error cell))))))
       grid)
      g)))
@@ -407,7 +444,7 @@
      (set! (.. g -position -x) (:heading-left-width styles/sizes))
      (set! (.. g -position -y) (:cell-h styles/sizes))
      g))
-  ([g row-heights col-widths pixi-app]
+  ([g grid row-heights col-widths pixi-app]
    (letfn [(grid-line*
              [sx sy ex ey]
              (grid-line g sx sy ex ey))
@@ -416,7 +453,7 @@
      (.clear g)
      (reset-listener!
       :grid-pointerdown g "pointerdown"
-      #(grid-pointer-down % g row-heights col-widths pixi-app)
+      #(grid-pointer-down % g grid row-heights col-widths pixi-app)
       pixi-app)
      (dorun (->> row-heights (reductions +) (map draw-horizontal)))
      (dorun (->> col-widths (reductions +) (map draw-vertical)))
@@ -457,8 +494,9 @@
 (defn repaint [sheet selection pixi-app]
   (let [{:keys [row-heights col-widths]} (:grid-dimensions sheet)
         v (:viewport @pixi-app)]
-    (draw-grid (:grid @pixi-app) row-heights col-widths pixi-app)
-    (draw-cell-background (:cell-background @pixi-app) (:grid sheet) row-heights col-widths)
+    (draw-grid (:grid @pixi-app) (:grid sheet) row-heights col-widths pixi-app)
+    (draw-merged-cells (:merged-cells @pixi-app) (:grid sheet) row-heights col-widths)
+    (draw-cell-backgrounds (:cell-backgrounds @pixi-app) (:grid sheet) row-heights col-widths)
     (draw-cell-text (:cell-text @pixi-app) (:grid sheet) row-heights col-widths)
     (draw-selection (:selection @pixi-app) selection row-heights col-widths)
     (draw-top-heading (:top-heading @pixi-app) col-widths v)
@@ -471,8 +509,9 @@
    #(let [app (make-app)
           v (.addChild (.-stage app) (make-viewport app))
           c (.addChild v (make-container))
-          cell-background (.addChild c (draw-cell-background))
+          cell-background (.addChild c (draw-cell-backgrounds))
           grid (.addChild c (draw-grid))
+          merged-cells (.addChild grid (draw-merged-cells))
           cell-text (.addChild grid (draw-cell-text))
           selection (.addChild grid (draw-selection))
           top-heading (.addChild c (draw-top-heading v))
@@ -483,7 +522,8 @@
                :container c
                :grid grid
                :selection selection
-               :cell-background cell-background
+               :merged-cells merged-cells
+               :cell-backgrounds cell-background
                :cell-text cell-text
                :top-heading top-heading
                :left-heading left-heading
@@ -526,10 +566,10 @@
               :suppressContentEditableWarning true
               :spell-check false
               :style {:transform (transform-css)
-                      :minHeight (nth row-heights r)
-                      :minWidth (nth col-widths c)
+                      :minHeight (cell-h r cell row-heights)
+                      :minWidth (cell-w c cell col-widths)
                       :background-color (when background (util/color-int->hex background))}
-              :on-key-down #(handle-cell-navigation % [r c])}
+              :on-key-down #(handle-cell-navigation % (:grid @sheet) [r c])}
        (:content cell)])))
 
 (defn- canvas* []
@@ -563,7 +603,7 @@
    pixi-app])
 
 (defn controls []
-  (let [selection @(rf/subscribe [::subs/selection])]
+  (let [{:keys [start end] :as selection} @(rf/subscribe [::subs/selection])]
     [:div {:class :controls-container}
      [:div {:class :controls-background-buttons}
       (for [color styles/cell-background-colors]
@@ -575,7 +615,10 @@
                   :on-mouse-down #(when selection
                                     (rf/dispatch [::events/set-cell-backgrounds
                                                   (util/selection->addresses selection)
-                                                  color]))} ""])]]))
+                                                  color]))} ""])]
+     [:button {:class :merge-cells-btn
+               :on-click #(rf/dispatch [::events/merge-cells start end])}
+      "Merge cells"]]))
 
 (defonce ^:private pixi-app* (atom nil))
 

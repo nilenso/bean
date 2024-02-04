@@ -45,6 +45,14 @@
         end-address (a1->rc end-a (js/parseInt end-n))]
     [start-address end-address]))
 
+(defn top-left [addresses]
+  [(apply min (map first addresses))
+   (apply min (map second addresses))])
+
+(defn bottom-right [addresses]
+  [(apply max (map first addresses))
+   (apply max (map second addresses))])
+
 (defn addresses-matrix
   [[start-row start-col] [end-row end-col]]
   (for [r (range start-row (inc end-row))]

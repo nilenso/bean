@@ -157,11 +157,11 @@
             (dissoc sheet :code-error) ;; reset the error from a previous evaluation
             (:bindings sheet))))
 
-(defn- set-cell-background [[r c] sheet background]
-  (assoc-in sheet [:grid r c :style :background] background))
+(defn- set-cell-style [[r c] sheet property value]
+  (assoc-in sheet [:grid r c :style property] value))
 
 (defn set-cell-backgrounds [addresses sheet background]
-  (reduce #(set-cell-background %2 %1 background) sheet addresses))
+  (reduce #(set-cell-style %2 %1 :background background) sheet addresses))
 
 (declare eval-dep)
 
@@ -192,6 +192,19 @@
                         (dependents (map deps/->cell-dep updated-addrs) depgraph)
                         (map deps/->cell-dep other-spillers))]
      (reduce #(eval-dep %2 %1) sheet* deps-to-reval))))
+
+(defn- merge-cell [sheet address merge-with]
+  (let [sheet* (if (not= merge-with address)
+                 (eval-cell address sheet "")
+                 sheet)]
+    (set-cell-style address sheet* :merged-with merge-with)))
+
+(defn merge-cells [sheet start end]
+  (let [merge-with (util/top-left [start end])
+        merged-until (util/bottom-right [start end])
+        addresses (mapcat identity (util/addresses-matrix merge-with merged-until))
+        sheet* (reduce #(merge-cell %1 %2 merge-with) sheet addresses)]
+    (set-cell-style merge-with sheet* :merged-until merged-until)))
 
 (defn eval-named
   ([name {:keys [bindings] :as sheet}]

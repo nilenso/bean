@@ -327,3 +327,11 @@ a {
     border-radius: 100%;
     cursor: pointer;
 }
+
+.merge-cells-btn {
+    width: 90px;
+    height: 30px;
+    margin-top: auto;
+    margin-bottom: auto;
+    margin-left: 20px;
+}
