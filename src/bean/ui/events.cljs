@@ -49,6 +49,11 @@
  (fn set-cell-backgrounds [db [_ addresses background]]
    (update-in db [:sheet] #(grid/set-cell-backgrounds % addresses background))))
 
+(rf/reg-event-db
+ ::toggle-cell-bold
+ (fn toggle-cell-bold [db [_ addresses]]
+   (update-in db [:sheet] #(grid/toggle-cell-bolds % addresses))))
+
 (rf/reg-event-fx
  ::submit-cell-input
  (fn submit-cell-input [{:keys [db]} [_ content]]

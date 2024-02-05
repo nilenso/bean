@@ -6,7 +6,7 @@
                       :grid-line 0x0f0f0f
                       :resizer-line 0x999999
                       :heading-border 0xcccccc
-                      :corner-background 0xdddddd
+                      :corner-background 0xdedede
                       :cell-color 0x000000
                       :cell-error-color 0xb93333
                       :selection-fill 0x000000
@@ -30,4 +30,4 @@
             :selection-border 1.5})
 
 (def cell-background-colors
-  [nil 0xffc9c9 0xb2f2bb 0xa5d8ff 0xffec99])
+  [nil 0xcccccc 0xffc9c9 0xb2f2bb 0xa5d8ff 0xffec99])

@@ -170,10 +170,10 @@
     (.addChild g bitmap)
     g))
 
-(defn- cell-text [text x y h w error?]
+(defn- cell-text [text x y h w error? bold?]
   (let [g (new pixi/Graphics)
         bitmap (new pixi/BitmapText text
-                    #js {:fontName "SpaceGrotesk"
+                    #js {:fontName (if bold? "SpaceGrotesk-Bold" "SpaceGrotesk")
                          :tint (if error?
                                  (:cell-error-color styles/colors)
                                  (:cell-color styles/colors))
@@ -438,7 +438,8 @@
                         (nth xs c) (nth ys r)
                         (cell-h r cell row-heights)
                         (cell-w c cell col-widths)
-                        (:error cell))))))
+                        (:error cell)
+                        (get-in cell [:style :bold]))))))
       grid)
      g)))
 
@@ -497,6 +498,11 @@
 (defn- make-container []
   (new pixi/Container))
 
+(defn- make-fonts-then [cb]
+  (.addBundle pixi/Assets "fonts" #js {"SpaceGrotesk" "/fonts/SpaceGrotesk.fnt"
+                                       "SpaceGrotesk-Bold" "/fonts/SpaceGrotesk-Bold.fnt"})
+  (.then (.loadBundle pixi/Assets "fonts") cb))
+
 (defn repaint [sheet selection pixi-app]
   (let [{:keys [row-heights col-widths]} (:grid-dimensions sheet)
         v (:viewport @pixi-app)]
@@ -510,8 +516,7 @@
     (draw-corner (:corner @pixi-app) v)))
 
 (defn setup [sheet pixi-app]
-  (.then
-   (.load pixi/Assets "/fonts/SpaceGrotesk.fnt")
+  (make-fonts-then
    #(let [app (make-app)
           v (.addChild (.-stage app) (make-viewport app))
           c (.addChild v (make-container))
@@ -564,7 +569,8 @@
           transform-css #(input-transform-css [r c] viewport row-heights col-widths)
           reposition #(let [el (.getElementById js/document "cell-input")]
                         (set! (.. el -style -transform) (transform-css)))
-          background (get-in cell [:style :background])]
+          background (get-in cell [:style :background])
+          bold? (get-in cell [:style :bold])]
       (reset-listener! :cell-input-reposition-move viewport "moved" reposition pixi-app)
       (reset-listener! :cell-input-reposition-move-end viewport "moved-end" reposition pixi-app)
       [:span {:id :cell-input
@@ -574,7 +580,8 @@
               :style {:transform (transform-css)
                       :minHeight (cell-h r cell row-heights)
                       :minWidth (cell-w c cell col-widths)
-                      :background-color (when background (util/color-int->hex background))}
+                      :background-color (when background (util/color-int->hex background))
+                      :fontWeight (if bold? "bold" "normal")}
               :on-key-down #(handle-cell-navigation % (:grid @sheet) [r c])}
        (:content cell)])))
 
@@ -611,6 +618,10 @@
 (defn controls []
   (let [{:keys [start end] :as selection} @(rf/subscribe [::subs/selection])]
     [:div {:class :controls-container}
+     [:button {:class :controls-btn
+               :on-click #(rf/dispatch [::events/toggle-cell-bold
+                                        (util/selection->addresses selection)])}
+      "B"]
      [:div {:class :controls-background-buttons}
       (for [color styles/cell-background-colors]
         [:button {:class :set-background-btn
@@ -622,13 +633,13 @@
                                     (rf/dispatch [::events/set-cell-backgrounds
                                                   (util/selection->addresses selection)
                                                   color]))} ""])]
-     [:button {:class :merge-cells-btn
+     [:button {:class :controls-btn
                :on-click #(rf/dispatch [::events/merge-cells start end])}
-      "Merge cells"]
-     [:button {:class :merge-cells-btn
+      "Merge"]
+     [:button {:class :controls-btn
                :on-click #(rf/dispatch [::events/unmerge-cells
                                         (util/selection->addresses selection)])}
-      "Unmerge cells"]]))
+      "Unmerge"]]))
 
 (defonce ^:private pixi-app* (atom nil))
 

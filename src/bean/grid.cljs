@@ -169,6 +169,11 @@
 (defn set-cell-backgrounds [sheet addresses background]
   (reduce #(set-cell-style %1 %2 :background background) sheet addresses))
 
+(defn toggle-cell-bolds [sheet addresses]
+  (if (every? #(get-cell-style sheet % :bold) addresses)
+    (reduce #(unset-cell-style %1 %2 :bold) sheet addresses)
+    (reduce #(set-cell-style %1 %2 :bold true) sheet addresses)))
+
 (declare eval-dep)
 
 (defn eval-cell
