@@ -88,8 +88,11 @@
       (.lineStyle g (:selection-border styles/sizes) (:selection-border styles/colors) 1 1)
       (.drawRect g top-x top-y w h))))
 
-(defn- edit-cell [grid [r c]]
-  (rf/dispatch [::events/edit-cell (or (get-in grid [r c :style :merged-with]) [r c])]))
+(defn- merged-or-self [grid [r c]]
+  (or (get-in grid [r c :style :merged-with]) [r c]))
+
+(defn- edit-cell [grid rc]
+  (rf/dispatch [::events/edit-cell (merged-or-self grid rc)]))
 
 (defn- grid-selection-end [{:keys [start end]} pixi-app]
   (remove-listener! :grid-selection-move pixi-app)
@@ -121,7 +124,9 @@
   (submit-cell-input)
   (rf/dispatch [::events/clear-selection])
   (edit-cell grid rc)
-  (grid-selection-start rc grid-g row-heights col-widths pixi-app))
+  (grid-selection-start
+   (merged-or-self grid rc)
+   grid-g row-heights col-widths pixi-app))
 
 (defn- grid-pointer-down [i grid-g grid row-heights col-widths pixi-app]
   (let [rc (i->rc i grid-g row-heights col-widths)]
