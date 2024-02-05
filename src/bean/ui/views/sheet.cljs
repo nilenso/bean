@@ -518,7 +518,7 @@
     (draw-left-heading (:left-heading @pixi-app) row-heights v)
     (draw-corner (:corner @pixi-app) v)))
 
-(defn setup [sheet pixi-app]
+(defn setup [sheet ui pixi-app]
   (make-fonts-then
    #(let [app (make-app)
           v (.addChild (.-stage app) (make-viewport app))
@@ -542,7 +542,7 @@
                :top-heading top-heading
                :left-heading left-heading
                :corner corner})
-      (repaint sheet nil pixi-app))))
+      (repaint sheet ui pixi-app))))
 
 (defn- input-transform-css [rc ^js viewport row-heights col-widths]
   (let [offset-t (:cell-h styles/sizes)
@@ -593,16 +593,16 @@
    {:display-name :grid-canvas
     :component-did-mount
     (fn [this]
-      (let [[sheet _selection pixi-app] (rest (rc/argv this))]
+      (let [[sheet ui pixi-app] (rest (rc/argv this))]
         (prn "Setting up canvas")
-        (setup sheet pixi-app)))
+        (setup sheet ui pixi-app)))
 
     :component-did-update
     (fn [this _]
-      (let [[sheet selection pixi-app] (rest (rc/argv this))]
+      (let [[sheet ui pixi-app] (rest (rc/argv this))]
         (when @pixi-app
           (prn "Repaint canvas")
-          (repaint sheet selection pixi-app))))
+          (repaint sheet ui pixi-app))))
 
     :component-will-unmount
     (fn [this]
