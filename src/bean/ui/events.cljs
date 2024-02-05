@@ -54,6 +54,11 @@
  (fn toggle-cell-bold [db [_ addresses]]
    (update-in db [:sheet] #(grid/toggle-cell-bolds % addresses))))
 
+(rf/reg-event-db
+ ::make-table
+ (fn make-table [db [_ table-name start end]]
+   (update-in db [:sheet] #(grid/make-table % table-name start end))))
+
 (rf/reg-event-fx
  ::submit-cell-input
  (fn submit-cell-input [{:keys [db]} [_ content]]
@@ -84,6 +89,12 @@
  ::set-selection
  (fn [db [_ selection]]
    (assoc-in db [:ui :grid :selection] selection)))
+
+(rf/reg-event-fx
+ ::select-table
+ (fn select-table [_ [_ {:keys [start end]}]]
+   {:fx [[:dispatch [::edit-cell nil]]
+         [:dispatch [::set-selection {:start start :end end :type :table}]]]}))
 
 (rf/reg-event-db
  ::clear-selection

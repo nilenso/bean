@@ -2,7 +2,7 @@
   (:require
    [re-frame.core :as rf]
    [bean.ui.subs :as subs]
-   [bean.ui.views.code :as code]
+   [bean.ui.views.sidebar :as sidebar]
    [bean.ui.views.help :as help]
    [bean.ui.views.sheet :as sheet]))
 
@@ -12,7 +12,7 @@
                     "help-open")}
      [help/help]
      [:div {:class :container}
-      [code/text-area]
+      [sidebar/sidebar]
       [sheet/sheet]]]))
 
 (defn routed []

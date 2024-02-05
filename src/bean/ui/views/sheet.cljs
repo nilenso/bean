@@ -3,13 +3,12 @@
             [bean.ui.styles :as styles]
             [bean.ui.subs :as subs]
             [bean.ui.util :as util]
+            [bean.ui.features :as features]
             [clojure.string :as string]
             [pixi-viewport :as pixi-viewport]
             [pixi.js :as pixi]
             [re-frame.core :as rf]
             [reagent.core :as rc]))
-
-(def show-background-buttons false)
 
 (defn- add-listener! [name g event f pixi-app]
   (.on g event f)
@@ -78,14 +77,17 @@
     ;; Reagent does not clear the element when input moves to a blank cell.
     (set! (.-innerHTML el) nil)))
 
-(defn- selection->rect [^js g {:keys [start end]} row-heights col-widths]
+(defn- selection->rect [^js g {:keys [start end type]} row-heights col-widths]
   (when (not= start end)
     (let [top-rc (util/top-left [start end])
           [bottom-r bottom-c] (util/bottom-right [start end])
           [top-x top-y] (rc->xy top-rc row-heights col-widths)
-          [w h] (span-w-h top-rc [bottom-r bottom-c] row-heights col-widths)]
-      (.beginFill g (:selection-fill styles/colors) (:selection-alpha styles/colors))
-      (.lineStyle g (:selection-border styles/sizes) (:selection-border styles/colors) 1 1)
+          [w h] (span-w-h top-rc [bottom-r bottom-c] row-heights col-widths)
+          color (case type
+                  :table (:table-selection styles/colors)
+                  (:selection styles/colors))]
+      (.beginFill g color (:selection-alpha styles/colors))
+      (.lineStyle g (:selection-border styles/sizes) color 1 1)
       (.drawRect g top-x top-y w h))))
 
 (defn- merged-or-self [grid [r c]]
@@ -648,7 +650,7 @@
 
 (defn sheet []
   [:div {:class :sheet-container}
-   (when show-background-buttons [controls])
+   (when features/show-control-bar [controls])
    [:div {:id :grid-container}
     [canvas pixi-app*]
     [cell-input pixi-app*]]])

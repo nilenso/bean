@@ -9,9 +9,9 @@
                       :corner-background 0xdedede
                       :cell-color 0x000000
                       :cell-error-color 0xb93333
-                      :selection-fill 0x000000
+                      :selection 0x888888
                       :selection-alpha 0.06
-                      :selection-border 0x999999})
+                      :table-selection 0x4563a7})
 
 (def colors light)
 

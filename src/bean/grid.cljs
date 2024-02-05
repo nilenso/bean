@@ -232,6 +232,15 @@
                 (unset-cell-style merged-with :merged-addresses))))
         sheet)))
 
+(defn make-table [sheet table-name start end]
+  ;; check if this overlaps with a table
+  ;; return an error otherwise somewhere
+  (if-not (= start end)
+    (let [top-rc (util/top-left [start end])
+          bottom-rc (util/bottom-right [start end])]
+      (assoc-in sheet [:tables table-name] {:start top-rc :end bottom-rc}))
+    sheet))
+
 (defn eval-named
   ([name {:keys [bindings] :as sheet}]
    (if-let [value (bindings name)]
@@ -334,6 +343,7 @@
   {;; Source fields
    :grid grid
    :code code
+   :tables tables
 
    ;; Evaluated fields
    :depgraph depgraph

@@ -8,6 +8,11 @@
    (:sheet db)))
 
 (re-frame/reg-sub
+ ::tables
+ (fn [db]
+   (get-in db [:sheet :tables])))
+
+(re-frame/reg-sub
  ::ui
  (fn [db]
    (:ui db)))
