@@ -499,9 +499,12 @@
   (new pixi/Container))
 
 (defn- make-fonts-then [cb]
-  (.addBundle pixi/Assets "fonts" #js {"SpaceGrotesk" "/fonts/SpaceGrotesk.fnt"
-                                       "SpaceGrotesk-Bold" "/fonts/SpaceGrotesk-Bold.fnt"})
-  (.then (.loadBundle pixi/Assets "fonts") cb))
+  (if-not (.get pixi/Assets "SpaceGrotesk")
+    (do
+      (.addBundle pixi/Assets "fonts" #js {"SpaceGrotesk" "/fonts/SpaceGrotesk.fnt"
+                                           "SpaceGrotesk-Bold" "/fonts/SpaceGrotesk-Bold.fnt"})
+      (.then (.loadBundle pixi/Assets "fonts") cb))
+    (cb)))
 
 (defn repaint [sheet selection pixi-app]
   (let [{:keys [row-heights col-widths]} (:grid-dimensions sheet)
