@@ -157,11 +157,17 @@
             (dissoc sheet :code-error) ;; reset the error from a previous evaluation
             (:bindings sheet))))
 
-(defn- set-cell-style [[r c] sheet property value]
+(defn- set-cell-style [sheet [r c] property value]
   (assoc-in sheet [:grid r c :style property] value))
 
-(defn set-cell-backgrounds [addresses sheet background]
-  (reduce #(set-cell-style %2 %1 :background background) sheet addresses))
+(defn- unset-cell-style [sheet [r c] property]
+  (update-in sheet [:grid r c :style] dissoc property))
+
+(defn- get-cell-style [sheet [r c] property]
+  (get-in sheet [:grid r c :style property]))
+
+(defn set-cell-backgrounds [sheet addresses background]
+  (reduce #(set-cell-style %1 %2 :background background) sheet addresses))
 
 (declare eval-dep)
 
@@ -197,14 +203,29 @@
   (let [sheet* (if (not= merge-with address)
                  (eval-cell address sheet "")
                  sheet)]
-    (set-cell-style address sheet* :merged-with merge-with)))
+    (set-cell-style sheet* address :merged-with merge-with)))
 
 (defn merge-cells [sheet start end]
   (let [merge-with (util/top-left [start end])
         merged-until (util/bottom-right [start end])
-        addresses (mapcat identity (util/addresses-matrix merge-with merged-until))
-        sheet* (reduce #(merge-cell %1 %2 merge-with) sheet addresses)]
-    (set-cell-style merge-with sheet* :merged-until merged-until)))
+        addresses (mapcat identity (util/addresses-matrix merge-with merged-until))]
+    (if (some #(get-cell-style sheet % :merged-with) addresses)
+      sheet
+      (->  (reduce #(merge-cell %1 %2 merge-with) sheet addresses)
+           (set-cell-style merge-with :merged-until merged-until)
+           (set-cell-style merge-with :merged-addresses addresses)))))
+
+(defn unmerge-cells [sheet addresses]
+  (->> addresses
+       (filter #(get-cell-style sheet % :merged-with))
+       (reduce
+        (fn [sheet* rc]
+          (let [merged-with (get-cell-style sheet rc :merged-with)
+                merged-addresses (get-cell-style sheet merged-with :merged-addresses)]
+            (-> (reduce #(unset-cell-style %1 %2 :merged-with) sheet* merged-addresses)
+                (unset-cell-style merged-with :merged-until)
+                (unset-cell-style merged-with :merged-addresses))))
+        sheet)))
 
 (defn eval-named
   ([name {:keys [bindings] :as sheet}]

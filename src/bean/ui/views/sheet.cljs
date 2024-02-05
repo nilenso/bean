@@ -624,7 +624,11 @@
                                                   color]))} ""])]
      [:button {:class :merge-cells-btn
                :on-click #(rf/dispatch [::events/merge-cells start end])}
-      "Merge cells"]]))
+      "Merge cells"]
+     [:button {:class :merge-cells-btn
+               :on-click #(rf/dispatch [::events/unmerge-cells
+                                        (util/selection->addresses selection)])}
+      "Unmerge cells"]]))
 
 (defonce ^:private pixi-app* (atom nil))
 

@@ -36,13 +36,18 @@
 
 (rf/reg-event-db
  ::merge-cells
- (fn merge-cells [db [_  start end]]
+ (fn merge-cells [db [_ start end]]
    (update-in db [:sheet] #(grid/merge-cells % start end))))
+
+(rf/reg-event-db
+ ::unmerge-cells
+ (fn merge-cells [db [_ addresses]]
+   (update-in db [:sheet] #(grid/unmerge-cells % addresses))))
 
 (rf/reg-event-db
  ::set-cell-backgrounds
  (fn set-cell-backgrounds [db [_ addresses background]]
-   (update-in db [:sheet] #(grid/set-cell-backgrounds addresses % background))))
+   (update-in db [:sheet] #(grid/set-cell-backgrounds % addresses background))))
 
 (rf/reg-event-fx
  ::submit-cell-input
