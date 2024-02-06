@@ -6,19 +6,32 @@
             [re-frame.core :as rf]))
 
 (defn sidebar []
-  [:div
-   (when features/show-control-bar
-     (let [tables @(rf/subscribe [::subs/tables])
-           {:keys [start end]} @(rf/subscribe [::subs/selection])]
-
-       [:div
-        (doall
-         (for [[table-name table-data] tables]
-           [:button {:key table-name
-                     :class :controls-btn
-                     :on-click #(rf/dispatch [::events/select-table table-data])}
-            table-name]))
-        [:button {:class :controls-btn
-                  :on-click #(rf/dispatch [::events/make-table (str "Table" (rand-int 100)) start end])}
-         "Make Table"]]))
-   [code/text-area]])
+  (let [table-name (atom nil)]
+    (fn []
+      [:div
+       (when features/show-control-bar
+         (let [tables @(rf/subscribe [::subs/tables])
+               {:keys [start end]} @(rf/subscribe [::subs/selection])
+               making-table (:making-table @(rf/subscribe [::subs/ui]))]
+           [:div
+            (doall
+             (for [[table-name] tables]
+               [:button {:key table-name
+                         :class :controls-btn
+                         :on-click #(rf/dispatch [::events/select-table table-name])}
+                table-name]))
+            (when making-table
+              [:form
+               {:on-submit #(.preventDefault %)}
+               [:input {:auto-focus true
+                        :on-change #(reset! table-name (-> % .-target .-value))
+                        :placeholder "Table name"}]
+               [:button {:class :controls-btn
+                         :type :submit
+                         :on-click #(rf/dispatch [::events/make-table @table-name start end])}
+                "Create Table"]])
+            (when-not (= start end)
+              [:button {:class :controls-btn
+                        :on-click #(rf/dispatch [::events/making-table])}
+               "Make Table"])]))
+       [code/text-area]])))

@@ -26,6 +26,18 @@
   (remove-listener! name pixi-app)
   (add-listener! name g event f pixi-app))
 
+(defn- cell->table-name [[r c] tables]
+  (some
+   (fn [[table-name {:keys [start end]}]]
+     (let [[start-r start-c] start
+           [end-r end-c] end]
+       (when (and (>= r start-r)
+                  (<= r end-r)
+                  (>= c start-c)
+                  (<= c end-c))
+         table-name)))
+   tables))
+
 (defn px->index [px offsets]
   (if (> px (reduce + offsets))
     -1
@@ -77,24 +89,23 @@
     ;; Reagent does not clear the element when input moves to a blank cell.
     (set! (.-innerHTML el) nil)))
 
-(defn- selection->rect [^js g {:keys [start end type]} row-heights col-widths]
+(defn- selection->rect [^js g {:keys [start end]} row-heights col-widths]
   (when (not= start end)
     (let [top-rc (util/top-left [start end])
           [bottom-r bottom-c] (util/bottom-right [start end])
           [top-x top-y] (rc->xy top-rc row-heights col-widths)
           [w h] (span-w-h top-rc [bottom-r bottom-c] row-heights col-widths)
-          color (case type
-                  :table (:table-selection styles/colors)
-                  (:selection styles/colors))]
+          color (:selection styles/colors)]
       (.beginFill g color (:selection-alpha styles/colors))
       (.lineStyle g (:selection-border styles/sizes) color 1 1)
       (.drawRect g top-x top-y w h))))
 
-(defn- merged-or-self [grid [r c]]
+(defn- merged-or-self [[r c] grid]
   (or (get-in grid [r c :style :merged-with]) [r c]))
 
-(defn- edit-cell [grid rc]
-  (rf/dispatch [::events/edit-cell (merged-or-self grid rc)]))
+(defn- edit-cell [rc grid tables]
+  (rf/dispatch-sync [::events/select-table (cell->table-name rc tables)])
+  (rf/dispatch [::events/edit-cell (merged-or-self rc grid)]))
 
 (defn- grid-selection-end [{:keys [start end]} pixi-app]
   (remove-listener! :grid-selection-move pixi-app)
@@ -122,20 +133,20 @@
      #(grid-selection-end (i->selection %) pixi-app)
      pixi-app)))
 
-(defn- cell-pointer-down [rc grid-g grid row-heights col-widths pixi-app]
+(defn- cell-pointer-down [rc grid-g grid tables row-heights col-widths pixi-app]
   (submit-cell-input)
   (rf/dispatch [::events/clear-selection])
-  (edit-cell grid rc)
+  (edit-cell rc grid tables)
   (grid-selection-start
-   (merged-or-self grid rc)
+   (merged-or-self rc grid)
    grid-g row-heights col-widths pixi-app))
 
-(defn- grid-pointer-down [i grid-g grid row-heights col-widths pixi-app]
+(defn- grid-pointer-down [i grid-g grid tables row-heights col-widths pixi-app]
   (let [rc (i->rc i grid-g row-heights col-widths)]
-    (cell-pointer-down rc grid-g grid row-heights col-widths pixi-app)))
+    (cell-pointer-down rc grid-g grid tables row-heights col-widths pixi-app)))
 
 ;; TODO: use the reframe keyboard library here
-(defn- handle-cell-navigation [e grid [r c]]
+(defn- handle-cell-navigation [e [r c] grid tables]
   (let [[mr mc] (get-in grid [r c :style :merged-until])
         move-to-cell (cond
                        (and (= (.-keyCode e) 13) (.-shiftKey e)) [(dec r) c]
@@ -146,7 +157,7 @@
     (when (and (nat-int? move-to-r) (nat-int? move-to-c))
       (.preventDefault e)
       (submit-cell-input)
-      (edit-cell grid move-to-cell)
+      (edit-cell move-to-cell grid tables)
       (rf/dispatch-sync [::events/set-selection {:start move-to-cell :end move-to-cell}]))))
 
 (defn- center-text! [bitmap-text x y h w]
@@ -327,6 +338,62 @@
     grid)
    g))
 
+(defn- draw-table-highlight [^js g table-name x y w h & [hover?]]
+  (let [font-size (:table-label-font styles/sizes)
+        text-bitmap (new pixi/BitmapText table-name
+                         #js {:fontName "SpaceGrotesk"
+                              :tint (:table-label styles/colors)
+                              :fontSize font-size})
+        color (if hover?
+                (:table-highlight-hover styles/colors)
+                (:table-highlight styles/colors))
+        padding (:table-label-padding styles/sizes)
+        padded #(+ (* 2 padding) %)]
+    (.lineStyle g 2 color 1 0.5)
+    (.drawRect g x y w h)
+    (.beginFill g color 1)
+    (.drawRect g x
+               (- y (padded font-size))
+               (padded (.-width text-bitmap))
+               (padded font-size))
+    (.beginFill g 0x0000000 0)
+    (set! (.-x text-bitmap) (+ x padding))
+    (set! (.-y text-bitmap) (- y (padded font-size)))
+    (.addChild g text-bitmap)
+    g))
+
+(defn- draw-tables
+  ([] (new pixi/Graphics))
+  ([^js g tables selected-table row-heights col-widths]
+   (.removeChildren g)
+   (.clear g)
+   (doseq [[table-name {:keys [start end]}] tables]
+     (let [[top-x top-y] (rc->xy start row-heights col-widths)
+           [w h] (span-w-h start end row-heights col-widths)
+           border (new pixi/Graphics)
+           highlight (new pixi/Graphics)
+           draw-highlight #(draw-table-highlight highlight table-name top-x top-y w h)
+           highlight-on-hover
+           (fn []
+             (.on border "pointerout" #(-> highlight (.clear) (.removeChildren)))
+             (.on border "pointerover" #(draw-table-highlight
+                                         highlight
+                                         table-name
+                                         top-x top-y w h true)))]
+       (.addChild g border)
+       (.addChild border highlight)
+       (set! (.-eventMode border) "static")
+       (set! (.-hitArea border) (new pixi/Rectangle
+                                     top-x
+                                     (- top-y (+ (* 2 (:table-label-padding styles/sizes))
+                                                 (:table-label-font styles/sizes)))
+                                     w h))
+       (if (= selected-table table-name)
+         (draw-highlight)
+         (highlight-on-hover))
+       (.lineStyle border (:table-border styles/sizes) (:table-border styles/colors) 1 1)
+       (.drawRect border top-x top-y w h)))))
+
 (defn- draw-cell-backgrounds
   ([] (let [g (new pixi/Graphics)]
         (set! (.. g -position -x) (:heading-left-width styles/sizes))
@@ -453,7 +520,7 @@
      (set! (.. g -position -x) (:heading-left-width styles/sizes))
      (set! (.. g -position -y) (:cell-h styles/sizes))
      g))
-  ([g grid row-heights col-widths pixi-app]
+  ([g grid tables row-heights col-widths pixi-app]
    (letfn [(grid-line*
              [sx sy ex ey]
              (grid-line g sx sy ex ey))
@@ -462,7 +529,7 @@
      (.clear g)
      (reset-listener!
       :grid-pointerdown g "pointerdown"
-      #(grid-pointer-down % g grid row-heights col-widths pixi-app)
+      #(grid-pointer-down % g grid tables row-heights col-widths pixi-app)
       pixi-app)
      (dorun (->> row-heights (reductions +) (map draw-horizontal)))
      (dorun (->> col-widths (reductions +) (map draw-vertical)))
@@ -508,13 +575,15 @@
       (.then (.loadBundle pixi/Assets "fonts") cb))
     (cb)))
 
-(defn repaint [sheet selection pixi-app]
+(defn repaint [sheet {:keys [grid]} pixi-app]
   (let [{:keys [row-heights col-widths]} (:grid-dimensions sheet)
+        {:keys [selection selected-table]} grid
         v (:viewport @pixi-app)]
-    (draw-grid (:grid @pixi-app) (:grid sheet) row-heights col-widths pixi-app)
+    (draw-grid (:grid @pixi-app) (:grid sheet) (:tables sheet) row-heights col-widths pixi-app)
     (draw-merged-cells (:merged-cells @pixi-app) (:grid sheet) row-heights col-widths)
     (draw-cell-backgrounds (:cell-backgrounds @pixi-app) (:grid sheet) row-heights col-widths)
     (draw-cell-text (:cell-text @pixi-app) (:grid sheet) row-heights col-widths)
+    (draw-tables (:tables @pixi-app) (:tables sheet) selected-table row-heights col-widths)
     (draw-selection (:selection @pixi-app) selection row-heights col-widths)
     (draw-top-heading (:top-heading @pixi-app) col-widths v)
     (draw-left-heading (:left-heading @pixi-app) row-heights v)
@@ -529,6 +598,7 @@
           grid (.addChild c (draw-grid))
           merged-cells (.addChild grid (draw-merged-cells))
           cell-text (.addChild grid (draw-cell-text))
+          tables (.addChild grid (draw-tables))
           selection (.addChild grid (draw-selection))
           top-heading (.addChild c (draw-top-heading v))
           left-heading (.addChild c (draw-left-heading v))
@@ -538,6 +608,7 @@
                :container c
                :grid grid
                :selection selection
+               :tables tables
                :merged-cells merged-cells
                :cell-backgrounds cell-background
                :cell-text cell-text
@@ -572,7 +643,7 @@
           cell (get-in @sheet [:grid r c])
           viewport (:viewport @pixi-app)
           transform-css #(input-transform-css [r c] viewport row-heights col-widths)
-          reposition #(let [el (.getElementById js/document "cell-input")]
+          reposition #(when-let [el (.getElementById js/document "cell-input")]
                         (set! (.. el -style -transform) (transform-css)))
           background (get-in cell [:style :background])
           bold? (get-in cell [:style :bold])]
@@ -582,12 +653,13 @@
               :content-editable true
               :suppressContentEditableWarning true
               :spell-check false
+              :auto-focus true
               :style {:transform (transform-css)
                       :minHeight (cell-h r cell row-heights)
                       :minWidth (cell-w c cell col-widths)
                       :background-color (when background (util/color-int->hex background))
                       :fontWeight (if bold? "bold" "normal")}
-              :on-key-down #(handle-cell-navigation % (:grid @sheet) [r c])}
+              :on-key-down #(handle-cell-navigation % [r c] (:grid @sheet) (:tables @sheet))}
        (:content cell)])))
 
 (defn- canvas* []
@@ -617,7 +689,7 @@
 (defn canvas [pixi-app]
   [canvas*
    @(rf/subscribe [::subs/sheet])
-   @(rf/subscribe [::subs/selection])
+   @(rf/subscribe [::subs/ui])
    pixi-app])
 
 (defn controls []

@@ -52,5 +52,7 @@
                                          :row-heights (vec (repeat num-rows (:cell-h styles/sizes)))
                                          :col-widths (vec (repeat num-cols (:cell-w styles/sizes)))}))
      :ui {:help-display false
+          :making-table nil
           :grid {:editing-cell nil
-                 :selection nil}}}))
+                 :selection nil
+                 :selected-table nil}}}))

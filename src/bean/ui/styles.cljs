@@ -11,7 +11,10 @@
                       :cell-error-color 0xb93333
                       :selection 0x888888
                       :selection-alpha 0.06
-                      :table-selection 0x4563a7})
+                      :table-border 0xaaaaaa
+                      :table-highlight 0x3b5aa3
+                      :table-highlight-hover 0x8190b5
+                      :table-label 0xffffff})
 
 (def colors light)
 
@@ -27,7 +30,11 @@
             :heading-left-width 40
             :heading-font-size 13
             :resizer-handle 20
-            :selection-border 1.5})
+            :selection-border 1.5
+            :table-border 1
+            :table-highlight 2
+            :table-label-font 12
+            :table-label-padding 3})
 
 (def cell-background-colors
   [nil 0xcccccc 0xffc9c9 0xb2f2bb 0xa5d8ff 0xffec99])
