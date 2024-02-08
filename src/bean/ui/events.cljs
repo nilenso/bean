@@ -36,8 +36,8 @@
 
 (rf/reg-event-db
  ::merge-cells
- (fn merge-cells [db [_ start end]]
-   (update-in db [:sheet] #(grid/merge-cells % start end))))
+ (fn merge-cells [db [_ area]]
+   (update-in db [:sheet] #(grid/merge-cells % area))))
 
 (rf/reg-event-db
  ::unmerge-cells
@@ -99,10 +99,10 @@
 
 (rf/reg-event-fx
  ::make-table
- (fn make-table [{:keys [db]} [_ table-name start end]]
+ (fn make-table [{:keys [db]} [_ table-name area]]
    {:db (->  db
              (assoc-in [:ui :making-table] false)
-             (update-in [:sheet] #(grid/make-table % table-name start end)))
+             (update-in [:sheet] #(grid/make-table % table-name area)))
     :fx [[:dispatch [::clear-selection]]
          [:dispatch [::select-table table-name]]]}))
 

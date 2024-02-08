@@ -3,7 +3,8 @@
             [bean.ui.events :as events]
             [bean.ui.subs :as subs]
             [bean.ui.features :as features]
-            [re-frame.core :as rf]))
+            [re-frame.core :as rf]
+            [bean.ui.util :as util]))
 
 (defn sidebar []
   (let [table-name (atom nil)]
@@ -11,7 +12,7 @@
       [:div
        (when features/show-control-bar
          (let [tables @(rf/subscribe [::subs/tables])
-               {:keys [start end]} @(rf/subscribe [::subs/selection])
+               selection @(rf/subscribe [::subs/selection])
                making-table (:making-table @(rf/subscribe [::subs/ui]))]
            [:div
             (doall
@@ -28,9 +29,9 @@
                         :placeholder "Table name"}]
                [:button {:class :controls-btn
                          :type :submit
-                         :on-click #(rf/dispatch [::events/make-table @table-name start end])}
+                         :on-click #(rf/dispatch [::events/make-table @table-name selection])}
                 "Create Table"]])
-            (when-not (= start end)
+            (when-not (util/area-empty? selection)
               [:button {:class :controls-btn
                         :on-click #(rf/dispatch [::events/making-table])}
                "Make Table"])]))

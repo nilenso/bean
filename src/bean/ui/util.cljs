@@ -28,20 +28,11 @@
 
 (def map-on-matrix-addressed util/map-on-matrix-addressed)
 
-(def addresses-matrix util/addresses-matrix)
+(def area->addresses util/area->addresses)
 
-(def top-left util/top-left)
+(def area-empty? util/area-empty?)
 
-(def bottom-right util/bottom-right)
-
-(defn selection->address-matrix [selection]
-  (let [{:keys [start end]} selection]
-    (addresses-matrix
-     (top-left [start end])
-     (bottom-right [start end]))))
-
-(defn selection->addresses [selection]
-  (mapcat identity (selection->address-matrix selection)))
+(def bounds->area util/bounds->area)
 
 (defn color-int->hex [color]
   (str "#" (.toString color 16)))

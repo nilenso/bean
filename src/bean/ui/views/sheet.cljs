@@ -59,12 +59,17 @@
 (defn rc->xy [[r c] row-heights col-widths]
   [(apply + (take c col-widths)) (apply + (take r row-heights))])
 
-(defn span-w-h
+(defn rcs->distance
   ([index1 index2 offsets]
    (reduce + (subvec offsets index1 index2)))
   ([[top-r top-c] [bottom-r bottom-c] row-heights col-widths]
-   [(span-w-h top-c (inc bottom-c) col-widths)
-    (span-w-h top-r (inc bottom-r) row-heights)]))
+   [(rcs->distance top-c (inc bottom-c) col-widths)
+    (rcs->distance top-r (inc bottom-r) row-heights)]))
+
+(defn- area->xywh [{:keys [start end]} row-heights col-widths]
+  (let [[x y] (rc->xy start row-heights col-widths)
+        [w h] (rcs->distance start end row-heights col-widths)]
+    [x y w h]))
 
 (defn- i->point [^js i g]
   (.getLocalPosition i g))
@@ -74,13 +79,13 @@
     (xy->rc [(.-x point) (.-y point)] row-heights col-widths)))
 
 (defn- cell-h [r cell row-heights]
-  (if-let [[bottom-r _] (get-in cell [:style :merged-until])]
-    (reduce + (subvec row-heights r (inc bottom-r)))
+  (if-let [[end-r _] (get-in cell [:style :merged-until])]
+    (rcs->distance r (inc end-r) row-heights)
     (nth row-heights r)))
 
 (defn- cell-w [c cell col-widths]
-  (if-let [[_ bottom-c] (get-in cell [:style :merged-until])]
-    (reduce + (subvec col-widths c (inc bottom-c)))
+  (if-let [[_ end-c] (get-in cell [:style :merged-until])]
+    (rcs->distance c (inc end-c) col-widths)
     (nth col-widths c)))
 
 (defn- submit-cell-input []
@@ -89,16 +94,13 @@
     ;; Reagent does not clear the element when input moves to a blank cell.
     (set! (.-innerHTML el) nil)))
 
-(defn- selection->rect [^js g {:keys [start end]} row-heights col-widths]
-  (when (not= start end)
-    (let [top-rc (util/top-left [start end])
-          [bottom-r bottom-c] (util/bottom-right [start end])
-          [top-x top-y] (rc->xy top-rc row-heights col-widths)
-          [w h] (span-w-h top-rc [bottom-r bottom-c] row-heights col-widths)
+(defn- selection->rect [^js g area row-heights col-widths]
+  (when-not (util/area-empty? area)
+    (let [[x y w h] (area->xywh area row-heights col-widths)
           color (:selection styles/colors)]
       (.beginFill g color (:selection-alpha styles/colors))
       (.lineStyle g (:selection-border styles/sizes) color 1 1)
-      (.drawRect g top-x top-y w h))))
+      (.drawRect g x y w h))))
 
 (defn- merged-or-self [[r c] grid]
   (or (get-in grid [r c :style :merged-with]) [r c]))
@@ -107,30 +109,30 @@
   (rf/dispatch-sync [::events/select-table (cell->table-name rc tables)])
   (rf/dispatch [::events/edit-cell (merged-or-self rc grid)]))
 
-(defn- grid-selection-end [{:keys [start end]} pixi-app]
+(defn- grid-selection-end [area pixi-app]
   (remove-listener! :grid-selection-move pixi-app)
   (remove-listener! :grid-selection-up pixi-app)
   (remove-listener! :grid-selection-up-outside pixi-app)
-  (rf/dispatch-sync [::events/set-selection {:start start :end end}]))
+  (rf/dispatch-sync [::events/set-selection area]))
 
-(defn- grid-selection-move [{:keys [start end]} row-heights col-widths pixi-app]
+(defn- grid-selection-move [area row-heights col-widths pixi-app]
   (.clear (:selection @pixi-app))
-  (selection->rect (:selection @pixi-app) {:start start :end end} row-heights col-widths))
+  (selection->rect (:selection @pixi-app) area row-heights col-widths))
 
 (defn- grid-selection-start [start grid-g row-heights col-widths pixi-app]
-  (let [i->selection #(let [rc (i->rc % grid-g row-heights col-widths)]
-                        {:start start :end rc})]
+  (let [i->area #(let [rc (i->rc % grid-g row-heights col-widths)]
+                   (util/bounds->area start rc))]
     (reset-listener!
      :grid-selection-move grid-g "globalpointermove"
-     #(grid-selection-move (i->selection %) row-heights col-widths pixi-app)
+     #(grid-selection-move (i->area %) row-heights col-widths pixi-app)
      pixi-app)
     (reset-listener!
      :grid-selection-up grid-g "pointerup"
-     #(grid-selection-end (i->selection %) pixi-app)
+     #(grid-selection-end (i->area %) pixi-app)
      pixi-app)
     (reset-listener!
      :grid-selection-up-outside grid-g "pointerupoutside"
-     #(grid-selection-end (i->selection %) pixi-app)
+     #(grid-selection-end (i->area %) pixi-app)
      pixi-app)))
 
 (defn- cell-pointer-down [rc grid-g grid tables row-heights col-widths pixi-app]
@@ -157,8 +159,7 @@
     (when (and (nat-int? move-to-r) (nat-int? move-to-c))
       (.preventDefault e)
       (submit-cell-input)
-      (edit-cell move-to-cell grid tables)
-      (rf/dispatch-sync [::events/set-selection {:start move-to-cell :end move-to-cell}]))))
+      (edit-cell move-to-cell grid tables))))
 
 (defn- center-text! [bitmap-text x y h w]
   (let [text-h (.-height bitmap-text)
@@ -331,10 +332,9 @@
    (util/map-on-matrix-addressed
     (fn [rc cell]
       (when-let [merged-until (get-in cell [:style :merged-until])]
-        (let [[top-x top-y] (rc->xy rc row-heights col-widths)
-              [bottom-x bottom-y] (span-w-h rc merged-until row-heights col-widths)]
+        (let [[x y w h] (area->xywh {:start rc :end merged-until} row-heights col-widths)]
           (.beginFill g (or (get-in cell [:style :background]) 0xffffff) 1)
-          (.drawRect g (+ top-x 0.25) (+ top-y 0.25) (- bottom-x 0.5) (- bottom-y 0.5)))))
+          (.drawRect g (+ x 0.25) (+ y 0.25) (- w 0.5) (- h 0.5)))))
     grid)
    g))
 
@@ -367,9 +367,8 @@
   ([^js g tables selected-table row-heights col-widths]
    (.removeChildren g)
    (.clear g)
-   (doseq [[table-name {:keys [start end]}] tables]
-     (let [[top-x top-y] (rc->xy start row-heights col-widths)
-           [w h] (span-w-h start end row-heights col-widths)
+   (doseq [[table-name area] tables]
+     (let [[top-x top-y w h] (area->xywh area row-heights col-widths)
            border (new pixi/Graphics)
            highlight (new pixi/Graphics)
            draw-highlight #(draw-table-highlight highlight table-name top-x top-y w h)
@@ -693,11 +692,11 @@
    pixi-app])
 
 (defn controls []
-  (let [{:keys [start end] :as selection} @(rf/subscribe [::subs/selection])]
+  (let [selection @(rf/subscribe [::subs/selection])]
     [:div {:class :controls-container}
      [:button {:class :controls-btn
                :on-click #(rf/dispatch [::events/toggle-cell-bold
-                                        (util/selection->addresses selection)])}
+                                        (util/area->addresses selection)])}
       "B"]
      [:div {:class :controls-background-buttons}
       (for [color styles/cell-background-colors]
@@ -708,14 +707,14 @@
                                               "transparent")}
                   :on-mouse-down #(when selection
                                     (rf/dispatch [::events/set-cell-backgrounds
-                                                  (util/selection->addresses selection)
+                                                  (util/area->addresses selection)
                                                   color]))} ""])]
      [:button {:class :controls-btn
-               :on-click #(rf/dispatch [::events/merge-cells start end])}
+               :on-click #(rf/dispatch [::events/merge-cells selection])}
       "Merge"]
      [:button {:class :controls-btn
                :on-click #(rf/dispatch [::events/unmerge-cells
-                                        (util/selection->addresses selection)])}
+                                        (util/area->addresses selection)])}
       "Unmerge"]]))
 
 (defonce ^:private pixi-app* (atom nil))

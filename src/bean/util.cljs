@@ -8,6 +8,9 @@
     contents
     {:error (str "Invalid address " address)}))
 
+(defn is-expression? [[node-type & _]]
+  (= node-type :Expression))
+
 (defn a1->rc [a n]
   (let [indexed-a (map vector (reverse a) (range))
         c (reduce (fn [total [alphabet i]]
@@ -54,10 +57,21 @@
    (apply max (map second addresses))])
 
 (defn addresses-matrix
-  [[start-row start-col] [end-row end-col]]
-  (for [r (range start-row (inc end-row))]
-    (for [c (range start-col (inc end-col))]
+  [[start-r start-c] [end-r end-c]]
+  (for [r (range start-r (inc end-r))]
+    (for [c (range start-c (inc end-c))]
       [r c])))
 
-(defn is-expression? [[node-type & _]]
-  (= node-type :Expression))
+(defn bounds->area [start end]
+  {:start (top-left [start end])
+   :end (bottom-right [start end])})
+
+(defn area->address-matrix [{:keys [start end]}]
+  (addresses-matrix start end))
+
+(defn area->addresses [area]
+  (mapcat identity (area->address-matrix area)))
+
+(defn area-empty? [{:keys [start end]}]
+  (= start end))
+

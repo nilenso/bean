@@ -10,8 +10,8 @@
             [clojure.string]
             [bean.parser.trellis-parser :as trellis-parser]))
 
-(defn- offset [[start-row start-col] [offset-rows offset-cols]]
-  [(+ start-row offset-rows) (+ start-col offset-cols)])
+(defn- offset [[start-r start-c] [offset-rows offset-cols]]
+  [(+ start-r offset-rows) (+ start-c offset-cols)])
 
 (defn- set-error [grid address error]
   (update-in grid
@@ -210,15 +210,13 @@
                  sheet)]
     (set-cell-style sheet* address :merged-with merge-with)))
 
-(defn merge-cells [sheet start end]
-  (let [merge-with (util/top-left [start end])
-        merged-until (util/bottom-right [start end])
-        addresses (mapcat identity (util/addresses-matrix merge-with merged-until))]
+(defn merge-cells [sheet {:keys [start end] :as area}]
+  (let [addresses (util/area->addresses area)]
     (if (some #(get-cell-style sheet % :merged-with) addresses)
       sheet
-      (->  (reduce #(merge-cell %1 %2 merge-with) sheet addresses)
-           (set-cell-style merge-with :merged-until merged-until)
-           (set-cell-style merge-with :merged-addresses addresses)))))
+      (->  (reduce #(merge-cell %1 %2 start) sheet addresses)
+           (set-cell-style start :merged-until end)
+           (set-cell-style start :merged-addresses addresses)))))
 
 (defn unmerge-cells [sheet addresses]
   (->> addresses
@@ -232,13 +230,11 @@
                 (unset-cell-style merged-with :merged-addresses))))
         sheet)))
 
-(defn make-table [sheet table-name start end]
+(defn make-table [sheet table-name area]
   ;; check if this overlaps with a table
   ;; return an error otherwise somewhere
-  (if-not (= start end)
-    (let [top-rc (util/top-left [start end])
-          bottom-rc (util/bottom-right [start end])]
-      (assoc-in sheet [:tables table-name] {:start top-rc :end bottom-rc}))
+  (if-not (util/area-empty? area)
+    (assoc-in sheet [:tables table-name] area)
     sheet))
 
 (defn eval-named
