@@ -4,7 +4,7 @@
             [bean.ui.subs :as subs]
             [bean.ui.features :as features]
             [re-frame.core :as rf]
-            [bean.ui.util :as util]))
+            [bean.grid :as grid]))
 
 (defn sidebar []
   (let [table-name (atom nil)]
@@ -31,7 +31,7 @@
                          :type :submit
                          :on-click #(rf/dispatch [::events/make-table @table-name selection])}
                 "Create Table"]])
-            (when-not (util/area-empty? selection)
+            (when-not (grid/area-empty? selection)
               [:button {:class :controls-btn
                         :on-click #(rf/dispatch [::events/making-table])}
                "Make Table"])]))

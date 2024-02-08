@@ -13,6 +13,27 @@
 (defn- offset [[start-r start-c] [offset-rows offset-cols]]
   [(+ start-r offset-rows) (+ start-c offset-cols)])
 
+(defn top-left [addresses]
+  [(apply min (map first addresses))
+   (apply min (map second addresses))])
+
+(defn bottom-right [addresses]
+  [(apply max (map first addresses))
+   (apply max (map second addresses))])
+
+(defn bounds->area [start end]
+  {:start (top-left [start end])
+   :end (bottom-right [start end])})
+
+(defn area->address-matrix [{:keys [start end]}]
+  (util/addresses-matrix start end))
+
+(defn area->addresses [area]
+  (mapcat identity (area->address-matrix area)))
+
+(defn area-empty? [{:keys [start end]}]
+  (= start end))
+
 (defn- set-error [grid address error]
   (update-in grid
              address
@@ -211,7 +232,7 @@
     (set-cell-style sheet* address :merged-with merge-with)))
 
 (defn merge-cells [sheet {:keys [start end] :as area}]
-  (let [addresses (util/area->addresses area)]
+  (let [addresses (area->addresses area)]
     (if (some #(get-cell-style sheet % :merged-with) addresses)
       sheet
       (->  (reduce #(merge-cell %1 %2 start) sheet addresses)
@@ -233,7 +254,7 @@
 (defn make-table [sheet table-name area]
   ;; check if this overlaps with a table
   ;; return an error otherwise somewhere
-  (if-not (util/area-empty? area)
+  (if-not (area-empty? area)
     (assoc-in sheet [:tables table-name] area)
     sheet))
 

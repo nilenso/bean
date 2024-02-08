@@ -1,9 +1,10 @@
 (ns bean.ui.views.sheet
-  (:require [bean.ui.events :as events]
+  (:require [bean.grid :as grid]
+            [bean.ui.events :as events]
+            [bean.ui.features :as features]
             [bean.ui.styles :as styles]
             [bean.ui.subs :as subs]
             [bean.ui.util :as util]
-            [bean.ui.features :as features]
             [clojure.string :as string]
             [pixi-viewport :as pixi-viewport]
             [pixi.js :as pixi]
@@ -95,7 +96,7 @@
     (set! (.-innerHTML el) nil)))
 
 (defn- selection->rect [^js g area row-heights col-widths]
-  (when-not (util/area-empty? area)
+  (when-not (grid/area-empty? area)
     (let [[x y w h] (area->xywh area row-heights col-widths)
           color (:selection styles/colors)]
       (.beginFill g color (:selection-alpha styles/colors))
@@ -121,7 +122,7 @@
 
 (defn- grid-selection-start [start grid-g row-heights col-widths pixi-app]
   (let [i->area #(let [rc (i->rc % grid-g row-heights col-widths)]
-                   (util/bounds->area start rc))]
+                   (grid/bounds->area start rc))]
     (reset-listener!
      :grid-selection-move grid-g "globalpointermove"
      #(grid-selection-move (i->area %) row-heights col-widths pixi-app)
@@ -696,7 +697,7 @@
     [:div {:class :controls-container}
      [:button {:class :controls-btn
                :on-click #(rf/dispatch [::events/toggle-cell-bold
-                                        (util/area->addresses selection)])}
+                                        (grid/area->addresses selection)])}
       "B"]
      [:div {:class :controls-background-buttons}
       (for [color styles/cell-background-colors]
@@ -707,14 +708,14 @@
                                               "transparent")}
                   :on-mouse-down #(when selection
                                     (rf/dispatch [::events/set-cell-backgrounds
-                                                  (util/area->addresses selection)
+                                                  (grid/area->addresses selection)
                                                   color]))} ""])]
      [:button {:class :controls-btn
                :on-click #(rf/dispatch [::events/merge-cells selection])}
       "Merge"]
      [:button {:class :controls-btn
                :on-click #(rf/dispatch [::events/unmerge-cells
-                                        (util/area->addresses selection)])}
+                                        (grid/area->addresses selection)])}
       "Unmerge"]]))
 
 (defonce ^:private pixi-app* (atom nil))
