@@ -1,5 +1,6 @@
 (ns bean.ui.events
   (:require [bean.grid :as grid]
+            [bean.tables :as tables]
             [bean.ui.provenance :as provenance]
             [bean.ui.db :as db]
             [re-frame.core :as rf]
@@ -102,9 +103,14 @@
  (fn make-table [{:keys [db]} [_ table-name area]]
    {:db (->  db
              (assoc-in [:ui :making-table] false)
-             (update-in [:sheet] #(grid/make-table % table-name area)))
+             (update-in [:sheet] #(tables/make-table % table-name area)))
     :fx [[:dispatch [::clear-selection]]
          [:dispatch [::select-table table-name]]]}))
+
+(rf/reg-event-db
+ ::add-label
+ (fn add-label [db [_ table-name rc dirn]]
+   (update-in db [:sheet] #(tables/add-label % table-name rc dirn))))
 
 (rf/reg-event-db
  ::clear-selection

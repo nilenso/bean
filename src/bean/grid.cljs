@@ -36,25 +36,14 @@
   (= start end))
 
 (defn overlap? [area-a area-b]
-  (let [{[a-r1 a-c1] :start [a-r2 a-c2] :end} area-a
-        {[b-r1 b-c1] :start [b-r2 b-c2] :end} area-b]
+  (let [{[a-x1 a-y1] :start [a-x2 a-y2] :end} area-a
+        {[b-x1 b-y1] :start [b-x2 b-y2] :end} area-b]
     (not
-     (or (< a-r2 b-r1)
-         (< a-c2 b-c1)
-         (> a-r1 b-r2)
-         (> a-c1 b-c2)))))
+     (or (< a-x2 b-x1)
+         (> a-x1 b-x2)
+         (< a-y2 b-y1)
+         (> a-y1 b-y2)))))
 
-(defn cell->table-name [[r c] tables]
-  (some
-   (fn [[table-name {:keys [start end]}]]
-     (let [[start-r start-c] start
-           [end-r end-c] end]
-       (when (and (>= r start-r)
-                  (<= r end-r)
-                  (>= c start-c)
-                  (<= c end-c))
-         table-name)))
-   tables))
 ;; end of TODO: consider moving them somewhere 
 
 (defn- set-error [grid address error]
@@ -273,14 +262,6 @@
                 (unset-cell-style merged-with :merged-until)
                 (unset-cell-style merged-with :merged-addresses))))
         sheet)))
-
-(defn make-table [sheet table-name area]
-  (if (and (not (area-empty? area))
-           (not (some
-                 #(overlap? % area)
-                 (vals (:tables sheet)))))
-    (assoc-in sheet [:tables table-name] area)
-    sheet))
 
 (defn eval-named
   ([name {:keys [bindings] :as sheet}]

@@ -1,5 +1,6 @@
 (ns bean.ui.views.sheet
   (:require [bean.grid :as grid]
+            [bean.tables :as tables]
             [bean.ui.events :as events]
             [bean.ui.features :as features]
             [bean.ui.styles :as styles]
@@ -95,7 +96,7 @@
   (or (get-in grid [r c :style :merged-with]) [r c]))
 
 (defn- edit-cell [rc grid tables]
-  (rf/dispatch-sync [::events/select-table (grid/cell->table-name rc tables)])
+  (rf/dispatch-sync [::events/select-table (tables/cell-table rc tables)])
   (rf/dispatch [::events/edit-cell (merged-or-self rc grid)]))
 
 (defn- grid-selection-end [area pixi-app]
