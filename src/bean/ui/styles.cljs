@@ -14,7 +14,7 @@
                       :table-border 0xaaaaaa
                       :table-highlight 0x3b5aa3
                       :table-highlight-hover 0x8190b5
-                      :table-label 0xffffff})
+                      :table-name 0xffffff})
 
 (def colors light)
 
@@ -33,8 +33,8 @@
             :selection-border 1.5
             :table-border 1
             :table-highlight 2
-            :table-label-font 12
-            :table-label-padding 3})
+            :table-name-font 12
+            :table-name-padding 3})
 
 (def cell-background-colors
   [nil 0xcccccc 0xffc9c9 0xb2f2bb 0xa5d8ff 0xffec99])

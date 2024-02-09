@@ -27,18 +27,6 @@
   (remove-listener! name pixi-app)
   (add-listener! name g event f pixi-app))
 
-(defn- cell->table-name [[r c] tables]
-  (some
-   (fn [[table-name {:keys [start end]}]]
-     (let [[start-r start-c] start
-           [end-r end-c] end]
-       (when (and (>= r start-r)
-                  (<= r end-r)
-                  (>= c start-c)
-                  (<= c end-c))
-         table-name)))
-   tables))
-
 (defn px->index [px offsets]
   (if (> px (reduce + offsets))
     -1
@@ -62,7 +50,7 @@
 
 (defn rcs->distance
   ([index1 index2 offsets]
-   (reduce + (subvec offsets index1 index2)))
+   (apply + (subvec offsets index1 index2)))
   ([[top-r top-c] [bottom-r bottom-c] row-heights col-widths]
    [(rcs->distance top-c (inc bottom-c) col-widths)
     (rcs->distance top-r (inc bottom-r) row-heights)]))
@@ -107,7 +95,7 @@
   (or (get-in grid [r c :style :merged-with]) [r c]))
 
 (defn- edit-cell [rc grid tables]
-  (rf/dispatch-sync [::events/select-table (cell->table-name rc tables)])
+  (rf/dispatch-sync [::events/select-table (grid/cell->table-name rc tables)])
   (rf/dispatch [::events/edit-cell (merged-or-self rc grid)]))
 
 (defn- grid-selection-end [area pixi-app]
@@ -340,17 +328,17 @@
    g))
 
 (defn- draw-table-highlight [^js g table-name x y w h & [hover?]]
-  (let [font-size (:table-label-font styles/sizes)
+  (let [font-size (:table-name-font styles/sizes)
         text-bitmap (new pixi/BitmapText table-name
                          #js {:fontName "SpaceGrotesk"
-                              :tint (:table-label styles/colors)
+                              :tint (:table-name styles/colors)
                               :fontSize font-size})
         color (if hover?
                 (:table-highlight-hover styles/colors)
                 (:table-highlight styles/colors))
-        padding (:table-label-padding styles/sizes)
+        padding (:table-name-padding styles/sizes)
         padded #(+ (* 2 padding) %)]
-    (.lineStyle g 2 color 1 0.5)
+    (.lineStyle g (:table-highlight styles/sizes) color 1 0.5)
     (.drawRect g x y w h)
     (.beginFill g color 1)
     (.drawRect g x
@@ -366,33 +354,30 @@
 (defn- draw-tables
   ([] (new pixi/Graphics))
   ([^js g tables selected-table row-heights col-widths]
-   (.removeChildren g)
-   (.clear g)
+   (-> g (.clear) (.removeChildren))
    (doseq [[table-name area] tables]
-     (let [[top-x top-y w h] (area->xywh area row-heights col-widths)
+     (let [[x y w h] (area->xywh area row-heights col-widths)
            border (new pixi/Graphics)
            highlight (new pixi/Graphics)
-           draw-highlight #(draw-table-highlight highlight table-name top-x top-y w h)
+           draw-highlight #(draw-table-highlight highlight table-name x y w h)
            highlight-on-hover
            (fn []
-             (.on border "pointerout" #(-> highlight (.clear) (.removeChildren)))
-             (.on border "pointerover" #(draw-table-highlight
-                                         highlight
-                                         table-name
-                                         top-x top-y w h true)))]
-       (.addChild g border)
-       (.addChild border highlight)
+             (.on border "pointerover"
+                  #(draw-table-highlight highlight table-name x y w h true))
+             (.on border "pointerout"
+                  #(-> highlight (.clear) (.removeChildren))))
+           extra-hitarea-y (+ (* 2 (:table-name-padding styles/sizes))
+                              (:table-name-font styles/sizes))]
+       (-> g (.addChild border) (.addChild highlight))
        (set! (.-eventMode border) "static")
        (set! (.-hitArea border) (new pixi/Rectangle
-                                     top-x
-                                     (- top-y (+ (* 2 (:table-label-padding styles/sizes))
-                                                 (:table-label-font styles/sizes)))
-                                     w h))
+                                     x (- y extra-hitarea-y)
+                                     w (+ h extra-hitarea-y)))
        (if (= selected-table table-name)
          (draw-highlight)
          (highlight-on-hover))
-       (.lineStyle border (:table-border styles/sizes) (:table-border styles/colors) 1 1)
-       (.drawRect border top-x top-y w h)))))
+       (.lineStyle border (:table-border styles/sizes) (:table-border styles/colors) 1 0.5)
+       (.drawRect border x y w h)))))
 
 (defn- draw-cell-backgrounds
   ([] (let [g (new pixi/Graphics)]

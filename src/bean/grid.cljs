@@ -13,6 +13,7 @@
 (defn- offset [[start-r start-c] [offset-rows offset-cols]]
   [(+ start-r offset-rows) (+ start-c offset-cols)])
 
+;; TODO: consider moving them somewhere 
 (defn top-left [addresses]
   [(apply min (map first addresses))
    (apply min (map second addresses))])
@@ -33,6 +34,28 @@
 
 (defn area-empty? [{:keys [start end]}]
   (= start end))
+
+(defn overlap? [area-a area-b]
+  (let [{[a-r1 a-c1] :start [a-r2 a-c2] :end} area-a
+        {[b-r1 b-c1] :start [b-r2 b-c2] :end} area-b]
+    (not
+     (or (< a-r2 b-r1)
+         (< a-c2 b-c1)
+         (> a-r1 b-r2)
+         (> a-c1 b-c2)))))
+
+(defn cell->table-name [[r c] tables]
+  (some
+   (fn [[table-name {:keys [start end]}]]
+     (let [[start-r start-c] start
+           [end-r end-c] end]
+       (when (and (>= r start-r)
+                  (<= r end-r)
+                  (>= c start-c)
+                  (<= c end-c))
+         table-name)))
+   tables))
+;; end of TODO: consider moving them somewhere 
 
 (defn- set-error [grid address error]
   (update-in grid
@@ -252,9 +275,10 @@
         sheet)))
 
 (defn make-table [sheet table-name area]
-  ;; check if this overlaps with a table
-  ;; return an error otherwise somewhere
-  (if-not (area-empty? area)
+  (if (and (not (area-empty? area))
+           (not (some
+                 #(overlap? % area)
+                 (vals (:tables sheet)))))
     (assoc-in sheet [:tables table-name] area)
     sheet))
 

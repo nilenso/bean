@@ -1,3 +1,3 @@
 (ns bean.ui.features)
 
-(def show-control-bar true)
+(def show-control-bar false)
