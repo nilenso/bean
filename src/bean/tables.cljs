@@ -76,12 +76,16 @@
   (let [{:keys [end] :as table} (get-table sheet table-name)
         [table-end-r table-end-c] end
         {:keys [dirn]} (get-in table [:labels label])]
-    ;; remove self (including cells under merge bounds) from this list
-    (grid/area->addresses
-     {:start label
-      :end (let [[br bc] (blocking-label sheet table-name label)]
-             (case dirn
-               :top [(if br (dec br) table-end-r)
-                     (min (last-col label sheet) table-end-c)]
-               :left [(min (last-row label sheet) table-end-r)
-                      (if bc (dec bc) table-end-c)]))})))
+    (as->
+     (grid/area->addresses
+      {:start label
+       :end (let [[br bc] (blocking-label sheet table-name label)]
+              (case dirn
+                :top [(if br (dec br) table-end-r)
+                      (min (last-col label sheet) table-end-c)]
+                :left [(min (last-row label sheet) table-end-r)
+                       (if bc (dec bc) table-end-c)]))}) cells
+      (apply disj cells (filter #(get (:labels table) %) cells))
+      (apply disj cells
+             (get-in (util/get-cell (:grid sheet) label)
+                     [:style :merged-addresses])))))
