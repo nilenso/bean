@@ -79,7 +79,8 @@
  ::edit-cell
  (fn edit-cell [{:keys [db]} [_ rc]]
    {:db (assoc-in db [:ui :grid :editing-cell] rc)
-    :fx [[::focus-element "cell-input"]]}))
+    :fx [[:dispatch [::set-selection {:start rc :end rc}]]
+         [::focus-element "cell-input"]]}))
 
 (rf/reg-event-db
  ::set-selection
@@ -108,18 +109,15 @@
          [:dispatch [::select-table table-name]]]}))
 
 (rf/reg-event-db
- ::add-label
- (fn add-label [db [_ table-name rc dirn color]]
-   (update-in
-    db [:sheet]
-    #(tables/add-label % table-name rc dirn color))))
+ ::add-labels
+ (fn add-labels [db [_ table-name addresses dirn]]
+   (update-in db [:sheet]
+              #(tables/add-labels % table-name addresses dirn))))
 
 (rf/reg-event-db
- ::remove-label
- (fn add-label [db [_ table-name rc]]
-   (update-in
-    db [:sheet]
-    #(tables/remove-label % table-name rc))))
+ ::remove-labels
+ (fn remove-labels [db [_ table-name addresses]]
+   (update-in db [:sheet] #(tables/remove-labels % table-name addresses))))
 
 (rf/reg-event-db
  ::clear-selection

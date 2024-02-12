@@ -27,8 +27,11 @@
   (when (= (cell-table rc sheet) table-name)
     (assoc-in sheet [:tables table-name :labels rc] {:dirn dirn :color color})))
 
-(defn remove-label [sheet table-name rc]
-  (update-in sheet [:tables table-name :labels] dissoc rc))
+(defn add-labels [sheet table-name addresses dirn]
+  (reduce #(add-label %1 table-name %2 dirn (util/random-color-hex)) sheet addresses))
+
+(defn remove-labels [sheet table-name addresses]
+  (reduce #(update-in % [:tables table-name :labels] dissoc %2) sheet addresses))
 
 (defn get-table [sheet table-name]
   (get-in sheet [:tables table-name]))

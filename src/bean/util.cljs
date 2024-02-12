@@ -53,3 +53,8 @@
   (for [r (range start-r (inc end-r))]
     (for [c (range start-c (inc end-c))]
       [r c])))
+
+(defn random-color-hex []
+  (+ (bit-shift-left (rand-int 256) 16)
+     (bit-shift-left (rand-int 256) 8)
+     (rand-int 256)))
