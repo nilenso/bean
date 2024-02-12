@@ -13,7 +13,7 @@
 (defn add-label [sheet table-name rc dirn]
   (update-in sheet [:tables table-name :labels] conj {:address rc :dirn dirn}))
 
-(defn cell-table [[r c] tables]
+(defn cell-table [[r c] sheet]
   (some
    (fn [[table-name {:keys [start end]}]]
      (let [[start-r start-c] start
@@ -23,4 +23,4 @@
                   (>= c start-c)
                   (<= c end-c))
          table-name)))
-   tables))
+   (:tables sheet)))

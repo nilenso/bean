@@ -92,12 +92,12 @@
       (.lineStyle g (:selection-border styles/sizes) color 1 1)
       (.drawRect g x y w h))))
 
-(defn- merged-or-self [[r c] grid]
-  (or (get-in grid [r c :style :merged-with]) [r c]))
+(defn- merged-or-self [[r c] sheet]
+  (or (get-in sheet [:grid r c :style :merged-with]) [r c]))
 
-(defn- edit-cell [rc grid tables]
-  (rf/dispatch-sync [::events/select-table (tables/cell-table rc tables)])
-  (rf/dispatch [::events/edit-cell (merged-or-self rc grid)]))
+(defn- edit-cell [rc sheet]
+  (rf/dispatch-sync [::events/select-table (tables/cell-table rc sheet)])
+  (rf/dispatch [::events/edit-cell (merged-or-self rc sheet)]))
 
 (defn- grid-selection-end [area pixi-app]
   (remove-listener! :grid-selection-move pixi-app)
@@ -125,21 +125,21 @@
      #(grid-selection-end (i->area %) pixi-app)
      pixi-app)))
 
-(defn- cell-pointer-down [rc grid-g grid tables row-heights col-widths pixi-app]
+(defn- cell-pointer-down [rc grid-g sheet row-heights col-widths pixi-app]
   (submit-cell-input)
   (rf/dispatch [::events/clear-selection])
-  (edit-cell rc grid tables)
+  (edit-cell rc sheet)
   (grid-selection-start
-   (merged-or-self rc grid)
+   (merged-or-self rc sheet)
    grid-g row-heights col-widths pixi-app))
 
-(defn- grid-pointer-down [i grid-g grid tables row-heights col-widths pixi-app]
+(defn- grid-pointer-down [i grid-g sheet row-heights col-widths pixi-app]
   (let [rc (i->rc i grid-g row-heights col-widths)]
-    (cell-pointer-down rc grid-g grid tables row-heights col-widths pixi-app)))
+    (cell-pointer-down rc grid-g sheet row-heights col-widths pixi-app)))
 
 ;; TODO: use the reframe keyboard library here
-(defn- handle-cell-navigation [e [r c] grid tables]
-  (let [[mr mc] (get-in grid [r c :style :merged-until])
+(defn- handle-cell-navigation [e [r c] sheet]
+  (let [[mr mc] (get-in sheet [:grid r c :style :merged-until])
         move-to-cell (cond
                        (and (= (.-keyCode e) 13) (.-shiftKey e)) [(dec r) c]
                        (and (= (.-keyCode e) 9) (.-shiftKey e)) [r (dec c)]
@@ -149,7 +149,7 @@
     (when (and (nat-int? move-to-r) (nat-int? move-to-c))
       (.preventDefault e)
       (submit-cell-input)
-      (edit-cell move-to-cell grid tables))))
+      (edit-cell move-to-cell sheet))))
 
 (defn- center-text! [bitmap-text x y h w]
   (let [text-h (.-height bitmap-text)
@@ -317,7 +317,7 @@
 (defn- draw-merged-cells
   ([]
    (let [g (new pixi/Graphics)] g))
-  ([^js g grid row-heights col-widths]
+  ([^js g {:keys [grid]} row-heights col-widths]
    (.clear g)
    (util/map-on-matrix-addressed
     (fn [rc cell]
@@ -354,7 +354,7 @@
 
 (defn- draw-tables
   ([] (new pixi/Graphics))
-  ([^js g tables selected-table row-heights col-widths]
+  ([^js g {:keys [tables]} selected-table row-heights col-widths]
    (-> g (.clear) (.removeChildren))
    (doseq [[table-name area] tables]
      (let [[x y w h] (area->xywh area row-heights col-widths)
@@ -386,7 +386,7 @@
         (set! (.. g -position -y) (:cell-h styles/sizes))
         (set! (.-interactiveChildren g) false)
         g))
-  ([^js g grid row-heights col-widths]
+  ([^js g {:keys [grid]} row-heights col-widths]
    (.clear g)
    (let [xs (reductions + 0 col-widths)
          ys (reductions + 0 row-heights)]
@@ -479,7 +479,7 @@
 
 (defn- draw-cell-text
   ([] (new pixi/Graphics))
-  ([^js g grid row-heights col-widths]
+  ([^js g {:keys [grid]} row-heights col-widths]
    (.removeChildren g)
    (let [xs (reductions + 0 col-widths)
          ys (reductions + 0 row-heights)]
@@ -506,7 +506,7 @@
      (set! (.. g -position -x) (:heading-left-width styles/sizes))
      (set! (.. g -position -y) (:cell-h styles/sizes))
      g))
-  ([g grid tables row-heights col-widths pixi-app]
+  ([g sheet row-heights col-widths pixi-app]
    (letfn [(grid-line*
              [sx sy ex ey]
              (grid-line g sx sy ex ey))
@@ -515,7 +515,7 @@
      (.clear g)
      (reset-listener!
       :grid-pointerdown g "pointerdown"
-      #(grid-pointer-down % g grid tables row-heights col-widths pixi-app)
+      #(grid-pointer-down % g sheet row-heights col-widths pixi-app)
       pixi-app)
      (dorun (->> row-heights (reductions +) (map draw-horizontal)))
      (dorun (->> col-widths (reductions +) (map draw-vertical)))
@@ -561,16 +561,15 @@
       (.then (.loadBundle pixi/Assets "fonts") cb))
     (cb)))
 
-(defn repaint [sheet {:keys [grid]} pixi-app]
+(defn repaint [sheet {grid-ui :grid} pixi-app]
   (let [{:keys [row-heights col-widths]} (:grid-dimensions sheet)
-        {:keys [selection selected-table]} grid
         v (:viewport @pixi-app)]
-    (draw-grid (:grid @pixi-app) (:grid sheet) (:tables sheet) row-heights col-widths pixi-app)
-    (draw-merged-cells (:merged-cells @pixi-app) (:grid sheet) row-heights col-widths)
-    (draw-cell-backgrounds (:cell-backgrounds @pixi-app) (:grid sheet) row-heights col-widths)
-    (draw-cell-text (:cell-text @pixi-app) (:grid sheet) row-heights col-widths)
-    (draw-tables (:tables @pixi-app) (:tables sheet) selected-table row-heights col-widths)
-    (draw-selection (:selection @pixi-app) selection row-heights col-widths)
+    (draw-grid (:grid @pixi-app) sheet row-heights col-widths pixi-app)
+    (draw-merged-cells (:merged-cells @pixi-app) sheet row-heights col-widths)
+    (draw-cell-backgrounds (:cell-backgrounds @pixi-app) sheet row-heights col-widths)
+    (draw-cell-text (:cell-text @pixi-app) sheet row-heights col-widths)
+    (draw-tables (:tables @pixi-app) sheet (:selected-table grid-ui) row-heights col-widths)
+    (draw-selection (:selection @pixi-app) (:selection grid-ui) row-heights col-widths)
     (draw-top-heading (:top-heading @pixi-app) col-widths v)
     (draw-left-heading (:left-heading @pixi-app) row-heights v)
     (draw-corner (:corner @pixi-app) v)))
@@ -645,7 +644,7 @@
                       :minWidth (cell-w c cell col-widths)
                       :background-color (when background (util/color-int->hex background))
                       :fontWeight (if bold? "bold" "normal")}
-              :on-key-down #(handle-cell-navigation % [r c] (:grid @sheet) (:tables @sheet))}
+              :on-key-down #(handle-cell-navigation % [r c] @sheet)}
        (:content cell)])))
 
 (defn- canvas* []
