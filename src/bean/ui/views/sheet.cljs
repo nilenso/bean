@@ -352,12 +352,39 @@
     (.addChild g text-bitmap)
     g))
 
+(defn- draw-label-bounds [sheet table-name labels row-heights col-widths]
+  (let [xs (reductions + 0 col-widths)
+        ys (reductions + 0 row-heights)
+        g (new pixi/Graphics)]
+    (doseq [[label {:keys [color dirn]}] labels]
+      (doseq [[r c] (tables/label->cells sheet table-name label)]
+        (.beginFill g color 0.2)
+        (.drawRect g
+                   (nth xs c) (nth ys r)
+                   (nth col-widths c) (nth row-heights r))
+        (.beginFill g color 0.5)
+        (case dirn
+          :top (.drawRect g
+                          (+ (nth xs c) (* (first label) 2)) (nth ys r)
+                          4 (nth row-heights r))
+          :left (.drawRect g
+                           (nth xs c) (+ (nth ys r) (* (second label) 2))
+                           (nth col-widths c) 4)))
+      (let [[r c] label]
+        (.beginFill g color 0.5)
+        (.drawRect g
+                   (nth xs c) (nth ys r)
+                   (cell-w c (get-in sheet [:grid r c]) col-widths)
+                   (cell-h r (get-in sheet [:grid r c]) row-heights))))
+    g))
+
 (defn- draw-tables
   ([] (new pixi/Graphics))
-  ([^js g {:keys [tables]} selected-table row-heights col-widths]
+  ([^js g {:keys [tables] :as sheet} selected-table row-heights col-widths]
    (-> g (.clear) (.removeChildren))
    (doseq [[table-name area] tables]
      (let [[x y w h] (area->xywh area row-heights col-widths)
+           show-label-bounds true
            border (new pixi/Graphics)
            highlight (new pixi/Graphics)
            draw-highlight #(draw-table-highlight highlight table-name x y w h)
@@ -370,15 +397,18 @@
            extra-hitarea-y (+ (* 2 (:table-name-padding styles/sizes))
                               (:table-name-font styles/sizes))]
        (-> g (.addChild border) (.addChild highlight))
+       (when show-label-bounds
+         (.addChild g (draw-label-bounds sheet table-name (:labels area) row-heights col-widths)))
        (set! (.-eventMode border) "static")
        (set! (.-hitArea border) (new pixi/Rectangle
                                      x (- y extra-hitarea-y)
                                      w (+ h extra-hitarea-y)))
+       (.lineStyle border (:table-border styles/sizes) (:table-border styles/colors) 1 0.5)
+       (.drawRect border x y w h)
+
        (if (= selected-table table-name)
          (draw-highlight)
-         (highlight-on-hover))
-       (.lineStyle border (:table-border styles/sizes) (:table-border styles/colors) 1 0.5)
-       (.drawRect border x y w h)))))
+         (highlight-on-hover))))))
 
 (defn- draw-cell-backgrounds
   ([] (let [g (new pixi/Graphics)]

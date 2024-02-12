@@ -3,10 +3,12 @@
                                eval-sheet
                                eval-code
                                eval-cell
-                               new-sheet]]
+                               new-sheet
+                               merge-cells]]
             [bean.deps :refer [make-depgraph]]
             [bean.util :as util]
-            [clojure.test :refer [deftest testing is]]))
+            [clojure.test :refer [deftest testing is]]
+            [bean.grid :as grid]))
 
 (deftest evaluator-test
   (testing "Basic evaluation"
@@ -326,3 +328,14 @@
              (eval-sheet sheet)
              (eval-cell [0 1] sheet "=addaone+20")
              (get-in sheet [:depgraph]))))))
+
+(deftest merge-cells-test
+  (testing "Merges cells given an area"
+    (let [sheet (-> (new-sheet (repeat 5 (repeat 5 "")) "")
+                    eval-sheet
+                    (grid/merge-cells {:start [0 0] :end [1 2]}))]
+      (is (= (get-in sheet [:grid 0 0 :style]) {:merged-with [0 0]
+                                                :merged-until [1 2]
+                                                :merged-addresses #{[0 0] [0 1] [0 2] [1 0] [1 1] [1 2]}}))
+      (is (= (grid/cell-h sheet [0 0]) 2))
+      (is (= (grid/cell-w sheet [0 0]) 3)))))

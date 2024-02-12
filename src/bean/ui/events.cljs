@@ -109,8 +109,17 @@
 
 (rf/reg-event-db
  ::add-label
- (fn add-label [db [_ table-name rc dirn]]
-   (update-in db [:sheet] #(tables/add-label % table-name rc dirn))))
+ (fn add-label [db [_ table-name rc dirn color]]
+   (update-in
+    db [:sheet]
+    #(tables/add-label % table-name rc dirn color))))
+
+(rf/reg-event-db
+ ::remove-label
+ (fn add-label [db [_ table-name rc]]
+   (update-in
+    db [:sheet]
+    #(tables/remove-label % table-name rc))))
 
 (rf/reg-event-db
  ::clear-selection

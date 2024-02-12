@@ -27,3 +27,8 @@
 
 (defn color-int->hex [color]
   (str "#" (.toString color 16)))
+
+(defn random-color-hex []
+  (+ (bit-shift-left (rand-int 256) 16)
+     (bit-shift-left (rand-int 256) 8)
+     (rand-int 256)))

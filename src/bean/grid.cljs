@@ -30,19 +30,29 @@
   (util/addresses-matrix start end))
 
 (defn area->addresses [area]
-  (mapcat identity (area->address-matrix area)))
+  (set (mapcat identity (area->address-matrix area))))
 
 (defn area-empty? [{:keys [start end]}]
   (= start end))
 
 (defn overlap? [area-a area-b]
-  (let [{[a-x1 a-y1] :start [a-x2 a-y2] :end} area-a
-        {[b-x1 b-y1] :start [b-x2 b-y2] :end} area-b]
+  (let [{[a-r1 a-c1] :start [a-r2 a-c2] :end} area-a
+        {[b-r1 b-c1] :start [b-r2 b-c2] :end} area-b]
     (not
-     (or (< a-x2 b-x1)
-         (> a-x1 b-x2)
-         (< a-y2 b-y1)
-         (> a-y1 b-y2)))))
+     (or (< a-r2 b-r1)
+         (> a-r1 b-r2)
+         (< a-c2 b-c1)
+         (> a-c1 b-c2)))))
+
+(defn cell-h [sheet [r c]]
+  (let [cell (util/get-cell (:grid sheet) [r c])
+        [end-r _] (get-in cell [:style :merged-until])]
+    (if end-r (inc (- end-r r)) 1)))
+
+(defn cell-w [sheet [r c]]
+  (let [cell (util/get-cell (:grid sheet) [r c])
+        [_ end-c] (get-in cell [:style :merged-until])]
+    (if end-c (inc (- end-c c)) 1)))
 
 ;; end of TODO: consider moving them somewhere 
 
@@ -243,6 +253,8 @@
                  sheet)]
     (set-cell-style sheet* address :merged-with merge-with)))
 
+;; TODO: when a cell is merged
+;; if any of the cells is a label, make the merged cell a label also
 (defn merge-cells [sheet {:keys [start end] :as area}]
   (let [addresses (area->addresses area)]
     (if (some #(get-cell-style sheet % :merged-with) addresses)
