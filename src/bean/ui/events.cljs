@@ -83,6 +83,11 @@
          [::focus-element "cell-input"]]}))
 
 (rf/reg-event-db
+ ::clear-edit-cell
+ (fn clear-edit-cell [db [_]]
+   (assoc-in db [:ui :grid :editing-cell] nil)))
+
+(rf/reg-event-db
  ::set-selection
  (fn [db [_ selection]]
    (assoc-in db [:ui :grid :selection] selection)))
@@ -122,7 +127,7 @@
 (rf/reg-event-db
  ::clear-selection
  (fn [db [_]]
-   (assoc-in db [:ui :grid :selection] nil)))
+   (assoc-in db [:ui :grid :editing-cell] nil)))
 
 (rf/reg-event-db
  ::explain

@@ -85,7 +85,7 @@
     (set! (.-innerHTML el) nil)))
 
 (defn- selection->rect [^js g area row-heights col-widths]
-  (when-not (grid/area-empty? area)
+  (when (:start area)
     (let [[x y w h] (area->xywh area row-heights col-widths)
           color (:selection styles/colors)]
       (.beginFill g color (:selection-alpha styles/colors))
@@ -352,24 +352,65 @@
     (.addChild g text-bitmap)
     g))
 
+(defn- button! [sprite ^js g x y w on-click]
+  (set! (.-eventMode sprite) "static")
+  (set! (.-cursor sprite) "pointer")
+  (.on sprite "pointerdown" #(do
+                               (on-click)
+                               (.stopPropagation %1)))
+  (set! (.-x sprite) x)
+  (set! (.-y sprite) y)
+  (set! (.-width sprite) w)
+  (set! (.-height sprite) (* (/ w (.. sprite -texture -baseTexture -width))
+                             (.. sprite -texture -baseTexture -height)))
+  (.addChild g sprite)
+  sprite)
+
+(defn- remove-label [table-name selection]
+  (rf/dispatch [::events/clear-edit-cell])
+  (rf/dispatch [::events/remove-labels table-name
+                (grid/area->addresses selection)]))
+
+(defn- add-label [table-name selection dirn]
+  (rf/dispatch [::events/clear-edit-cell])
+  (rf/dispatch [::events/add-labels table-name
+                (grid/area->addresses selection) dirn]))
+
+(defn- draw-label-controls [icons table-name selection]
+  (let [g (new pixi/Graphics)]
+    (.lineStyle g 2 0xcccccc 1 0.5)
+    (.beginFill g 0xffffff)
+    (.drawRoundedRect g 0 0 30 82 5)
+    (set! (.-eventMode g) "static")
+    (.on g "pointerdown" #(.stopPropagation %))
+    (button! (new pixi/Sprite (:add-top-label icons))
+             g 5 5 20
+             #(add-label table-name selection :top))
+    (button! (new pixi/Sprite (:add-left-label icons))
+             g 5 30 20
+             #(add-label table-name selection :left))
+    (button! (new pixi/Sprite (:trash-label icons))
+             g 5 55 20
+             #(remove-label table-name selection))
+    g))
+
 (defn- draw-label-bounds [sheet table-name labels row-heights col-widths]
   (let [xs (reductions + 0 col-widths)
         ys (reductions + 0 row-heights)
         g (new pixi/Graphics)]
-    (doseq [[label {:keys [color dirn]}] labels]
+    (doseq [[[label-r label-c :as label] {:keys [color dirn]}] labels]
       (doseq [[r c] (tables/label->cells sheet table-name label)]
         (.beginFill g color 0.2)
-        (.drawRect g
-                   (nth xs c) (nth ys r)
-                   (nth col-widths c) (nth row-heights r))
         (.beginFill g color 0.5)
         (case dirn
-          :top (.drawRect g
-                          (+ (nth xs c) (* (first label) 2)) (nth ys r)
-                          4 (nth row-heights r))
-          :left (.drawRect g
-                           (nth xs c) (+ (nth ys r) (* (second label) 2))
-                           (nth col-widths c) 4)))
+          :top (when (= c label-c)
+                 (.drawRect g
+                            (+ (nth xs c) (* (first label) 1.5)) (nth ys r)
+                            4 (nth row-heights r)))
+          :left (when (= r label-r)
+                  (.drawRect g
+                             (nth xs c) (+ (nth ys r) (* (second label) 2))
+                             (nth col-widths c) 4))))
       (let [[r c] label]
         (.beginFill g color 0.5)
         (.drawRect g
@@ -380,14 +421,12 @@
 
 (defn- draw-tables
   ([] (new pixi/Graphics))
-  ([^js g {:keys [tables] :as sheet} selected-table row-heights col-widths]
+  ([^js g icons {:keys [tables] :as sheet} {:keys [selection selected-table]} row-heights col-widths]
    (-> g (.clear) (.removeChildren))
-   (doseq [[table-name area] tables]
-     (let [[x y w h] (area->xywh area row-heights col-widths)
-           show-label-bounds true
+   (doseq [[table-name table-data] tables]
+     (let [[x y w h] (area->xywh table-data row-heights col-widths)
            border (new pixi/Graphics)
            highlight (new pixi/Graphics)
-           draw-highlight #(draw-table-highlight highlight table-name x y w h)
            highlight-on-hover
            (fn []
              (.on border "pointerover"
@@ -397,8 +436,6 @@
            extra-hitarea-y (+ (* 2 (:table-name-padding styles/sizes))
                               (:table-name-font styles/sizes))]
        (-> g (.addChild border) (.addChild highlight))
-       (when show-label-bounds
-         (.addChild g (draw-label-bounds sheet table-name (:labels area) row-heights col-widths)))
        (set! (.-eventMode border) "static")
        (set! (.-hitArea border) (new pixi/Rectangle
                                      x (- y extra-hitarea-y)
@@ -407,7 +444,12 @@
        (.drawRect border x y w h)
 
        (if (= selected-table table-name)
-         (draw-highlight)
+         (let [label-controls (draw-label-controls icons table-name selection)]
+           (draw-table-highlight highlight table-name x y w h)
+           (.addChild g (draw-label-bounds sheet table-name (:labels table-data) row-heights col-widths))
+           (.addChild g label-controls)
+           (set! (.-x label-controls) (+ x w 5))
+           (set! (.-y label-controls) y))
          (highlight-on-hover))))))
 
 (defn- draw-cell-backgrounds
@@ -598,7 +640,7 @@
     (draw-merged-cells (:merged-cells @pixi-app) sheet row-heights col-widths)
     (draw-cell-backgrounds (:cell-backgrounds @pixi-app) sheet row-heights col-widths)
     (draw-cell-text (:cell-text @pixi-app) sheet row-heights col-widths)
-    (draw-tables (:tables @pixi-app) sheet (:selected-table grid-ui) row-heights col-widths)
+    (draw-tables (:tables @pixi-app) (:icons @pixi-app) sheet grid-ui row-heights col-widths)
     (draw-selection (:selection @pixi-app) (:selection grid-ui) row-heights col-widths)
     (draw-top-heading (:top-heading @pixi-app) col-widths v)
     (draw-left-heading (:left-heading @pixi-app) row-heights v)
@@ -629,7 +671,10 @@
                :cell-text cell-text
                :top-heading top-heading
                :left-heading left-heading
-               :corner corner})
+               :corner corner
+               :icons {:add-top-label (.from pixi/Texture "/img/top-label.png")
+                       :add-left-label (.from pixi/Texture "/img/left-label.png")
+                       :trash-label (.from pixi/Texture "/img/trash-label.png")}})
       (repaint sheet ui pixi-app))))
 
 (defn- input-transform-css [rc ^js viewport row-heights col-widths]

@@ -24,8 +24,9 @@
    (:tables sheet)))
 
 (defn add-label [sheet table-name rc dirn & [color]]
-  (when (= (cell-table rc sheet) table-name)
-    (assoc-in sheet [:tables table-name :labels rc] {:dirn dirn :color color})))
+  (if (= (cell-table rc sheet) table-name)
+    (assoc-in sheet [:tables table-name :labels rc] {:dirn dirn :color color})
+    sheet))
 
 (defn add-labels [sheet table-name addresses dirn]
   (reduce #(add-label %1 table-name %2 dirn (util/random-color-hex)) sheet addresses))
