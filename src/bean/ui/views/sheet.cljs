@@ -380,7 +380,7 @@
   (let [g (new pixi/Graphics)]
     (.lineStyle g 2 0xcccccc 1 0.5)
     (.beginFill g 0xffffff)
-    (.drawRoundedRect g 0 0 30 82 5)
+    (.drawRoundedRect g 0 0 30 112 5)
     (set! (.-eventMode g) "static")
     (.on g "pointerdown" #(.stopPropagation %))
     (button! (new pixi/Sprite (:add-top-label icons))
@@ -389,8 +389,11 @@
     (button! (new pixi/Sprite (:add-left-label icons))
              g 5 30 20
              #(add-label table-name selection :left))
-    (button! (new pixi/Sprite (:trash-label icons))
+    (button! (new pixi/Sprite (:add-skip-label icons))
              g 5 55 20
+             #(prn "Skip label clicked"))
+    (button! (new pixi/Sprite (:trash-label icons))
+             g 5 80 20
              #(remove-label table-name selection))
     g))
 
@@ -674,6 +677,7 @@
                :corner corner
                :icons {:add-top-label (.from pixi/Texture "/img/top-label.png")
                        :add-left-label (.from pixi/Texture "/img/left-label.png")
+                       :add-skip-label (.from pixi/Texture "/img/skip-label.png")
                        :trash-label (.from pixi/Texture "/img/trash-label.png")}})
       (repaint sheet ui pixi-app))))
 
