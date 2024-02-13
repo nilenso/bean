@@ -406,7 +406,7 @@
           :top (when (= c label-c)
                  (.drawRect g
                             (+ (nth xs c) (* (first label) 1.5)) (nth ys r)
-                            4 (nth row-heights r)))
+                            2 (nth row-heights r)))
           :left (when (= r label-r)
                   (.drawRect g
                              (nth xs c) (+ (nth ys r) (* (second label) 2))
