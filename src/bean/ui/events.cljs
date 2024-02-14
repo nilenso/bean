@@ -122,7 +122,15 @@
 (rf/reg-event-db
  ::remove-labels
  (fn remove-labels [db [_ table-name addresses]]
-   (update-in db [:sheet] #(tables/remove-labels % table-name addresses))))
+   (->  db
+        (update-in [:sheet] #(tables/remove-labels % table-name addresses))
+        (update-in [:sheet] #(tables/unmark-skipped % table-name addresses)))))
+
+(rf/reg-event-db
+ ::mark-skip-cells
+ (fn mark-skip-cells [db [_ table-name addresses]]
+   (update-in db [:sheet]
+              #(tables/mark-skipped % table-name addresses))))
 
 (rf/reg-event-db
  ::clear-selection

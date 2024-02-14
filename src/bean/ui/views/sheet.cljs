@@ -366,6 +366,11 @@
   (.addChild g sprite)
   sprite)
 
+(defn- mark-skip-cells [table-name selection]
+  (rf/dispatch [::events/clear-edit-cell])
+  (rf/dispatch [::events/mark-skip-cells table-name
+                (grid/area->addresses selection)]))
+
 (defn- remove-label [table-name selection]
   (rf/dispatch [::events/clear-edit-cell])
   (rf/dispatch [::events/remove-labels table-name
@@ -391,40 +396,56 @@
              #(add-label table-name selection :left))
     (button! (new pixi/Sprite (:add-skip-label icons))
              g 5 55 20
-             #(prn "Skip label clicked"))
+             #(mark-skip-cells table-name selection))
     (button! (new pixi/Sprite (:trash-label icons))
              g 5 80 20
              #(remove-label table-name selection))
     g))
 
-(defn- draw-label-bounds [sheet table-name labels row-heights col-widths]
+(defn- draw-skipped-cells [^js g textures sheet skipped-cells row-heights col-widths xs ys]
+  (doseq [[r c] skipped-cells]
+    (let [bg (new pixi/TilingSprite (:stripes textures)
+                  (cell-w c (get-in sheet [:grid r c]) col-widths)
+                  (cell-h r (get-in sheet [:grid r c]) row-heights))]
+      (set! (.-x bg) (nth xs c))
+      (set! (.-y bg) (nth ys r))
+      (set! (.-alpha bg) 0.05)
+      (set! (.. bg -tileScale -x) 0.7)
+      (set! (.. bg -tileScale -y) 1.7)
+      (.addChild g bg))))
+
+(defn- draw-label-bounds [textures sheet table-name labels row-heights col-widths]
   (let [xs (reductions + 0 col-widths)
         ys (reductions + 0 row-heights)
         g (new pixi/Graphics)]
-    (doseq [[[label-r label-c :as label] {:keys [color dirn]}] labels]
-      (doseq [[r c] (tables/label->cells sheet table-name label)]
-        (.beginFill g color 0.2)
-        (.beginFill g color 0.5)
-        (case dirn
-          :top (when (= c label-c)
-                 (.drawRect g
-                            (+ (nth xs c) (* (first label) 1.5)) (nth ys r)
-                            2 (nth row-heights r)))
-          :left (when (= r label-r)
-                  (.drawRect g
-                             (nth xs c) (+ (nth ys r) (* (second label) 2))
-                             (nth col-widths c) 4))))
-      (let [[r c] label]
-        (.beginFill g color 0.5)
-        (.drawRect g
-                   (nth xs c) (nth ys r)
-                   (cell-w c (get-in sheet [:grid r c]) col-widths)
-                   (cell-h r (get-in sheet [:grid r c]) row-heights))))
+    (let [skipped-cells (tables/skipped-cells sheet table-name)]
+      (doseq [[[label-r label-c :as label] {:keys [color dirn]}] labels]
+        (doseq [[r c] (tables/label->cells sheet table-name label)]
+          (if (get skipped-cells [r c])
+            (.beginFill g color 0.2)
+            (.beginFill g color 0.5))
+          (case dirn
+            :top (when (= c label-c)
+                   (.drawRect g
+                              (+ (nth xs c) (* label-c 1.5)) (nth ys r)
+                              2 (nth row-heights r)))
+            :left (when (= r label-r)
+                    (.drawRect g
+                               (nth xs c) (+ (nth ys r) label-r)
+                               (nth col-widths c) 4))))
+        (let [[r c] label]
+          (.beginFill g color 0.5)
+          (.drawRect g
+                     (nth xs c) (nth ys r)
+                     (cell-w c (get-in sheet [:grid r c]) col-widths)
+                     (cell-h r (get-in sheet [:grid r c]) row-heights))))
+      (draw-skipped-cells g textures sheet skipped-cells row-heights col-widths xs ys)
+      (.endFill g))
     g))
 
 (defn- draw-tables
   ([] (new pixi/Graphics))
-  ([^js g icons {:keys [tables] :as sheet} {:keys [selection selected-table]} row-heights col-widths]
+  ([^js g textures {:keys [tables] :as sheet} {:keys [selection selected-table]} row-heights col-widths]
    (-> g (.clear) (.removeChildren))
    (doseq [[table-name table-data] tables]
      (let [[x y w h] (area->xywh table-data row-heights col-widths)
@@ -447,9 +468,9 @@
        (.drawRect border x y w h)
 
        (if (= selected-table table-name)
-         (let [label-controls (draw-label-controls icons table-name selection)]
+         (let [label-controls (draw-label-controls textures table-name selection)]
            (draw-table-highlight highlight table-name x y w h)
-           (.addChild g (draw-label-bounds sheet table-name (:labels table-data) row-heights col-widths))
+           (.addChild g (draw-label-bounds textures sheet table-name (:labels table-data) row-heights col-widths))
            (.addChild g label-controls)
            (set! (.-x label-controls) (+ x w 5))
            (set! (.-y label-controls) y))
@@ -643,7 +664,7 @@
     (draw-merged-cells (:merged-cells @pixi-app) sheet row-heights col-widths)
     (draw-cell-backgrounds (:cell-backgrounds @pixi-app) sheet row-heights col-widths)
     (draw-cell-text (:cell-text @pixi-app) sheet row-heights col-widths)
-    (draw-tables (:tables @pixi-app) (:icons @pixi-app) sheet grid-ui row-heights col-widths)
+    (draw-tables (:tables @pixi-app) (:textures @pixi-app) sheet grid-ui row-heights col-widths)
     (draw-selection (:selection @pixi-app) (:selection grid-ui) row-heights col-widths)
     (draw-top-heading (:top-heading @pixi-app) col-widths v)
     (draw-left-heading (:left-heading @pixi-app) row-heights v)
@@ -675,10 +696,11 @@
                :top-heading top-heading
                :left-heading left-heading
                :corner corner
-               :icons {:add-top-label (.from pixi/Texture "/img/top-label.png")
-                       :add-left-label (.from pixi/Texture "/img/left-label.png")
-                       :add-skip-label (.from pixi/Texture "/img/skip-label.png")
-                       :trash-label (.from pixi/Texture "/img/trash-label.png")}})
+               :textures {:add-top-label (.from pixi/Texture "/img/top-label.png")
+                          :add-left-label (.from pixi/Texture "/img/left-label.png")
+                          :add-skip-label (.from pixi/Texture "/img/skip-label.png")
+                          :stripes (.from pixi/Texture "/img/stripes4.jpg")
+                          :trash-label (.from pixi/Texture "/img/trash-label.png")}})
       (repaint sheet ui pixi-app))))
 
 (defn- input-transform-css [rc ^js viewport row-heights col-widths]
