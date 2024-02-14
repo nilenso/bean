@@ -53,22 +53,22 @@
           sheet (-> (new-sheet)
                     (tables/make-table table-name {:start [0 0] :end [2 2]})
                     (tables/add-label table-name [1 1] :top))]
-      (is (= (tables/label->cells sheet table-name [1 1]) #{[1 1] [2 1]}))))
+      (is (= (tables/label->cells sheet table-name [1 1]) #{[2 1]}))))
 
   (testing "Gets cells under a simple left label"
     (let [table-name "A Table"
           sheet (-> (new-sheet)
                     (tables/make-table table-name {:start [0 0] :end [2 2]})
                     (tables/add-label table-name [1 1] :left))]
-      (is (= (tables/label->cells sheet table-name [1 1]) #{[1 1] [1 2]}))))
+      (is (= (tables/label->cells sheet table-name [1 1]) #{[1 2]}))))
 
   (testing "Gets cells under a merged top label"
     (let [table-name "A Table"
           sheet (-> (new-sheet)
                     (tables/make-table table-name {:start [0 0] :end [2 2]})
                     (tables/add-label table-name [1 1] :top)
-                    (grid/merge-cells {:start [1 1] :end [2 2]}))]
-      (is (= (tables/label->cells sheet table-name [1 1]) #{[1 1] [1 2] [2 1] [2 2]}))))
+                    (grid/merge-cells {:start [1 1] :end [1 2]}))]
+      (is (= (tables/label->cells sheet table-name [1 1]) #{[2 1] [2 2]}))))
 
   (testing "Doesn't include other labels in the result"
     (let [table-name "A Table"
