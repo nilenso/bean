@@ -9,8 +9,7 @@
 (deftest make-table-test
   (testing "Creates a table"
     (let [sheet (tables/make-table (new-sheet) "A Table" {:start [0 0] :end [2 2]})]
-      (is (= (:tables sheet) {"A Table" {:start [0 0] :end [2 2] :labels {}}}))
-      (is (= (tables/get-table sheet "A Table") {:start [0 0] :end [2 2] :labels {}})))))
+      (is (= (tables/get-table sheet "A Table") {:start [0 0] :end [2 2] :labels {} :skip-cells #{}})))))
 
 (deftest cell-table-test
   (testing "Gets a cell's table name"
@@ -77,4 +76,22 @@
                     (tables/add-label table-name [0 0] :top)
                     (grid/merge-cells {:start [0 0] :end [0 1]})
                     (tables/add-label table-name [1 0] :top))]
-      (is (nil? (get [1 0] (tables/label->cells sheet table-name [0 0])))))))
+      (is (nil? (get [1 0] (tables/label->cells sheet table-name [0 0]))))))
+
+  (testing "Includes skip cells from the result"
+    (let [table-name "A Table"
+          sheet (-> (new-sheet)
+                    (tables/make-table table-name {:start [0 0] :end [2 2]})
+                    (tables/add-label table-name [1 1] :top)
+                    (tables/mark-skipped table-name [[2 1]]))]
+      (is (some? (get-in sheet [:tables table-name :skip-cells [2 1]])))
+      (is (some? (get (tables/label->cells sheet table-name [1 1]) [2 1]))))))
+
+(deftest skipped-cells-test
+  (testing "Returns skipped cells and cells under a skip label"
+    (let [table-name "A Table"
+          sheet (-> (new-sheet)
+                    (tables/make-table table-name {:start [0 0] :end [2 2]})
+                    (tables/add-label table-name [1 1] :top)
+                    (tables/mark-skipped table-name [[1 1]]))]
+      (is (some? (get (tables/skipped-cells sheet table-name) [2 1]))))))
