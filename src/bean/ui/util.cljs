@@ -27,3 +27,7 @@
 
 (defn color-int->hex [color]
   (str "#" (.toString color 16)))
+
+(defn merged-or-self [[r c] sheet]
+  (or (get-in sheet [:grid r c :style :merged-with]) [r c]))
+

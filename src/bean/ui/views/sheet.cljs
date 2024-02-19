@@ -92,12 +92,9 @@
       (.lineStyle g (:selection-border styles/sizes) color 1 1)
       (.drawRect g x y w h))))
 
-(defn- merged-or-self [[r c] sheet]
-  (or (get-in sheet [:grid r c :style :merged-with]) [r c]))
-
 (defn- edit-cell [rc sheet]
   (rf/dispatch-sync [::events/select-table (tables/cell-table rc sheet)])
-  (rf/dispatch [::events/edit-cell (merged-or-self rc sheet)]))
+  (rf/dispatch [::events/edit-cell rc]))
 
 (defn- grid-selection-end [area pixi-app]
   (remove-listener! :grid-selection-move pixi-app)
@@ -127,10 +124,10 @@
 
 (defn- cell-pointer-down [rc grid-g sheet row-heights col-widths pixi-app]
   (submit-cell-input)
-  (rf/dispatch [::events/clear-selection])
+  (rf/dispatch [::events/clear-edit-cell])
   (edit-cell rc sheet)
   (grid-selection-start
-   (merged-or-self rc sheet)
+   (util/merged-or-self rc sheet)
    grid-g row-heights col-widths pixi-app))
 
 (defn- grid-pointer-down [i grid-g sheet row-heights col-widths pixi-app]

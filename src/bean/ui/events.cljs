@@ -6,7 +6,8 @@
             [re-frame.core :as rf]
             [reagent.core :as rc]
             [bean.code :as code]
-            [bean.code-errors :as code-errors]))
+            [bean.code-errors :as code-errors]
+            [bean.ui.util :as util]))
 
 (rf/reg-event-db
  ::initialize-db
@@ -35,10 +36,11 @@
  (fn update-cell [db [_ address content]]
    (update-in db [:sheet] #(grid/eval-cell address % content))))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  ::merge-cells
- (fn merge-cells [db [_ area]]
-   (update-in db [:sheet] #(grid/merge-cells % area))))
+ (fn merge-cells [{:keys [db]} [_ area]]
+   {:db (update-in db [:sheet] #(grid/merge-cells % area))
+    :fx [[:dispatch [::edit-cell (:start area)]]]}))
 
 (rf/reg-event-db
  ::unmerge-cells
@@ -78,9 +80,10 @@
 (rf/reg-event-fx
  ::edit-cell
  (fn edit-cell [{:keys [db]} [_ rc]]
-   {:db (assoc-in db [:ui :grid :editing-cell] rc)
-    :fx [[:dispatch [::set-selection {:start rc :end rc}]]
-         [::focus-element "cell-input"]]}))
+   (let [rc* (util/merged-or-self rc (:sheet db))]
+     {:db (assoc-in db [:ui :grid :editing-cell] rc*)
+      :fx [[:dispatch [::set-selection {:start rc* :end rc*}]]
+           [::focus-element "cell-input"]]})))
 
 (rf/reg-event-db
  ::clear-edit-cell
@@ -110,8 +113,7 @@
    {:db (->  db
              (assoc-in [:ui :making-table] false)
              (update-in [:sheet] #(tables/make-table % table-name area)))
-    :fx [[:dispatch [::clear-selection]]
-         [:dispatch [::select-table table-name]]]}))
+    :fx [[:dispatch [::select-table table-name]]]}))
 
 (rf/reg-event-db
  ::add-labels
@@ -135,7 +137,7 @@
 (rf/reg-event-db
  ::clear-selection
  (fn [db [_]]
-   (assoc-in db [:ui :grid :editing-cell] nil)))
+   (assoc-in db [:ui :grid :selection] nil)))
 
 (rf/reg-event-db
  ::explain
