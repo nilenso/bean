@@ -171,8 +171,11 @@
 (defn set-cell-backgrounds [sheet addresses background]
   (reduce #(set-cell-style %1 %2 :background background) sheet addresses))
 
+(defn all-bold? [sheet addresses]
+  (every? #(get-cell-style sheet % :bold) addresses))
+
 (defn toggle-cell-bolds [sheet addresses]
-  (if (every? #(get-cell-style sheet % :bold) addresses)
+  (if (all-bold? sheet addresses)
     (reduce #(unset-cell-style %1 %2 :bold) sheet addresses)
     (reduce #(set-cell-style %1 %2 :bold true) sheet addresses)))
 
@@ -212,19 +215,25 @@
                  sheet)]
     (set-cell-style sheet* address :merged-with merge-with)))
 
-(defn merge-cells [sheet {:keys [start end] :as area}]
-  (let [addresses (area/area->addresses area)
-        merged-already (map #(get-cell-style sheet % :merged-with) addresses)
+(defn mergeable? [sheet addresses]
+  (let [merged-already (map #(get-cell-style sheet % :merged-with) addresses)
         all-merged-addresses (mapcat #(get-cell-style
                                        sheet
                                        (get-cell-style sheet % :merged-with)
                                        :merged-addresses) merged-already)]
-    (if (every? #(get addresses %) all-merged-addresses)
-      (->  (reduce #(merge-cell %1 %2 start) sheet addresses)
-           (set-cell-style start :merged-until end)
-           (set-cell-style start :merged-addresses addresses)
-           (tables/merge-labels start addresses))
+    (every? #(get addresses %) all-merged-addresses)))
+
+(defn merge-cells [sheet {:keys [start end] :as area}]
+  (let [addresses (area/area->addresses area)]
+    (if (mergeable? sheet addresses)
+      (-> (reduce #(merge-cell %1 %2 start) sheet addresses)
+          (set-cell-style start :merged-until end)
+          (set-cell-style start :merged-addresses addresses)
+          (tables/merge-labels start addresses))
       sheet)))
+
+(defn unmergeable? [sheet addresses]
+  (some #(get-cell-style sheet % :merged-with) addresses))
 
 (defn unmerge-cells [sheet addresses]
   (->> addresses

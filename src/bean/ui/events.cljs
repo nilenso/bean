@@ -42,10 +42,11 @@
    {:db (update-in db [:sheet] #(grid/merge-cells % area))
     :fx [[:dispatch [::edit-cell (:start area)]]]}))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  ::unmerge-cells
- (fn merge-cells [db [_ addresses]]
-   (update-in db [:sheet] #(grid/unmerge-cells % addresses))))
+ (fn unmerge-cells [{:keys [db]} [_ addresses]]
+   {:db (update-in db [:sheet] #(grid/unmerge-cells % addresses))
+    :fx [[:dispatch [::edit-cell (first addresses)]]]}))
 
 (rf/reg-event-db
  ::set-cell-backgrounds

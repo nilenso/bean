@@ -1,6 +1,7 @@
 (ns bean.ui.views.sheet
-  (:require [bean.tables :as tables]
-            [bean.area :as area]
+  (:require [bean.area :as area]
+            [bean.grid :as grid]
+            [bean.tables :as tables]
             [bean.ui.events :as events]
             [bean.ui.features :as features]
             [bean.ui.styles :as styles]
@@ -776,12 +777,21 @@
    pixi-app])
 
 (defn controls []
-  (let [selection @(rf/subscribe [::subs/selection])]
+  (let [selection @(rf/subscribe [::subs/selection])
+        sheet @(rf/subscribe [::subs/sheet])]
     [:div {:class :controls-container}
-     [:button {:class :controls-btn
+     [:button {:class [:controls-btn
+                       (when (grid/all-bold? sheet (area/area->addresses selection))
+                         :pressed)]
                :on-click #(rf/dispatch [::events/toggle-cell-bold
                                         (area/area->addresses selection)])}
       "B"]
+     (let [unmergeable? (grid/unmergeable? sheet (area/area->addresses selection))]
+       [:button {:class [:controls-btn (when unmergeable? :pressed)]
+                 :on-click #(if unmergeable?
+                              (rf/dispatch [::events/unmerge-cells (area/area->addresses selection)])
+                              (rf/dispatch [::events/merge-cells selection]))}
+        (if unmergeable? "Unmerge" "Merge")])
      [:div {:class :controls-background-buttons}
       (for [color styles/cell-background-colors]
         [:button {:class :set-background-btn
@@ -792,14 +802,7 @@
                   :on-mouse-down #(when selection
                                     (rf/dispatch [::events/set-cell-backgrounds
                                                   (area/area->addresses selection)
-                                                  color]))} ""])]
-     [:button {:class :controls-btn
-               :on-click #(rf/dispatch [::events/merge-cells selection])}
-      "Merge"]
-     [:button {:class :controls-btn
-               :on-click #(rf/dispatch [::events/unmerge-cells
-                                        (area/area->addresses selection)])}
-      "Unmerge"]]))
+                                                  color]))} ""])]]))
 
 (defonce ^:private pixi-app* (atom nil))
 
