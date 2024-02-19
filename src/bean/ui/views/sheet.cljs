@@ -172,8 +172,12 @@
     (.addChild g bitmap)
     g))
 
-(defn- cell-text [text x y h w error? bold?]
+(defn- cell-text [cell x y h w]
   (let [g (new pixi/Graphics)
+        text (:representation cell)
+        bold? (get-in cell [:style :bold])
+        error? (:error cell)
+        merged? (get-in cell [:style :merged-until])
         bitmap (new pixi/BitmapText text
                     #js {:fontName (if bold? "SpaceGrotesk-Bold" "SpaceGrotesk")
                          :tint (if error?
@@ -187,6 +191,7 @@
     (set! (.-y bitmap) (+ y (:cell-padding styles/sizes)))
     (-> mask (.beginFill 0xffffff) (.drawRect x y w h) .endFill)
     (set! (.-mask bitmap) mask)
+    (when merged? (center-text! bitmap x y h w))
     (.addChild g mask)
     (.addChild g bitmap)
     g))
@@ -581,14 +586,11 @@
       (fn [[r c] cell]
         (let [text (:representation cell)]
           (when-not (empty? text)
-            (.addChild g
-                       (cell-text
-                        text
-                        (nth xs c) (nth ys r)
-                        (cell-h r cell row-heights)
-                        (cell-w c cell col-widths)
-                        (:error cell)
-                        (get-in cell [:style :bold]))))))
+            (.addChild g (cell-text
+                          cell
+                          (nth xs c) (nth ys r)
+                          (cell-h r cell row-heights)
+                          (cell-w c cell col-widths))))))
       grid)
      g)))
 
@@ -730,7 +732,8 @@
           reposition #(when-let [el (.getElementById js/document "cell-input")]
                         (set! (.. el -style -transform) (transform-css)))
           background (get-in cell [:style :background])
-          bold? (get-in cell [:style :bold])]
+          bold? (get-in cell [:style :bold])
+          merged? (get-in cell [:style :merged-until])]
       (reset-listener! :cell-input-reposition-move viewport "moved" reposition pixi-app)
       (reset-listener! :cell-input-reposition-move-end viewport "moved-end" reposition pixi-app)
       [:span {:id :cell-input
@@ -741,6 +744,8 @@
               :style {:transform (transform-css)
                       :minHeight (cell-h r cell row-heights)
                       :minWidth (cell-w c cell col-widths)
+                      :text-align (when merged? :center)
+                      :line-height (str (- (cell-h r cell row-heights) 12) "px")
                       :background-color (when background (util/color-int->hex background))
                       :fontWeight (if bold? "bold" "normal")}
               :on-key-down #(handle-cell-navigation % [r c] @sheet)}
