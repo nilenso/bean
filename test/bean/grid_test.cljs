@@ -3,12 +3,12 @@
                                eval-sheet
                                eval-code
                                eval-cell
-                               new-sheet
-                               merge-cells]]
+                               new-sheet] :as grid]
             [bean.deps :refer [make-depgraph]]
             [bean.util :as util]
             [clojure.test :refer [deftest testing is]]
-            [bean.grid :as grid]))
+            [bean.area :as area]
+            [bean.tables :as tables]))
 
 (deftest evaluator-test
   (testing "Basic evaluation"
@@ -337,5 +337,5 @@
       (is (= (get-in sheet [:grid 0 0 :style]) {:merged-with [0 0]
                                                 :merged-until [1 2]
                                                 :merged-addresses #{[0 0] [0 1] [0 2] [1 0] [1 1] [1 2]}}))
-      (is (= (grid/cell-h sheet [0 0]) 2))
-      (is (= (grid/cell-w sheet [0 0]) 3)))))
+      (is (= (area/cell-h sheet [0 0]) 2))
+      (is (= (area/cell-w sheet [0 0]) 3)))))

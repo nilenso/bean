@@ -1,6 +1,6 @@
 (ns bean.ui.views.sheet
-  (:require [bean.grid :as grid]
-            [bean.tables :as tables]
+  (:require [bean.tables :as tables]
+            [bean.area :as area]
             [bean.ui.events :as events]
             [bean.ui.features :as features]
             [bean.ui.styles :as styles]
@@ -111,7 +111,7 @@
 
 (defn- grid-selection-start [start grid-g row-heights col-widths pixi-app]
   (let [i->area #(let [rc (i->rc % grid-g row-heights col-widths)]
-                   (grid/bounds->area start rc))]
+                   (area/bounds->area start rc))]
     (reset-listener!
      :grid-selection-move grid-g "globalpointermove"
      #(grid-selection-move (i->area %) row-heights col-widths pixi-app)
@@ -369,17 +369,17 @@
 (defn- mark-skip-cells [table-name selection]
   (rf/dispatch [::events/clear-edit-cell])
   (rf/dispatch [::events/mark-skip-cells table-name
-                (grid/area->addresses selection)]))
+                (area/area->addresses selection)]))
 
 (defn- remove-label [table-name selection]
   (rf/dispatch [::events/clear-edit-cell])
   (rf/dispatch [::events/remove-labels table-name
-                (grid/area->addresses selection)]))
+                (area/area->addresses selection)]))
 
 (defn- add-label [table-name selection dirn]
   (rf/dispatch [::events/clear-edit-cell])
   (rf/dispatch [::events/add-labels table-name
-                (grid/area->addresses selection) dirn]))
+                (area/area->addresses selection) dirn]))
 
 (defn- draw-label-controls [icons table-name selection]
   (let [g (new pixi/Graphics)]
@@ -783,7 +783,7 @@
     [:div {:class :controls-container}
      [:button {:class :controls-btn
                :on-click #(rf/dispatch [::events/toggle-cell-bold
-                                        (grid/area->addresses selection)])}
+                                        (area/area->addresses selection)])}
       "B"]
      [:div {:class :controls-background-buttons}
       (for [color styles/cell-background-colors]
@@ -794,14 +794,14 @@
                                               "transparent")}
                   :on-mouse-down #(when selection
                                     (rf/dispatch [::events/set-cell-backgrounds
-                                                  (grid/area->addresses selection)
+                                                  (area/area->addresses selection)
                                                   color]))} ""])]
      [:button {:class :controls-btn
                :on-click #(rf/dispatch [::events/merge-cells selection])}
       "Merge"]
      [:button {:class :controls-btn
                :on-click #(rf/dispatch [::events/unmerge-cells
-                                        (grid/area->addresses selection)])}
+                                        (area/area->addresses selection)])}
       "Unmerge"]]))
 
 (defonce ^:private pixi-app* (atom nil))

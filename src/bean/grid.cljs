@@ -1,60 +1,18 @@
 (ns bean.grid
-  (:require [bean.interpreter :as interpreter]
-            [bean.parser.parser :as parser]
-            [bean.util :as util]
-            [bean.value :as value]
+  (:require [bean.area :as area]
+            [bean.code-errors :as code-errors]
             [bean.deps :as deps]
             [bean.errors :as errors]
-            [bean.code-errors :as code-errors]
+            [bean.interpreter :as interpreter]
+            [bean.parser.parser :as parser]
+            [bean.parser.trellis-parser :as trellis-parser]
+            [bean.util :as util]
+            [bean.value :as value]
             [clojure.set :as set]
-            [clojure.string]
-            [bean.parser.trellis-parser :as trellis-parser]))
+            [clojure.string]))
 
 (defn- offset [[start-r start-c] [offset-rows offset-cols]]
   [(+ start-r offset-rows) (+ start-c offset-cols)])
-
-;; TODO: consider moving them somewhere 
-(defn top-left [addresses]
-  [(apply min (map first addresses))
-   (apply min (map second addresses))])
-
-(defn bottom-right [addresses]
-  [(apply max (map first addresses))
-   (apply max (map second addresses))])
-
-(defn bounds->area [start end]
-  {:start (top-left [start end])
-   :end (bottom-right [start end])})
-
-(defn area->address-matrix [{:keys [start end]}]
-  (util/addresses-matrix start end))
-
-(defn area->addresses [area]
-  (set (mapcat identity (area->address-matrix area))))
-
-(defn area-empty? [{:keys [start end]}]
-  (= start end))
-
-(defn overlap? [area-a area-b]
-  (let [{[a-r1 a-c1] :start [a-r2 a-c2] :end} area-a
-        {[b-r1 b-c1] :start [b-r2 b-c2] :end} area-b]
-    (not
-     (or (< a-r2 b-r1)
-         (> a-r1 b-r2)
-         (< a-c2 b-c1)
-         (> a-c1 b-c2)))))
-
-(defn cell-h [sheet [r c]]
-  (let [cell (util/get-cell (:grid sheet) [r c])
-        [end-r _] (get-in cell [:style :merged-until])]
-    (if end-r (inc (- end-r r)) 1)))
-
-(defn cell-w [sheet [r c]]
-  (let [cell (util/get-cell (:grid sheet) [r c])
-        [_ end-c] (get-in cell [:style :merged-until])]
-    (if end-c (inc (- end-c c)) 1)))
-
-;; end of TODO: consider moving them somewhere 
 
 (defn- set-error [grid address error]
   (update-in grid
@@ -256,7 +214,7 @@
 ;; TODO: when a cell is merged
 ;; if any of the cells is a label, make the merged cell a label also
 (defn merge-cells [sheet {:keys [start end] :as area}]
-  (let [addresses (area->addresses area)]
+  (let [addresses (area/area->addresses area)]
     (if (some #(get-cell-style sheet % :merged-with) addresses)
       sheet
       (->  (reduce #(merge-cell %1 %2 start) sheet addresses)

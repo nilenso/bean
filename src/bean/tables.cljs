@@ -1,12 +1,12 @@
 (ns bean.tables
-  (:require [bean.grid :as grid]
+  (:require [bean.area :as area]
             [bean.util :as util]
             [clojure.set :as set]))
 
 (defn make-table [sheet table-name area]
-  (if (and (not (grid/area-empty? area))
+  (if (and (not (area/area-empty? area))
            (not (some
-                 #(grid/overlap? % area)
+                 #(area/overlap? % area)
                  (vals (:tables sheet)))))
     (assoc-in sheet [:tables table-name]
               (merge area {:labels {}
@@ -46,10 +46,10 @@
   (get-in sheet [:tables table-name]))
 
 (defn- last-row [[r c] sheet]
-  (+ r (dec (grid/cell-h sheet [r c]))))
+  (+ r (dec (area/cell-h sheet [r c]))))
 
 (defn- last-col [[r c] sheet]
-  (+ c (dec (grid/cell-w sheet [r c]))))
+  (+ c (dec (area/cell-w sheet [r c]))))
 
 (defn- left-blocking-label [sheet [r c] labels]
   (some
@@ -58,8 +58,8 @@
       (and
        (= dirn :left)
        (= r r*)
-       (= (grid/cell-h sheet [r c])
-          (grid/cell-h sheet [r* c*]))
+       (= (area/cell-h sheet [r c])
+          (area/cell-h sheet [r* c*]))
        (> c* (last-col [r c] sheet)))
        [r* c*]))
    (sort-by (fn [[[_ c] _]] c) labels)))
@@ -71,8 +71,8 @@
       (and
        (= dirn :top)
        (= c c*)
-       (= (grid/cell-w sheet [r c])
-          (grid/cell-w sheet [r* c*]))
+       (= (area/cell-w sheet [r c])
+          (area/cell-w sheet [r* c*]))
        (> r* (last-row [r c] sheet)))
        [r* c*]))
    (sort-by (fn [[[r _] _]] r) labels)))
@@ -90,7 +90,7 @@
         labels (:labels table)
         {:keys [dirn]} (get labels label)]
     (as->
-     (grid/area->addresses
+     (area/area->addresses
       {:start label
        :end (let [[br bc] (blocking-label sheet table-name label)]
               (case dirn
