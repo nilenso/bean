@@ -209,6 +209,11 @@
                         (map deps/->cell-dep other-spillers))]
      (reduce #(eval-dep %2 %1) sheet* deps-to-reval))))
 
+(defn update-cell [address sheet content]
+  (if (= (:content (util/get-cell (:grid sheet) address)) content)
+    sheet
+    (eval-cell address (tables/expand-tables sheet address) content)))
+
 (defn- merge-cell [sheet address merge-with]
   (let [sheet* (if (not= merge-with address)
                  (eval-cell address sheet "")
