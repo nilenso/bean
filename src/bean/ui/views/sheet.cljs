@@ -699,7 +699,7 @@
                :textures {:add-top-label (.from pixi/Texture "/img/top-label.png")
                           :add-left-label (.from pixi/Texture "/img/left-label.png")
                           :add-skip-label (.from pixi/Texture "/img/skip-label.png")
-                          :stripes (.from pixi/Texture "/img/stripes4.jpg")
+                          :stripes (.from pixi/Texture "/img/stripes.jpg")
                           :trash-label (.from pixi/Texture "/img/trash-label.png")}})
       (repaint sheet ui pixi-app))))
 
