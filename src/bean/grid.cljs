@@ -1,5 +1,6 @@
 (ns bean.grid
   (:require [bean.area :as area]
+            [bean.tables :as tables]
             [bean.code-errors :as code-errors]
             [bean.deps :as deps]
             [bean.errors :as errors]
@@ -211,15 +212,19 @@
                  sheet)]
     (set-cell-style sheet* address :merged-with merge-with)))
 
-;; TODO: when a cell is merged
-;; if any of the cells is a label, make the merged cell a label also
 (defn merge-cells [sheet {:keys [start end] :as area}]
-  (let [addresses (area/area->addresses area)]
-    (if (some #(get-cell-style sheet % :merged-with) addresses)
-      sheet
+  (let [addresses (area/area->addresses area)
+        merged-already (map #(get-cell-style sheet % :merged-with) addresses)
+        all-merged-addresses (mapcat #(get-cell-style
+                                       sheet
+                                       (get-cell-style sheet % :merged-with)
+                                       :merged-addresses) merged-already)]
+    (if (every? #(get addresses %) all-merged-addresses)
       (->  (reduce #(merge-cell %1 %2 start) sheet addresses)
            (set-cell-style start :merged-until end)
-           (set-cell-style start :merged-addresses addresses)))))
+           (set-cell-style start :merged-addresses addresses)
+           (tables/merge-labels start addresses))
+      sheet)))
 
 (defn unmerge-cells [sheet addresses]
   (->> addresses

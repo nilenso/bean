@@ -338,4 +338,28 @@
                                                 :merged-until [1 2]
                                                 :merged-addresses #{[0 0] [0 1] [0 2] [1 0] [1 1] [1 2]}}))
       (is (= (area/cell-h sheet [0 0]) 2))
-      (is (= (area/cell-w sheet [0 0]) 3)))))
+      (is (= (area/cell-w sheet [0 0]) 3))))
+
+  (testing "Merges existing merged cells only if the full merged cell is in the area"
+    (let [sheet (-> (new-sheet (repeat 5 (repeat 5 "")) "")
+                    eval-sheet
+                    (grid/merge-cells {:start [0 0] :end [1 1]})
+                    (grid/merge-cells {:start [1 1] :end [1 2]}))]
+      (is (= (select-keys (get-in sheet [:grid 0 0 :style])
+                          [:merged-with :merged-until])
+             {:merged-with [0 0]
+              :merged-until [1 1]}))
+      (is (= (select-keys (get-in (grid/merge-cells sheet {:start [0 0] :end [1 2]})
+                                  [:grid 0 0 :style])
+                          [:merged-with :merged-until])
+             {:merged-with [0 0]
+              :merged-until [1 2]}))))
+
+  (testing "Merges labels into a single label"
+    (let [table-name "A table"
+          sheet (-> (new-sheet (repeat 5 (repeat 5 "")) "")
+                    eval-sheet
+                    (tables/make-table table-name {:start [0 0] :end [2 2]})
+                    (tables/add-label table-name [1 1] :top)
+                    (grid/merge-cells {:start [0 1] :end [1 1]}))]
+      (is (= (get-in sheet [:tables table-name :labels]) {[0 1] {:dirn :top :color nil}})))))

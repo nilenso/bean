@@ -45,6 +45,22 @@
 (defn get-table [sheet table-name]
   (get-in sheet [:tables table-name]))
 
+(defn- get-label [sheet table-name rc]
+  (get-in sheet [:tables table-name :labels rc]))
+
+(defn merge-labels [sheet start addresses]
+  (if-let [table-name (cell-table start sheet)]
+    (let [is-label? (get-label sheet table-name start)
+          other-labels? (and (not is-label?)
+                             (some #(get-label sheet table-name %) addresses))
+          label (or is-label? other-labels?)]
+      (if label
+        (-> sheet
+            (remove-labels table-name addresses)
+            (add-label table-name start (:dirn label) (:color label)))
+        sheet))
+    sheet))
+
 (defn- last-row [[r c] sheet]
   (+ r (dec (area/cell-h sheet [r c]))))
 
