@@ -30,12 +30,6 @@
     (assoc-in sheet [:tables table-name :labels rc] {:dirn dirn :color color})
     sheet))
 
-(defn mark-skipped [sheet table-name addresses]
-  (update-in sheet [:tables table-name :skip-cells] #(apply conj % (set addresses))))
-
-(defn unmark-skipped [sheet table-name addresses]
-  (update-in sheet [:tables table-name :skip-cells] #(apply disj % (set addresses))))
-
 (defn add-labels [sheet table-name addresses dirn]
   (reduce #(add-label %1 table-name %2 dirn (util/random-color-hex)) sheet addresses))
 
@@ -103,27 +97,36 @@
 (defn label->cells [sheet table-name label]
   (let [{:keys [end] :as table} (get-table sheet table-name)
         [table-end-r table-end-c] end
-        labels (:labels table)
-        {:keys [dirn]} (get labels label)]
-    (as->
-     (area/area->addresses
-      {:start label
-       :end (let [[br bc] (blocking-label sheet table-name label)]
-              (case dirn
-                :top [(if br (dec br) table-end-r)
-                      (min (last-col label sheet) table-end-c)]
-                :left [(min (last-row label sheet) table-end-r)
-                       (if bc (dec bc) table-end-c)]))}) cells
-      (apply disj cells (filter #(get labels %) cells))
-      (apply disj cells
-             (get-in (util/get-cell (:grid sheet) label)
-                     [:style :merged-addresses])))))
+        labels (:labels table)]
+    (when-let [{:keys [dirn]} (get labels label)]
+      (as->
+       (area/area->addresses
+        {:start label
+         :end (let [[br bc] (blocking-label sheet table-name label)]
+                (case dirn
+                  :top [(if br (dec br) table-end-r)
+                        (min (last-col label sheet) table-end-c)]
+                  :left [(min (last-row label sheet) table-end-r)
+                         (if bc (dec bc) table-end-c)]))}) cells
+        (apply disj cells (filter #(get labels %) cells))
+        (apply disj cells
+               (get-in (util/get-cell (:grid sheet) label)
+                       [:style :merged-addresses]))))))
+
+(defn mark-skipped [sheet table-name addresses]
+  (update-in sheet [:tables table-name :skip-cells] #(apply conj % (set addresses))))
+
+(defn unmark-skipped [sheet table-name addresses]
+  (let [addresses*
+        (set/union
+         (set addresses)
+         (set (mapcat #(label->cells sheet table-name %) addresses)))]
+    (update-in sheet [:tables table-name :skip-cells] #(apply disj % addresses*))))
 
 (defn skipped-cells [sheet table-name]
   (let [table (get-table sheet table-name)
         labels (:labels table)
         skip-labels (filter #(get-in table [:skip-cells %]) (keys labels))]
-    (->> (map #(label->cells sheet table-name %) skip-labels)
-         (mapcat identity)
-         set
-         (set/union (:skip-cells table)))))
+    (set/union
+     (set (mapcat #(label->cells sheet table-name %) skip-labels))
+     (:skip-cells table))))
