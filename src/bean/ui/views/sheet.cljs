@@ -791,12 +791,14 @@
                :on-click #(rf/dispatch [::events/toggle-cell-bold
                                         (area/area->addresses selection)])}
       "B"]
-     (let [unmergeable? (grid/unmergeable? sheet (area/area->addresses selection))]
-       [:button {:class [:controls-btn (when unmergeable? :pressed)]
-                 :on-click #(if unmergeable?
-                              (rf/dispatch [::events/unmerge-cells (area/area->addresses selection)])
-                              (rf/dispatch [::events/merge-cells selection]))}
-        (if unmergeable? "Unmerge" "Merge")])
+     [:button {:class [:controls-btn]
+               :on-click #(rf/dispatch [::events/merge-cells selection])
+               :disabled (not (grid/can-merge? sheet (area/area->addresses selection)))}
+      "Merge"]
+     [:button {:class [:controls-btn]
+               :on-click #(rf/dispatch [::events/unmerge-cells (area/area->addresses selection) selection])
+               :disabled (not (grid/can-unmerge? sheet (area/area->addresses selection)))}
+      "Unmerge"]
      [:div {:class :controls-background-buttons}
       (for [color styles/cell-background-colors]
         [:button {:class :set-background-btn

@@ -342,8 +342,9 @@ a {
     margin-right: 20px;
 }
 
-.controls-btn:hover {
-    background-color: var(--btn-background);
+.controls-btn:disabled {
+    cursor: default;
+    opacity: 0.6;
 }
 
 .controls-btn.pressed {

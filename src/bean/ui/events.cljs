@@ -83,7 +83,7 @@
  (fn edit-cell [{:keys [db]} [_ rc]]
    (let [rc* (util/merged-or-self rc (:sheet db))]
      {:db (assoc-in db [:ui :grid :editing-cell] rc*)
-      :fx [[:dispatch [::set-selection {:start rc* :end rc*}]]
+      :fx [[:dispatch [::set-selection {:start rc* :end (util/merged-until-or-self rc* (:sheet db))}]]
            [::focus-element "cell-input"]]})))
 
 (rf/reg-event-db

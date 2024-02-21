@@ -58,3 +58,6 @@
   (+ (bit-shift-left (rand-int 256) 16)
      (bit-shift-left (rand-int 256) 8)
      (rand-int 256)))
+
+(defn merged-or-self [[r c] sheet]
+  (or (get-in sheet [:grid r c :style :merged-with]) [r c]))

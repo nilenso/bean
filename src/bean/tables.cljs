@@ -27,7 +27,10 @@
 
 (defn add-label [sheet table-name rc dirn & [color]]
   (if (= (cell-table rc sheet) table-name)
-    (assoc-in sheet [:tables table-name :labels rc] {:dirn dirn :color color})
+    (assoc-in
+     sheet
+     [:tables table-name :labels (util/merged-or-self rc sheet)]
+     {:dirn dirn :color color})
     sheet))
 
 (defn add-labels [sheet table-name addresses dirn]
@@ -109,9 +112,9 @@
                   :left [(min (last-row label sheet) table-end-r)
                          (if bc (dec bc) table-end-c)]))}) cells
         (apply disj cells (filter #(get labels %) cells))
-        (apply disj cells
-               (get-in (util/get-cell (:grid sheet) label)
-                       [:style :merged-addresses]))))))
+        (apply disj cells (mapcat
+                           #(get-in (util/get-cell (:grid sheet) %) [:style :merged-addresses])
+                           (keys labels)))))))
 
 (defn mark-skipped [sheet table-name addresses]
   (update-in sheet [:tables table-name :skip-cells] #(apply conj % (set addresses))))

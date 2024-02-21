@@ -31,3 +31,7 @@
 (defn merged-or-self [[r c] sheet]
   (or (get-in sheet [:grid r c :style :merged-with]) [r c]))
 
+(defn merged-until-or-self [rc sheet]
+  (let [[r* c*] (merged-or-self rc sheet)]
+    (or (get-in sheet [:grid r* c* :style :merged-until]) rc)))
+

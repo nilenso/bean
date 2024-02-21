@@ -220,24 +220,26 @@
                  sheet)]
     (set-cell-style sheet* address :merged-with merge-with)))
 
-(defn mergeable? [sheet addresses]
+(defn can-merge? [sheet addresses]
   (let [merged-already (map #(get-cell-style sheet % :merged-with) addresses)
-        all-merged-addresses (mapcat #(get-cell-style
-                                       sheet
-                                       (get-cell-style sheet % :merged-with)
-                                       :merged-addresses) merged-already)]
-    (every? #(get addresses %) all-merged-addresses)))
+        all-merged-addresses (set
+                              (mapcat #(get-cell-style
+                                        sheet
+                                        (get-cell-style sheet % :merged-with)
+                                        :merged-addresses) merged-already))]
+    (and (every? #(get addresses %) all-merged-addresses)
+         (> (count addresses) 1))))
 
 (defn merge-cells [sheet {:keys [start end] :as area}]
   (let [addresses (area/area->addresses area)]
-    (if (mergeable? sheet addresses)
+    (if (can-merge? sheet addresses)
       (-> (reduce #(merge-cell %1 %2 start) sheet addresses)
           (set-cell-style start :merged-until end)
           (set-cell-style start :merged-addresses addresses)
           (tables/merge-labels start addresses))
       sheet)))
 
-(defn unmergeable? [sheet addresses]
+(defn can-unmerge? [sheet addresses]
   (some #(get-cell-style sheet % :merged-with) addresses))
 
 (defn unmerge-cells [sheet addresses]
@@ -247,9 +249,10 @@
         (fn [sheet* rc]
           (let [merged-with (get-cell-style sheet rc :merged-with)
                 merged-addresses (get-cell-style sheet merged-with :merged-addresses)]
-            (-> (reduce #(unset-cell-style %1 %2 :merged-with) sheet* merged-addresses)
-                (unset-cell-style merged-with :merged-until)
-                (unset-cell-style merged-with :merged-addresses))))
+            (as-> sheet* sheet*
+              (reduce #(unset-cell-style %1 %2 :merged-with) sheet* merged-addresses)
+              (reduce #(unset-cell-style %1 %2 :merged-addresses) sheet* merged-addresses)
+              (reduce #(unset-cell-style %1 %2 :merged-until) sheet* merged-addresses))))
         sheet)))
 
 (defn eval-named
