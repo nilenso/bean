@@ -748,6 +748,11 @@
                       :line-height (str (- (cell-h r cell row-heights) 12) "px")
                       :background-color (when background (util/color-int->hex background))
                       :fontWeight (if bold? "bold" "normal")}
+              :on-pointer-down #(grid-selection-start
+                                 (util/merged-or-self [r c] sheet)
+                                 (:grid @pixi-app) row-heights col-widths pixi-app)
+              :on-pointer-up #(let [canvas (.querySelector js/document "#grid-container canvas")]
+                                (.dispatchEvent canvas (new js/MouseEvent "pointerup" %)))
               :on-key-down #(handle-cell-navigation % [r c] @sheet)}
        (:content cell)])))
 
