@@ -13,6 +13,18 @@
   {:error (str "Undefined reference: \"" name "\"")
    :representation (str "Undefined reference: \"" name "\"")})
 
+(defn undefined-table-at [address]
+  {:error (str "No table found at " address "")
+   :representation (str "No table found at " address "")})
+
+(defn invalid-table-args [address]
+  {:error (str "table() needs a cell ref, given \"" address "\"")
+   :representation (str "table() needs a cell ref, given \"" address "\"")})
+
+(defn label-not-found [label-name]
+  {:error (str "label \"" label-name "\" doesn't exist")
+   :representation (str "label \"" label-name "\" doesn't exist")})
+
 (defn spill-error []
   {:error "Spill error"
    :representation "Spill error"})

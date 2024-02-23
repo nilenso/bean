@@ -16,6 +16,14 @@
 (def default-bindings
   {"concat" {:scalar functions/bean-concat
              :representation "f"}
+   "get" {:scalar functions/bean-get
+          :representation "f"}
+   "vget" {:scalar functions/bean-vget
+           :representation "f"}
+   "hget" {:scalar functions/bean-hget
+           :representation "f"}
+   "table" {:scalar functions/bean-table
+            :representation "f"}
    "error" {:scalar functions/bean-error
             :representation "f"}})
 

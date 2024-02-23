@@ -42,8 +42,20 @@
 (defn get-table [sheet table-name]
   (get-in sheet [:tables table-name]))
 
-(defn- get-label [sheet table-name rc]
-  (get-in sheet [:tables table-name :labels rc]))
+(defn- get-label [sheet table-name rc & [dirn]]
+  (let [label (get-in sheet [:tables table-name :labels rc])]
+    (if dirn
+      (when (= (:dirn label) dirn)
+        label)
+      label)))
+
+(defn label? [sheet table-name label-name & [dirn]]
+  (some
+   (fn [[label label-data]]
+     (and (= label-name
+             (:scalar (util/get-cell (:grid sheet) label)))
+          (if dirn (= (:dirn label-data) dirn) true)))
+   (:labels (get-table sheet table-name))))
 
 (defn merge-labels [sheet start addresses]
   (if-let [table-name (cell-table start sheet)]
@@ -100,7 +112,11 @@
 (defn label->cells [sheet table-name label]
   (let [{:keys [end] :as table} (get-table sheet table-name)
         [table-end-r table-end-c] end
-        labels (:labels table)]
+        labels (:labels table)
+        merged-with-labels (mapcat
+                            #(get-in (util/get-cell (:grid sheet) %)
+                                     [:style :merged-addresses])
+                            (keys labels))]
     (when-let [{:keys [dirn]} (get labels label)]
       (as->
        (area/area->addresses
@@ -112,9 +128,16 @@
                   :left [(min (last-row label sheet) table-end-r)
                          (if bc (dec bc) table-end-c)]))}) cells
         (apply disj cells (filter #(get labels %) cells))
-        (apply disj cells (mapcat
-                           #(get-in (util/get-cell (:grid sheet) %) [:style :merged-addresses])
-                           (keys labels)))))))
+        (apply disj cells merged-with-labels)))))
+
+(defn label-name->cells [sheet table-name label-name & [dirn]]
+  (->> (keys (:labels (get-table sheet table-name)))
+       (filter #(get-label sheet table-name % dirn))
+       (filter #(when (= label-name
+                         (:scalar (util/get-cell (:grid sheet) %)))
+                  %))
+       (map #(label->cells sheet table-name %))
+       (apply set/union)))
 
 (defn mark-skipped [sheet table-name addresses]
   (update-in sheet [:tables table-name :skip-cells] #(apply conj % (set addresses))))

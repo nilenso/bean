@@ -19,6 +19,13 @@
 (defn area->addresses [area]
   (set (mapcat identity (area->address-matrix area))))
 
+(defn addresses->area [addresses]
+  {:start (top-left addresses)
+   :end (bottom-right addresses)})
+
+(defn addresses->address-matrix [addresses]
+  (area->address-matrix (addresses->area addresses)))
+
 (defn area-empty? [{:keys [start end]}]
   (= start end))
 

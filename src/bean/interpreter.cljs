@@ -26,15 +26,15 @@
    (when error {:error error})
    (when (:style cell) {:style (:style cell)})))
 
-(defn- first-error [ast-results]
+(defn first-error [ast-results]
   (->> ast-results (filter :error) first))
 
-(defn- eval-matrix [start-address end-address grid]
+(defn eval-matrix [start-address end-address grid]
   (util/map-on-matrix
    #(util/get-cell grid %)
    (util/addresses-matrix start-address end-address)))
 
-(defn- apply-results
+(defn apply-results
   ([f ast-results]
    (if-let [referenced-error (first-error ast-results)]
      referenced-error
@@ -95,7 +95,7 @@
       :FunctionDefinition (fn-result arg)
       :FunctionInvocation (apply-f sheet
                                    (eval-sub-ast arg)
-                                   (map eval-sub-ast (rest args)))
+                                   (rest args))
       :Expression (if (util/is-expression? arg)
                     (let [[left op right] args]
                       (apply-op (eval-sub-ast op)
@@ -110,13 +110,20 @@
                                "+" operators/bean-op-+
                                "*" operators/bean-op-*)))))
 
-(defn- apply-f [sheet f params]
-  (if (fn? (:scalar f))
-    ((:scalar f) params)
-    (eval-ast (:scalar f)
-              (update-in sheet
-                         [:bindings]
-                         #(merge % (into {} (map vector ["x" "y" "z"] params)))))))
+(defn eval-asts [sheet asts]
+  (map (fn [arg-ast] (eval-ast arg-ast sheet)) asts))
+
+(defn- bound-to-xyz [values]
+  (into {} (map vector ["x" "y" "z"] values)))
+
+(defn- apply-f [sheet f asts]
+  (let [fn-ast (:scalar f)]
+    (if (fn? fn-ast)
+      (fn-ast sheet asts)
+      (eval-ast fn-ast
+                (update-in sheet [:bindings]
+                           merge (bound-to-xyz
+                                  (eval-asts sheet asts)))))))
 
 (defn eval-cell [cell sheet]
   (-> (eval-ast (:ast cell) sheet)
