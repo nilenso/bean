@@ -1,16 +1,23 @@
 (ns bean.grid
   (:require [bean.area :as area]
-            [bean.tables :as tables]
             [bean.code-errors :as code-errors]
             [bean.deps :as deps]
             [bean.errors :as errors]
+            [bean.functions :as functions]
             [bean.interpreter :as interpreter]
             [bean.parser.parser :as parser]
             [bean.parser.trellis-parser :as trellis-parser]
+            [bean.tables :as tables]
             [bean.util :as util]
             [bean.value :as value]
             [clojure.set :as set]
             [clojure.string]))
+
+(def default-bindings
+  {"concat" {:scalar functions/bean-concat
+             :representation "f"}
+   "error" {:scalar functions/bean-error
+            :representation "f"}})
 
 (defn- offset [[start-r start-c] [offset-rows offset-cols]]
   [(+ start-r offset-rows) (+ start-c offset-cols)])
@@ -145,7 +152,7 @@
      {:grid parsed-grid
       :code code
       :tests tests
-      :bindings {}
+      :bindings default-bindings
       :depgraph (deps/make-depgraph parsed-grid)})))
 
 (defn- escalate-bindings-errors [sheet]

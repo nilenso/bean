@@ -1,6 +1,5 @@
 (ns bean.interpreter
-  (:require [bean.functions :as functions]
-            [bean.util :as util]
+  (:require [bean.util :as util]
             [bean.errors :as errors]
             [bean.operators :as operators]))
 
@@ -70,11 +69,6 @@
       rmatrix (apply-results #(apply %1 [%3 %2]) [op left] rmatrix)
       :else (apply-results #(apply %1 [%2 %3]) [op left right]))))
 
-(def global-ctx
-  {"concat" {:scalar functions/bean-concat
-             :representation "f"}
-   "error" {:scalar functions/bean-error
-            :representation "f"}})
 
 (declare apply-f)
 
@@ -97,7 +91,6 @@
                                (apply util/matrix-bounds)
                                (apply eval-matrix*))}
       :Name (or (get bindings arg)
-                (get global-ctx arg)
                 (errors/undefined-named-ref arg))
       :FunctionDefinition (fn-result arg)
       :FunctionInvocation (apply-f sheet
