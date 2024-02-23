@@ -82,8 +82,7 @@ a {
     z-index: 0;
     background: var(--cell-background);
     outline: 0.5px solid var(--sheet-border);
-    padding: var(--cell-padding);
-    padding-top: 6px;
+    padding: 0 var(--cell-padding) 0 var(--cell-padding);
     font-family: "SpaceGrotesk";
     overflow: hidden;
     cursor: cell;
