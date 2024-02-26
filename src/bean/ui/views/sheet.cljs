@@ -149,19 +149,11 @@
       (submit-cell-input)
       (edit-cell move-to-cell sheet))))
 
-(defn- center-text-v! [bitmap-text y h]
-  (let [text-h (.-height bitmap-text)]
-    (set! (.-y bitmap-text) (- (+ y (/ h 2)) text-h)))
-  bitmap-text)
-
-(defn- center-text-h! [bitmap-text x w]
-  (let [text-w (.-width bitmap-text)]
-    (set! (.-x bitmap-text) (- (+ x (/ w 2)) (/ text-w 2))))
-  bitmap-text)
-
 (defn- center-text! [bitmap-text x y h w]
-  (center-text-h! bitmap-text x w)
-  (center-text-v! bitmap-text y h)
+  (let [text-h (.-height bitmap-text)
+        text-w (.-width bitmap-text)]
+    (set! (.-x bitmap-text) (- (+ x (/ w 2)) (/ text-w 2)))
+    (set! (.-y bitmap-text) (- (+ y (/ h 2)) text-h)))
   bitmap-text)
 
 (defn- heading-text [text x y h w]
@@ -199,15 +191,7 @@
     (set! (.-y bitmap) (+ y (:cell-padding styles/sizes)))
     (-> mask (.beginFill 0xffffff) (.drawRect x y w h) .endFill)
     (set! (.-mask bitmap) mask)
-    (if merged?
-      (center-text! bitmap
-                    (+ x (:cell-padding styles/sizes))
-                    (+ y (:cell-padding styles/sizes))
-                    (- h (:cell-padding styles/sizes))
-                    (- w (:cell-padding styles/sizes)))
-      (center-text-v! bitmap
-                      (+ y (:cell-padding styles/sizes))
-                      (- h (:cell-padding styles/sizes))))
+    (when merged? (center-text! bitmap x y h w))
     (.addChild g mask)
     (.addChild g bitmap)
     g))
@@ -761,7 +745,7 @@
                       :minHeight (cell-h r cell row-heights)
                       :minWidth (cell-w c cell col-widths)
                       :text-align (when merged? :center)
-                      :line-height (str (cell-h r cell row-heights) "px")
+                      :line-height (str (- (cell-h r cell row-heights) 12) "px")
                       :background-color (when background (util/color-int->hex background))
                       :fontWeight (if bold? "bold" "normal")}
               :on-pointer-down #(grid-selection-start
