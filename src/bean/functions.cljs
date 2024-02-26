@@ -37,7 +37,7 @@
                     (area/addresses->address-matrix new-selection))
            :table (merge table-result
                          {:selection new-selection
-                          :selection-dirn :top})}
+                          :selection-dirn dirn})}
           (errors/label-not-found
            (:scalar (interpreter/eval-ast (second asts) sheet)))))
       error)))

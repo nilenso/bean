@@ -69,7 +69,6 @@
       rmatrix (apply-results #(apply %1 [%3 %2]) [op left] rmatrix)
       :else (apply-results #(apply %1 [%2 %3]) [op left right]))))
 
-
 (declare apply-f)
 
 (defn eval-ast [ast {:keys [grid bindings] :as sheet}]
@@ -96,6 +95,9 @@
       :FunctionInvocation (apply-f sheet
                                    (eval-sub-ast arg)
                                    (rest args))
+      :FunctionChain (let [[expr [_ fn-name & fn-args]] args]
+                       (eval-sub-ast
+                        (concat [:FunctionInvocation fn-name expr] fn-args)))
       :Expression (if (util/is-expression? arg)
                     (let [[left op right] args]
                       (apply-op (eval-sub-ast op)

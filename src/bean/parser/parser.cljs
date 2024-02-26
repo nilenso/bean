@@ -20,9 +20,11 @@
     MatrixRef = CellRef <':'> CellRef
 
     Operation = '+' | '*'
-    Expression = Value | CellRef | MatrixRef | Expression Operation Expression | FunctionInvocation | FunctionDefinition | Name
+    Expression = Value | CellRef | MatrixRef | Expression Operation Expression | FunctionInvocation | FunctionChain | FunctionDefinition | Name
     FunctionInvocation = (FunctionDefinition | Name) <'('> [Expression {<' '> Expression}] <')'>
     FunctionDefinition = <'{'> Expression <'}'>
+    FunctionChain = Expression <'.'> FunctionInvocation
+
     Name = #'[a-z]+'
 
     Value = Integer / <'\"'> QuotedString <'\"'>
