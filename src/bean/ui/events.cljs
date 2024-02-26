@@ -104,9 +104,10 @@
 (rf/reg-event-fx
  ::select-table
  (fn select-table [{:keys [db]} [_ table-name]]
-   (when-let [{:keys [start]} (get-in db [:sheet :tables table-name])]
-     {:db (assoc-in db [:ui :grid :selected-table] table-name)
-      :fx [[:dispatch [::edit-cell start]]]})))
+   (let [{:keys [start]} (get-in db [:sheet :tables table-name])]
+     (merge
+      {:db (assoc-in db [:ui :grid :selected-table] table-name)}
+      (when start {:fx [[:dispatch [::edit-cell start]]]})))))
 
 (rf/reg-event-fx
  ::make-table
