@@ -87,6 +87,16 @@
       (is (some? (get-in sheet [:tables table-name :skip-cells [2 1]])))
       (is (some? (get (tables/label->cells sheet table-name [1 1]) [2 1]))))))
 
+(deftest label-name->cells-test
+  (testing "Doesn't include skip cells from the result"
+    (let [table-name "A Table"
+          sheet (as-> (new-sheet) sheet
+                  (tables/make-table sheet table-name {:start [0 0] :end [2 2]})
+                  (tables/add-label sheet table-name [0 0] :top)
+                  (grid/update-cell [0 0] sheet "A label")
+                  (tables/mark-skipped sheet table-name [[2 0]]))]
+      (is (= (tables/label-name->cells sheet table-name "A label") #{[1 0]})))))
+
 (deftest skipped-cells-test
   (testing "Returns skipped cells and cells under a skip label"
     (let [table-name "A Table"

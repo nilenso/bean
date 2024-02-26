@@ -130,14 +130,24 @@
         (apply disj cells (filter #(get labels %) cells))
         (apply disj cells merged-with-labels)))))
 
+(defn skipped-cells [sheet table-name]
+  (let [table (get-table sheet table-name)
+        labels (:labels table)
+        skip-labels (filter #(get-in table [:skip-cells %]) (keys labels))]
+    (set/union
+     (set (mapcat #(label->cells sheet table-name %) skip-labels))
+     (:skip-cells table))))
+
 (defn label-name->cells [sheet table-name label-name & [dirn]]
+  ;; Excludes skip labels
   (->> (keys (:labels (get-table sheet table-name)))
        (filter #(get-label sheet table-name % dirn))
        (filter #(when (= label-name
                          (:scalar (util/get-cell (:grid sheet) %)))
                   %))
        (map #(label->cells sheet table-name %))
-       (apply set/union)))
+       (apply set/union)
+       (#(apply disj % (skipped-cells sheet table-name)))))
 
 (defn mark-skipped [sheet table-name addresses]
   (update-in sheet [:tables table-name :skip-cells] #(apply conj % (set addresses))))
@@ -148,14 +158,6 @@
          (set addresses)
          (set (mapcat #(label->cells sheet table-name %) addresses)))]
     (update-in sheet [:tables table-name :skip-cells] #(apply disj % addresses*))))
-
-(defn skipped-cells [sheet table-name]
-  (let [table (get-table sheet table-name)
-        labels (:labels table)
-        skip-labels (filter #(get-in table [:skip-cells %]) (keys labels))]
-    (set/union
-     (set (mapcat #(label->cells sheet table-name %) skip-labels))
-     (:skip-cells table))))
 
 (defn resize-table [sheet table-name area]
   (update-in sheet [:tables table-name] merge area))
