@@ -45,6 +45,18 @@
   {:error "+ only works for Integers"
    :representation "+ only works for Integers"})
 
+(defn type-mismatch-<-op []
+  {:error "< only works for Integers"
+   :representation "< only works for Integers"})
+
+(defn type-mismatch->-op []
+  {:error "> only works for Integers"
+   :representation "> only works for Integers"})
+
+(defn type-mismatch-=-op []
+  {:error "= only works for Integers"
+   :representation "= only works for Integers"})
+
 (defn type-mismatch-*-op []
   {:error "* only works for Integers"
    :representation "* only works for Integers"})

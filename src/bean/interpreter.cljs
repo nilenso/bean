@@ -110,7 +110,10 @@
       :QuotedString (ast-result arg)
       :Operation (ast-result (case arg
                                "+" operators/bean-op-+
-                               "*" operators/bean-op-*)))))
+                               "*" operators/bean-op-*
+                               "<" operators/bean-op-<
+                               ">" operators/bean-op->
+                               "=" operators/bean-op-=)))))
 
 (defn eval-asts [sheet asts]
   (map (fn [arg-ast] (eval-ast arg-ast sheet)) asts))

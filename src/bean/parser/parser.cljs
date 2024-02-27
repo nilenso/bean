@@ -19,7 +19,7 @@
     CellRef = #'[A-Z]+' #'[1-9][0-9]*'
     MatrixRef = CellRef <':'> CellRef
 
-    Operation = '+' | '*'
+    Operation = '+' | '*' | '=' | '<' | '>'
     Expression = Value | CellRef | MatrixRef | Expression Operation Expression | FunctionInvocation | FunctionChain | FunctionDefinition | Name
     FunctionInvocation = (FunctionDefinition | Name) <'('> [Expression {<' '> Expression}] <')'>
     FunctionDefinition = <'{'> Expression <'}'>
