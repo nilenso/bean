@@ -594,6 +594,21 @@
       grid)
      g)))
 
+(defn- draw-spills
+  ([] (new pixi/Graphics))
+  ([^js g {:keys [grid]} row-heights col-widths]
+   (.clear g)
+   (.lineStyle g 1 0x006666 0.5 1)
+   (util/map-on-matrix-addressed
+    (fn [_ cell]
+      (when-let [spills (:spilled-into cell)]
+        (let [[x y w h] (area->xywh
+                         (area/addresses->area spills)
+                         row-heights col-widths)]
+          (.drawRect g x y w h))))
+    grid)
+   g))
+
 (defn- draw-grid
   ([]
    (let [g (new pixi/Graphics)]
@@ -661,6 +676,7 @@
   (let [{:keys [row-heights col-widths]} (:grid-dimensions sheet)
         v (:viewport @pixi-app)]
     (draw-grid (:grid @pixi-app) sheet row-heights col-widths pixi-app)
+    (draw-spills (:spills @pixi-app) sheet row-heights col-widths)
     (draw-merged-cells (:merged-cells @pixi-app) sheet row-heights col-widths)
     (draw-cell-backgrounds (:cell-backgrounds @pixi-app) sheet row-heights col-widths)
     (draw-cell-text (:cell-text @pixi-app) sheet row-heights col-widths)
@@ -677,6 +693,7 @@
           c (.addChild v (make-container))
           cell-background (.addChild c (draw-cell-backgrounds))
           grid (.addChild c (draw-grid))
+          spills (.addChild grid (draw-spills))
           merged-cells (.addChild grid (draw-merged-cells))
           cell-text (.addChild grid (draw-cell-text))
           tables (.addChild grid (draw-tables))
@@ -688,6 +705,7 @@
               {:viewport v
                :container c
                :grid grid
+               :spills spills
                :selection selection
                :tables tables
                :merged-cells merged-cells
