@@ -44,6 +44,9 @@
                         :on-change #(reset! table-name (-> % .-target .-value))
                         :placeholder "Table name"}]
                [:button {:class :controls-btn
+                         :style {:margin-left "-3px"
+                                 :margin-right "0"
+                                 :height "26px"}
                          :type :submit
                          :on-click #(rf/dispatch [::events/make-table @table-name selection])}
                 "Create Table"]]])]]]))))

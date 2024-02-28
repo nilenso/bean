@@ -174,12 +174,15 @@ p {
     margin: auto 0 auto 0;
 }
 
+.make-table-input {
+    border: 1px solid #e9e9ed;
+    padding: 4px;
+}
+
 .make-table-input:active, .make-table-input:focus {
     outline: none;
     /* border: 2px solid #3b5aa3; */
 }
-
-
 
 .code {
     z-index: 3;
