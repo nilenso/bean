@@ -20,7 +20,7 @@
     MatrixRef = CellRef <':'> CellRef
 
     Operation = '+' | '*' | '=' | '<' | '>'
-    Expression = Value | CellRef | MatrixRef | Expression Operation Expression | FunctionInvocation | FunctionChain | FunctionDefinition | Name
+    Expression = Value | CellRef | MatrixRef | FunctionChain | Expression Operation Expression | FunctionInvocation | FunctionDefinition | Name
     FunctionInvocation = (FunctionDefinition | Name) <'('> [Expression {<' '> Expression}] <')'>
     FunctionDefinition = <'{'> Expression <'}'>
     FunctionChain = Expression <'.'> FunctionInvocation
