@@ -5,8 +5,8 @@
                       :heading-color 0x555555
                       :grid-line 0x0f0f0f
                       :resizer-line 0x999999
-                      :heading-border 0xcccccc
-                      :corner-background 0xdedede
+                      :heading-border 0xdddddd
+                      :corner-background 0xf2f2f1
                       :cell-color 0x000000
                       :cell-error-color 0xb93333
                       :selection 0x888888
@@ -29,6 +29,7 @@
             :error-font-size 9
             :heading-left-width 40
             :heading-font-size 13
+            :heading-border 1
             :resizer-handle 20
             :selection-border 1.5
             :table-border 1
