@@ -17,7 +17,10 @@
     (errors/type-mismatch->-op)))
 
 (defn bean-op-= [left right]
-  (if (and (int? left) (int? right))
+  (if (and (or (string? left)
+               (int? left))
+           (or (string? right)
+               (int? right)))
     (= left right)
     (errors/type-mismatch-=-op)))
 
