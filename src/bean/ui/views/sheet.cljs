@@ -508,6 +508,8 @@
      (reposition)
      (.beginFill g (:corner-background styles/colors))
      (.drawRect g 0 0 (:heading-left-width styles/sizes) (:cell-h styles/sizes))
+     (.lineStyle g (:heading-border styles/sizes) (:heading-border styles/colors) 1 0)
+     (.drawRect g 0 0 (:heading-left-width styles/sizes) (:cell-h styles/sizes))
      g))
   ([g _viewport] g))
 
@@ -525,10 +527,12 @@
     ;; draw the background
      (.beginFill g (:heading-background styles/colors))
      (.drawRect g 0 0 offset-l (:world-h styles/sizes))
-     (heading-line g offset-l 0 offset-l (:world-h styles/sizes))
+     (.lineStyle g (:heading-border styles/sizes) (:heading-border styles/colors) 1 0)
+     (.drawRect g 0 0 offset-l (:world-h styles/sizes))
     ;; draw individual heading borders
      (->> row-heights
           (reductions + offset-t)
+          (drop 1)
           (map #(heading-line g 0 % offset-l %))
           dorun)
     ;; draw text
@@ -553,9 +557,11 @@
      (.removeChildren g)
      (.beginFill g (:heading-background styles/colors))
      (.drawRect g 0 0 (:world-w styles/sizes) offset-t)
-     (heading-line g 0 offset-t (:world-w styles/sizes) offset-t)
+     (.lineStyle g (:heading-border styles/sizes) (:heading-border styles/colors) 1 0)
+     (.drawRect g 0 0 (:world-w styles/sizes) offset-t)
      (->> col-widths
           (reductions + offset-l)
+          (drop 1)
           (map #(heading-line g % 0 % offset-t))
           dorun)
      (reduce
@@ -838,7 +844,7 @@
 
 (defn sheet []
   [:div {:class :sheet-container}
-   (when features/show-control-bar [controls])
+   [controls]
    [:div {:id :grid-container}
     [canvas pixi-app*]
     [cell-input pixi-app*]]])

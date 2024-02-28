@@ -9,20 +9,19 @@
   (let [sheet (rf/subscribe [::subs/sheet])]
     [:div {:class :code}
      [:div {:class "code-header"}
+      [:img {:src "img/code-icon.png"
+             :class :code-icon}]
+      [:p {:style {:line-height "1.2rem"}}
+       "Code"]
+      [:div {:class :code-error} (:code-error @sheet)]
       [:button {:class (cs
                         :small-btn
+                        :dark-mode-btn
                         (str "code-state-"
                              (name (or (:code-evaluation-state @sheet)
                                        :evaluated))))
                 :on-click #(rf/dispatch [::events/evaluate-code])}
        "▶"]
-      [:div {:class :code-error} (:code-error @sheet)]
-      [:button {:class [:small-btn :dark-mode-btn]
-                :on-click #(.setAttribute js/document.documentElement "data-theme" "dark")}
-       "☾"]
-      [:button {:class [:small-btn :light-mode-btn]
-                :on-click #(.setAttribute js/document.documentElement "data-theme" "light")}
-       "☀"]
       [:button {:class [:small-btn :help-btn]
                 :on-click #(rf/dispatch [::events/display-help true])}
        "?"]]
