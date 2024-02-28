@@ -163,6 +163,7 @@
 (defn expand-tables [sheet [updated-r _]]
   (if-let [at-end-of-table (some (fn [[table-name {:keys [end]}]]
                                    (when (= updated-r (inc (first end)))
+                                    ;;  and the columns are within the tables cols
                                      table-name)) (:tables sheet))]
     (let [[end-r end-c] (:end (get-table sheet at-end-of-table))]
       (resize-table sheet at-end-of-table {:end [(inc end-r) end-c]}))

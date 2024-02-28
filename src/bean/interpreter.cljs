@@ -3,7 +3,7 @@
             [bean.errors :as errors]
             [bean.operators :as operators]))
 
-(defn- ast-result [error-or-val]
+(defn ast-result [error-or-val]
   (if-let [error (:error error-or-val)]
     (errors/stringified-error error)
     {:scalar error-or-val
@@ -116,14 +116,19 @@
 (defn- bound-to-xyz [values]
   (into {} (map vector ["x" "y" "z"] values)))
 
-(defn- apply-f [sheet f asts]
+(defn apply-system-f [sheet f asts]
+  (f sheet asts))
+
+(defn apply-user-f [sheet f args]
+  (eval-ast f (update-in sheet [:bindings]
+                         merge (bound-to-xyz args))))
+
+(defn apply-f [sheet f asts]
   (let [fn-ast (:scalar f)]
     (if (fn? fn-ast)
-      (fn-ast sheet asts)
-      (eval-ast fn-ast
-                (update-in sheet [:bindings]
-                           merge (bound-to-xyz
-                                  (eval-asts sheet asts)))))))
+      (apply-system-f sheet fn-ast asts)
+      (apply-user-f
+       sheet fn-ast (eval-asts sheet asts)))))
 
 (defn eval-cell [cell sheet]
   (-> (eval-ast (:ast cell) sheet)

@@ -19,8 +19,16 @@
     CellRef = #'[A-Z]+' #'[1-9][0-9]*'
     MatrixRef = CellRef <':'> CellRef
 
+<<<<<<< Updated upstream
     Operation = '+' | '*'
     Expression = Value | CellRef | MatrixRef | Expression Operation Expression | FunctionInvocation | FunctionDefinition | Name
+=======
+    Operation = '+' | '*' | '=' | '<' | '>'
+    Expression = Value | CellRef | MatrixRef | FunctionChain | Expression Operation Expression | FunctionInvocation | FunctionDefinition | Name
+<<<<<<< ours
+>>>>>>> Stashed changes
+=======
+>>>>>>> theirs
     FunctionInvocation = (FunctionDefinition | Name) <'('> [Expression {<' '> Expression}] <')'>
     FunctionDefinition = <'{'> Expression <'}'>
     Name = #'[a-z]+'

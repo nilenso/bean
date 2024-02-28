@@ -9,7 +9,8 @@
   (routes/start)
   (r/render
    [root/routed]
-   (.getElementById js/document "app")))
+   (.getElementById js/document "app"))
+  (rf/dispatch [::events/refresh-bindings]))
 
 (defn  ^:export main []
   (rf/dispatch-sync [::events/initialize-db])

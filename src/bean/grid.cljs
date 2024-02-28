@@ -24,6 +24,12 @@
            :representation "f"}
    "table" {:scalar functions/bean-table
             :representation "f"}
+   "filter" {:scalar functions/bean-filter
+             :representation "f"}
+   "reduce" {:scalar functions/bean-reduce
+             :representation "f"}
+   "row" {:scalar functions/bean-row
+          :representation "f"}
    "error" {:scalar functions/bean-error
             :representation "f"}})
 
@@ -225,9 +231,7 @@
      (reduce #(eval-dep %2 %1) sheet* deps-to-reval))))
 
 (defn update-cell [address sheet content]
-  (if (= (:content (util/get-cell (:grid sheet) address)) content)
-    sheet
-    (eval-cell address (tables/expand-tables sheet address) content)))
+  (eval-cell address (tables/expand-tables sheet address) content))
 
 (defn- merge-cell [sheet address merge-with]
   (let [sheet* (if (not= merge-with address)
