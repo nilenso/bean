@@ -23,7 +23,7 @@
     --code-thick-line-gap: 4;
     --headings-left-width: 40px;
     --controls-height: 60px;
-    --sidebar-left-margin: 20px;
+    --sidebar-left-margin: 10px;
 }
 
 [data-theme='dark'] {

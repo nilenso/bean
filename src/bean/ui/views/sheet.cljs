@@ -437,7 +437,7 @@
                                (nth xs c) (+ (nth ys r) label-r)
                                (nth col-widths c) 4))))
         (let [[r c] label]
-          (.beginFill g color 0.5)
+          (.beginFill g color 0.25)
           (.drawRect g
                      (nth xs c) (nth ys r)
                      (cell-w c (get-in sheet [:grid r c]) col-widths)
