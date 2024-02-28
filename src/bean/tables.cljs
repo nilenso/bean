@@ -162,9 +162,11 @@
 (defn resize-table [sheet table-name area]
   (update-in sheet [:tables table-name] merge area))
 
-(defn expand-tables [sheet [updated-r _]]
-  (if-let [at-end-of-table (some (fn [[table-name {:keys [end]}]]
-                                   (when (= updated-r (inc (first end)))
+(defn expand-tables [sheet [updated-r updated-c]]
+  (if-let [at-end-of-table (some (fn [[table-name {:keys [start end]}]]
+                                   (when (and (= updated-r (inc (first end)))
+                                              (< updated-c (inc (second end)))
+                                              (> updated-c (second start)))
                                      table-name)) (:tables sheet))]
     (let [[end-r end-c] (:end (get-table sheet at-end-of-table))]
       (resize-table sheet at-end-of-table {:end [(inc end-r) end-c]}))
