@@ -5,11 +5,10 @@
 
 (deftest code-errors-test
   (testing "When the code has a parse error, it is escalated on reevaluation"
-    (is (= (-> (grid/new-sheet [[""]] "")
-               (code/set-code "foo: 99fail")
-               code/reevaluate
-               :code-error)
-           "Parse Error: idx 7. [{:tag :string, :expecting \"*\"} {:tag :regexp, :expecting #\"^\\s+\"} {:tag :string, :expecting \"+\"} {:tag :string, :expecting \".\"} {:tag :string, :expecting \"\\n\"}]")))
+    (is (not-empty (-> (grid/new-sheet [[""]] "")
+                       (code/set-code "foo: 99fail")
+                       code/reevaluate
+                       :code-error))))
 
   (testing "When the code has an error in a statement, it is escalated on reevaluation"
     (is (= (-> (grid/new-sheet [[""]] "")

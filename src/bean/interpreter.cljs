@@ -118,17 +118,29 @@
 (defn eval-asts [sheet asts]
   (map (fn [arg-ast] (eval-ast arg-ast sheet)) asts))
 
-(defn- bound-to-xyz [values]
+(defn- bind-to-xyz [values]
   (into {} (map vector ["x" "y" "z"] values)))
 
-(defn- apply-f [sheet f asts]
+(defn- apply-system-f [sheet f args asts]
+  (if asts
+    (f sheet args asts)
+    (f sheet args)))
+
+(defn- apply-user-f [sheet f args]
+  (eval-ast f (update-in sheet [:bindings]
+                         merge (bind-to-xyz args))))
+
+(defn apply-f-args [sheet f args & [asts]]
   (let [fn-ast (:scalar f)]
     (if (fn? fn-ast)
-      (fn-ast sheet asts)
-      (eval-ast fn-ast
-                (update-in sheet [:bindings]
-                           merge (bound-to-xyz
-                                  (eval-asts sheet asts)))))))
+      (apply-system-f sheet fn-ast args asts)
+      (apply-user-f sheet fn-ast args))))
+
+(defn apply-f [sheet f asts]
+  (let [args (eval-asts sheet asts)]
+    (if-let [error (first-error args)]
+      error
+      (apply-f-args sheet f args asts))))
 
 (defn eval-cell [cell sheet]
   (-> (eval-ast (:ast cell) sheet)

@@ -24,6 +24,14 @@
            :representation "f"}
    "table" {:scalar functions/bean-table
             :representation "f"}
+   "filter" {:scalar functions/bean-filter
+             :representation "f"}
+   "reduce" {:scalar functions/bean-reduce
+             :representation "f"}
+   "row" {:scalar functions/bean-row
+          :representation "f"}
+   "col" {:scalar functions/bean-col
+          :representation "f"}
    "error" {:scalar functions/bean-error
             :representation "f"}})
 

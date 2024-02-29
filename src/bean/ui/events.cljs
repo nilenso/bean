@@ -32,6 +32,11 @@
                    :evaluated)))))
 
 (rf/reg-event-db
+ ::reload-bindings
+ (fn reload-bindings [db [_]]
+   (update-in db [:sheet :bindings] merge grid/default-bindings)))
+
+(rf/reg-event-db
  ::update-cell
  (fn update-cell [db [_ address content]]
    (update-in db [:sheet] #(grid/update-cell address % content))))
