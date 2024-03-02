@@ -398,7 +398,7 @@ p {
     z-index: 4;
     position: absolute;
     content: '';
-    left: 38px;
+    left: 33px;
     height: 100%;
     width: 1px;
     background: var(--code-margin);    

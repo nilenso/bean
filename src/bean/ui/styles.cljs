@@ -27,7 +27,7 @@
             :cell-padding 5
             :cell-font-size 14
             :error-font-size 9
-            :heading-left-width 40
+            :heading-left-width 35
             :heading-font-size 13
             :heading-border 1
             :resizer-handle 20
