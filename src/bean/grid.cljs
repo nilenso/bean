@@ -22,7 +22,7 @@
            :representation "f"}
    "hget" {:scalar functions/bean-hget
            :representation "f"}
-   "table" {:scalar functions/bean-table
+   "frame" {:scalar functions/bean-table
             :representation "f"}
    "filter" {:scalar functions/bean-filter
              :representation "f"}

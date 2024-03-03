@@ -11,10 +11,8 @@
                       :cell-error-color 0xb93333
                       :selection 0x888888
                       :selection-alpha 0.06
-                      :table-border 0xaaaaaa
-                      :table-highlight 0x3b5aa3
-                      :table-highlight-hover 0x8190b5
-                      :table-name 0xffffff})
+                      :table-border 0x3b5aa3
+                      :table-name 0x3b5aa3})
 
 (def colors light)
 

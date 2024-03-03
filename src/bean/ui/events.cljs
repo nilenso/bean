@@ -101,11 +101,6 @@
  (fn [db [_ selection]]
    (assoc-in db [:ui :grid :selection] selection)))
 
-(rf/reg-event-db
- ::making-table
- (fn making-table [db [_]]
-   (assoc-in db [:ui :making-table] true)))
-
 (rf/reg-event-fx
  ::select-table
  (fn select-table [{:keys [db]} [_ table-name]]
@@ -115,12 +110,14 @@
       (when start {:fx [[:dispatch [::edit-cell start]]]})))))
 
 (rf/reg-event-fx
- ::make-table
- (fn make-table [{:keys [db]} [_ table-name area]]
-   {:db (->  db
-             (assoc-in [:ui :making-table] false)
-             (update-in [:sheet] #(tables/make-table % table-name area)))
-    :fx [[:dispatch [::select-table table-name]]]}))
+ ::make-frame
+ (fn make-frame [{:keys [db]} [_ area]]
+   (let [frame-number (inc (get-in db [:sheet :last-table-number]))
+         frame-name (str "Frame " frame-number)]
+     {:db (->  db
+               (assoc-in [:sheet :last-table-number] frame-number)
+               (update-in [:sheet] #(tables/make-table % frame-name area)))
+      :fx [[:dispatch [::select-table frame-name]]]})))
 
 (rf/reg-event-db
  ::add-labels

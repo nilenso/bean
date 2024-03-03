@@ -331,25 +331,19 @@
     grid)
    g))
 
-(defn- draw-table-highlight [^js g table-name x y w h & [hover?]]
+(defn- draw-table-name [^js g table-name x y]
   (let [font-size (:table-name-font styles/sizes)
         text-bitmap (new pixi/BitmapText table-name
                          #js {:fontName "SpaceGrotesk"
                               :tint (:table-name styles/colors)
                               :fontSize font-size})
-        color (if hover?
-                (:table-highlight-hover styles/colors)
-                (:table-highlight styles/colors))
         padding (:table-name-padding styles/sizes)
         padded #(+ (* 2 padding) %)]
-    (.lineStyle g (:table-highlight styles/sizes) color 1 0.5)
-    (.drawRect g x y w h)
-    (.beginFill g color 1)
+    (.beginFill g 0xffffff 1)
     (.drawRect g x
                (- y (padded font-size))
                (padded (.-width text-bitmap))
-               (padded font-size))
-    (.beginFill g 0x0000000 0)
+               (dec (padded font-size)))
     (set! (.-x text-bitmap) (+ x padding))
     (set! (.-y text-bitmap) (- y (padded font-size)))
     (.addChild g text-bitmap)
@@ -436,12 +430,11 @@
                     (.drawRect g
                                (nth xs c) (+ (nth ys r) label-r)
                                (nth col-widths c) 4))))
-        (let [[r c] label]
-          (.beginFill g color 0.25)
-          (.drawRect g
-                     (nth xs c) (nth ys r)
-                     (cell-w c (get-in sheet [:grid r c]) col-widths)
-                     (cell-h r (get-in sheet [:grid r c]) row-heights))))
+        (.beginFill g color 0.25)
+        (.drawRect g
+                   (nth xs label-c) (nth ys label-r)
+                   (cell-w label-c (get-in sheet [:grid label-r label-c]) col-widths)
+                   (cell-h label-r (get-in sheet [:grid label-r label-c]) row-heights)))
       (draw-skipped-cells g textures sheet skipped-cells row-heights col-widths xs ys)
       (.endFill g))
     g))
@@ -454,12 +447,6 @@
      (let [[x y w h] (area->xywh table-data row-heights col-widths)
            border (new pixi/Graphics)
            highlight (new pixi/Graphics)
-           highlight-on-hover
-           (fn []
-             (.on border "pointerover"
-                  #(draw-table-highlight highlight table-name x y w h true))
-             (.on border "pointerout"
-                  #(-> highlight (.clear) (.removeChildren))))
            extra-hitarea-y (+ (* 2 (:table-name-padding styles/sizes))
                               (:table-name-font styles/sizes))]
        (-> g (.addChild border) (.addChild highlight))
@@ -467,17 +454,16 @@
        (set! (.-hitArea border) (new pixi/Rectangle
                                      x (- y extra-hitarea-y)
                                      w (+ h extra-hitarea-y)))
-       (.lineStyle border (:table-border styles/sizes) (:table-border styles/colors) 1 0.5)
+       (.lineStyle border (:table-border styles/sizes) (:table-border styles/colors) 0.5 0.5)
        (.drawRect border x y w h)
+       (draw-table-name highlight table-name x y)
+       (.addChild g (draw-label-bounds textures sheet table-name (:labels table-data) row-heights col-widths))
 
-       (if (= selected-table table-name)
+       (when (= selected-table table-name)
          (let [label-controls (draw-label-controls textures table-name selection)]
-           (draw-table-highlight highlight table-name x y w h)
-           (.addChild g (draw-label-bounds textures sheet table-name (:labels table-data) row-heights col-widths))
            (.addChild g label-controls)
            (set! (.-x label-controls) (+ x w 5))
-           (set! (.-y label-controls) y))
-         (highlight-on-hover))))))
+           (set! (.-y label-controls) y)))))))
 
 (defn- draw-cell-backgrounds
   ([] (let [g (new pixi/Graphics)]
