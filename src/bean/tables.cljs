@@ -166,8 +166,9 @@
   (if-let [at-end-of-table (some (fn [[table-name {:keys [start end]}]]
                                    (when (and (= updated-r (inc (first end)))
                                               (< updated-c (inc (second end)))
-                                              (> updated-c (second start)))
+                                              (>= updated-c (second start)))
                                      table-name)) (:tables sheet))]
+    
     (let [[end-r end-c] (:end (get-table sheet at-end-of-table))]
       (resize-table sheet at-end-of-table {:end [(inc end-r) end-c]}))
     sheet))

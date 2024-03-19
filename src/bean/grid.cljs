@@ -232,10 +232,24 @@
                         (map deps/->cell-dep other-spillers))]
      (reduce #(eval-dep %2 %1) sheet* deps-to-reval))))
 
+;; Temporary hack until we figure out how to reval
+;; table queries
+(defn eval-sheet-a-few-times [sheet]
+  (let [addresses (->> (:grid sheet)
+                       (util/map-on-matrix-addressed
+                        (fn [address item]
+                          (when (and (not= (:content item) "")
+                                     (not (nil? (:content item))))
+                            address)))
+                       (mapcat identity)
+                       (remove nil?))]
+    (reduce
+     (fn [sheet* _] (reduce #(eval-cell %2 %1) sheet* addresses)) sheet (range 3))))
+
 (defn update-cell [address sheet content]
   (if (= (:content (util/get-cell (:grid sheet) address)) content "")
     sheet
-    (eval-cell address (tables/expand-tables sheet address) content)))
+    (eval-sheet-a-few-times (eval-cell address (tables/expand-tables sheet address) content))))
 
 (defn- merge-cell [sheet address merge-with]
   (let [sheet* (if (not= merge-with address)
