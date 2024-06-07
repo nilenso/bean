@@ -25,3 +25,4 @@ output.js
 tests.js
 .calva/
 out/
+.vscode/
