@@ -1,9 +1,8 @@
 (ns bean.ui.views.sheet
   (:require [bean.area :as area]
             [bean.grid :as grid]
-            [bean.tables :as tables]
+            [bean.frames :as frames]
             [bean.ui.events :as events]
-            [bean.ui.features :as features]
             [bean.ui.styles :as styles]
             [bean.ui.subs :as subs]
             [bean.ui.util :as util]
@@ -94,7 +93,7 @@
       (.drawRect g x y w h))))
 
 (defn- edit-cell [rc sheet]
-  (rf/dispatch-sync [::events/select-table (tables/cell-table rc sheet)])
+  (rf/dispatch-sync [::events/select-frame (frames/cell-frame rc sheet)])
   (rf/dispatch [::events/edit-cell rc]))
 
 (defn- grid-selection-end [area pixi-app]
@@ -331,13 +330,13 @@
     grid)
    g))
 
-(defn- draw-table-name [^js g table-name x y]
-  (let [font-size (:table-name-font styles/sizes)
-        text-bitmap (new pixi/BitmapText table-name
+(defn- draw-frame-name [^js g frame-name x y]
+  (let [font-size (:frame-name-font styles/sizes)
+        text-bitmap (new pixi/BitmapText frame-name
                          #js {:fontName "SpaceGrotesk"
-                              :tint (:table-name styles/colors)
+                              :tint (:frame-name styles/colors)
                               :fontSize font-size})
-        padding (:table-name-padding styles/sizes)
+        padding (:frame-name-padding styles/sizes)
         padded #(+ (* 2 padding) %)]
     (.beginFill g 0xffffff 1)
     (.drawRect g x
@@ -363,22 +362,22 @@
   (.addChild g sprite)
   sprite)
 
-(defn- mark-skip-cells [table-name selection]
+(defn- mark-skip-cells [frame-name selection]
   (rf/dispatch [::events/clear-edit-cell])
-  (rf/dispatch [::events/mark-skip-cells table-name
+  (rf/dispatch [::events/mark-skip-cells frame-name
                 (area/area->addresses selection)]))
 
-(defn- remove-label [table-name selection]
+(defn- remove-label [frame-name selection]
   (rf/dispatch [::events/clear-edit-cell])
-  (rf/dispatch [::events/remove-labels table-name
+  (rf/dispatch [::events/remove-labels frame-name
                 (area/area->addresses selection)]))
 
-(defn- add-label [table-name selection dirn]
+(defn- add-label [frame-name selection dirn]
   (rf/dispatch [::events/clear-edit-cell])
-  (rf/dispatch [::events/add-labels table-name
+  (rf/dispatch [::events/add-labels frame-name
                 (area/area->addresses selection) dirn]))
 
-(defn- draw-label-controls [icons table-name selection]
+(defn- draw-label-controls [icons frame-name selection]
   (let [g (new pixi/Graphics)]
     (.lineStyle g 2 0xcccccc 1 0.5)
     (.beginFill g 0xffffff)
@@ -387,16 +386,16 @@
     (.on g "pointerdown" #(.stopPropagation %))
     (button! (new pixi/Sprite (:add-top-label icons))
              g 5 5 20
-             #(add-label table-name selection :top))
+             #(add-label frame-name selection :top))
     (button! (new pixi/Sprite (:add-left-label icons))
              g 5 30 20
-             #(add-label table-name selection :left))
+             #(add-label frame-name selection :left))
     (button! (new pixi/Sprite (:add-skip-label icons))
              g 5 55 20
-             #(mark-skip-cells table-name selection))
+             #(mark-skip-cells frame-name selection))
     (button! (new pixi/Sprite (:trash-label icons))
              g 5 80 20
-             #(remove-label table-name selection))
+             #(remove-label frame-name selection))
     g))
 
 (defn- draw-skipped-cells [^js g textures sheet skipped-cells row-heights col-widths xs ys]
@@ -411,13 +410,13 @@
       (set! (.. bg -tileScale -y) 1.7)
       (.addChild g bg))))
 
-(defn- draw-label-bounds [textures sheet table-name labels row-heights col-widths]
+(defn- draw-label-bounds [textures sheet frame-name labels row-heights col-widths]
   (let [xs (reductions + 0 col-widths)
         ys (reductions + 0 row-heights)
         g (new pixi/Graphics)]
-    (let [skipped-cells (tables/skipped-cells sheet table-name)]
+    (let [skipped-cells (frames/skipped-cells sheet frame-name)]
       (doseq [[[label-r label-c :as label] {:keys [color dirn]}] labels]
-        (doseq [[r c] (tables/label->cells sheet table-name label)]
+        (doseq [[r c] (frames/label->cells sheet frame-name label)]
           (if (get skipped-cells [r c])
             (.beginFill g color 0.2)
             (.beginFill g color 0.5))
@@ -439,28 +438,28 @@
       (.endFill g))
     g))
 
-(defn- draw-tables
+(defn- draw-frames
   ([] (new pixi/Graphics))
-  ([^js g textures {:keys [tables] :as sheet} {:keys [selection selected-table]} row-heights col-widths]
+  ([^js g textures {:keys [frames] :as sheet} {:keys [selection selected-frame]} row-heights col-widths]
    (-> g (.clear) (.removeChildren))
-   (doseq [[table-name table-data] tables]
-     (let [[x y w h] (area->xywh table-data row-heights col-widths)
+   (doseq [[frame-name frame-data] frames]
+     (let [[x y w h] (area->xywh frame-data row-heights col-widths)
            border (new pixi/Graphics)
            highlight (new pixi/Graphics)
-           extra-hitarea-y (+ (* 2 (:table-name-padding styles/sizes))
-                              (:table-name-font styles/sizes))]
+           extra-hitarea-y (+ (* 2 (:frame-name-padding styles/sizes))
+                              (:frame-name-font styles/sizes))]
        (-> g (.addChild border) (.addChild highlight))
        (set! (.-eventMode border) "static")
        (set! (.-hitArea border) (new pixi/Rectangle
                                      x (- y extra-hitarea-y)
                                      w (+ h extra-hitarea-y)))
-       (.lineStyle border (:table-border styles/sizes) (:table-border styles/colors) 0.5 0.5)
+       (.lineStyle border (:frame-border styles/sizes) (:frame-border styles/colors) 0.5 0.5)
        (.drawRect border x y w h)
-       (draw-table-name highlight table-name x y)
-       (.addChild g (draw-label-bounds textures sheet table-name (:labels table-data) row-heights col-widths))
+       (draw-frame-name highlight frame-name x y)
+       (.addChild g (draw-label-bounds textures sheet frame-name (:labels frame-data) row-heights col-widths))
 
-       (when (= selected-table table-name)
-         (let [label-controls (draw-label-controls textures table-name selection)]
+       (when (= selected-frame frame-name)
+         (let [label-controls (draw-label-controls textures frame-name selection)]
            (.addChild g label-controls)
            (set! (.-x label-controls) (+ x w 5))
            (set! (.-y label-controls) y)))))))
@@ -672,7 +671,7 @@
     (draw-merged-cells (:merged-cells @pixi-app) sheet row-heights col-widths)
     (draw-cell-backgrounds (:cell-backgrounds @pixi-app) sheet row-heights col-widths)
     (draw-cell-text (:cell-text @pixi-app) sheet row-heights col-widths)
-    (draw-tables (:tables @pixi-app) (:textures @pixi-app) sheet grid-ui row-heights col-widths)
+    (draw-frames (:frames @pixi-app) (:textures @pixi-app) sheet grid-ui row-heights col-widths)
     (draw-selection (:selection @pixi-app) (:selection grid-ui) row-heights col-widths)
     (draw-top-heading (:top-heading @pixi-app) col-widths v)
     (draw-left-heading (:left-heading @pixi-app) row-heights v)
@@ -688,7 +687,7 @@
           spills (.addChild grid (draw-spills))
           merged-cells (.addChild grid (draw-merged-cells))
           cell-text (.addChild grid (draw-cell-text))
-          tables (.addChild grid (draw-tables))
+          frames (.addChild grid (draw-frames))
           selection (.addChild grid (draw-selection))
           top-heading (.addChild c (draw-top-heading v))
           left-heading (.addChild c (draw-left-heading v))
@@ -699,7 +698,7 @@
                :grid grid
                :spills spills
                :selection selection
-               :tables tables
+               :frames frames
                :merged-cells merged-cells
                :cell-backgrounds cell-background
                :cell-text cell-text

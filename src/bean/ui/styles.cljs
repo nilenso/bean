@@ -11,8 +11,8 @@
                       :cell-error-color 0xb93333
                       :selection 0x888888
                       :selection-alpha 0.06
-                      :table-border 0x3b5aa3
-                      :table-name 0x3b5aa3})
+                      :frame-border 0x3b5aa3
+                      :frame-name 0x3b5aa3})
 
 (def colors light)
 
@@ -30,10 +30,10 @@
             :heading-border 1
             :resizer-handle 20
             :selection-border 1.5
-            :table-border 1
-            :table-highlight 2
-            :table-name-font 12
-            :table-name-padding 3})
+            :frame-border 1
+            :frame-highlight 2
+            :frame-name-font 12
+            :frame-name-padding 3})
 
 (def cell-background-colors
   [nil 0xcccccc 0xffc9c9 0xb2f2bb 0xa5d8ff 0xffec99])

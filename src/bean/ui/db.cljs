@@ -54,4 +54,4 @@
      :ui {:help-display false
           :grid {:editing-cell nil
                  :selection nil
-                 :selected-table nil}}}))
+                 :selected-frame nil}}}))

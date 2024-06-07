@@ -7,7 +7,7 @@
             [bean.interpreter :as interpreter]
             [bean.parser.parser :as parser]
             [bean.parser.trellis-parser :as trellis-parser]
-            [bean.tables :as tables]
+            [bean.frames :as frames]
             [bean.util :as util]
             [bean.value :as value]
             [clojure.set :as set]
@@ -22,7 +22,7 @@
            :representation "f"}
    "hget" {:scalar functions/bean-hget
            :representation "f"}
-   "frame" {:scalar functions/bean-table
+   "frame" {:scalar functions/bean-frame
             :representation "f"}
    "filter" {:scalar functions/bean-filter
              :representation "f"}
@@ -233,7 +233,7 @@
      (reduce #(eval-dep %2 %1) sheet* deps-to-reval))))
 
 ;; Temporary hack until we figure out how to reval
-;; table queries
+;; frame queries
 (defn eval-sheet-a-few-times [sheet]
   (let [addresses (->> (:grid sheet)
                        (util/map-on-matrix-addressed
@@ -249,7 +249,7 @@
 (defn update-cell [address sheet content]
   (if (= (:content (util/get-cell (:grid sheet) address)) content "")
     sheet
-    (eval-sheet-a-few-times (eval-cell address (tables/expand-tables sheet address) content))))
+    (eval-sheet-a-few-times (eval-cell address (frames/expand-frames sheet address) content))))
 
 (defn- merge-cell [sheet address merge-with]
   (let [sheet* (if (not= merge-with address)
@@ -273,7 +273,7 @@
       (-> (reduce #(merge-cell %1 %2 start) sheet addresses)
           (set-cell-style start :merged-until end)
           (set-cell-style start :merged-addresses addresses)
-          (tables/merge-labels start addresses))
+          (frames/merge-labels start addresses))
       sheet)))
 
 (defn can-unmerge? [sheet addresses]
@@ -394,7 +394,7 @@
   {;; Source fields
    :grid grid
    :code code
-   :tables tables
+   :frames frames
 
    ;; Evaluated fields
    :depgraph depgraph

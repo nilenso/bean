@@ -13,13 +13,13 @@
   {:error (str "Undefined reference: \"" name "\"")
    :representation (str "Undefined reference: \"" name "\"")})
 
-(defn undefined-table-at [address]
-  {:error (str "No table found at " address "")
-   :representation (str "No table found at " address "")})
+(defn undefined-frame-at [address]
+  {:error (str "No frame found at " address "")
+   :representation (str "No frame found at " address "")})
 
-(defn invalid-table-args [address]
-  {:error (str "table() needs a cell ref, given \"" address "\"")
-   :representation (str "table() needs a cell ref, given \"" address "\"")})
+(defn invalid-frame-args [address]
+  {:error (str "frame() needs a cell ref, given \"" address "\"")
+   :representation (str "frame() needs a cell ref, given \"" address "\"")})
 
 (defn label-not-found [label-name]
   {:error (str "label \"" label-name "\" doesn't exist")

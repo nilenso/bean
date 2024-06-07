@@ -2,7 +2,7 @@
   (:require [bean.area :as area]
             [bean.errors :as errors]
             [bean.interpreter :as interpreter]
-            [bean.tables :as tables]
+            [bean.frames :as frames]
             [bean.util :as util]
             [clojure.set :as set]
             [clojure.string]))
@@ -19,54 +19,54 @@
      (reduce str "" arg))
    args))
 
-(defn- new-table-result [sheet table-result new-selection]
+(defn- new-frame-result [sheet frame-result new-selection]
   (let [new-selection (set new-selection)]
     {:matrix (util/map-on-matrix
               #(if (get new-selection %)
                  (util/get-cell (:grid sheet) %)
                  {:scalar "" :representation ""})
               (area/addresses->address-matrix new-selection))
-     :table (merge table-result
+     :frame (merge frame-result
                    {:selection new-selection})}))
 
 (defn bean-row [sheet args]
-  (let [table-result (:table (first args))
-        selection (:selection table-result)
-        table (tables/get-table sheet (:name table-result))
-        [start-r start-c] (:start table)
-        [end-r end-c] (:end table)
+  (let [frame-result (:frame (first args))
+        selection (:selection frame-result)
+        frame (frames/get-frame sheet (:name frame-result))
+        [start-r start-c] (:start frame)
+        [end-r end-c] (:end frame)
         cols (range start-c (inc end-c))
-        labels (set (keys (:labels table)))]
+        labels (set (keys (:labels frame)))]
     (as-> (for [col cols]
             (for [[r _] selection]
               [r col])) rcs
       (mapcat identity rcs)
       (set rcs)
       (apply disj rcs labels)
-      (new-table-result sheet table-result rcs))))
+      (new-frame-result sheet frame-result rcs))))
 
 (defn bean-col [sheet args]
-  (let [table-result (:table (first args))
-        selection (:selection table-result)
-        table (tables/get-table sheet (:name table-result))
-        [start-r start-c] (:start table)
-        [end-r end-c] (:end table)
+  (let [frame-result (:frame (first args))
+        selection (:selection frame-result)
+        frame (frames/get-frame sheet (:name frame-result))
+        [start-r start-c] (:start frame)
+        [end-r end-c] (:end frame)
         rows (range start-r (inc end-r))
-        labels (set (keys (:labels table)))]
+        labels (set (keys (:labels frame)))]
     (as-> (for [row rows]
             (for [[_ c] selection]
               [row c])) rcs
       (mapcat identity rcs)
       (set rcs)
       (apply disj rcs labels)
-      (new-table-result sheet table-result rcs))))
+      (new-frame-result sheet frame-result rcs))))
 
 (defn bean-reduce [sheet args]
-  (let [table-result (:table (first args))
+  (let [frame-result (:frame (first args))
         f (second args)
         f* #(interpreter/apply-f-args sheet f [%1 %2])
         val* (first (drop 2 args))
-        col* (->> (:selection table-result)
+        col* (->> (:selection frame-result)
                   sort
                   (map #(util/get-cell (:grid sheet) %))
                   (remove #(clojure.string/blank? (:scalar %))))]
@@ -77,28 +77,28 @@
 ;; This doesn't work for matrices right now
 ;; It should: eval-matrix should perhaps return a :selection also
 (defn bean-filter [sheet args]
-  (let [table-result (:table (first args))
+  (let [frame-result (:frame (first args))
         f (second args)
-        selection (:selection table-result)]
+        selection (:selection frame-result)]
     (->> selection
          (filter
           #(:scalar
             (interpreter/apply-f-args sheet f
              [(util/get-cell (:grid sheet) %)])))
-         (new-table-result sheet table-result))))
+         (new-frame-result sheet frame-result))))
 
 (defn- bean-get* [sheet args asts & [dirn]]
-  (let [table-result (:table (first args))
+  (let [frame-result (:frame (first args))
         label (:scalar (second args))
-        existing-selection (:selection table-result)
-        vget-cells (tables/label-name->cells
+        existing-selection (:selection frame-result)
+        vget-cells (frames/label-name->cells
                     sheet
-                    (:name table-result) label dirn)
+                    (:name frame-result) label dirn)
         new-selection (set/intersection
                        vget-cells
                        existing-selection)]
-    (if (tables/label? sheet (:name table-result) label dirn)
-      (new-table-result sheet table-result new-selection)
+    (if (frames/label? sheet (:name frame-result) label dirn)
+      (new-frame-result sheet frame-result new-selection)
       (errors/label-not-found
        (:scalar (interpreter/eval-ast (second asts) sheet))))))
 
@@ -111,22 +111,22 @@
 (defn bean-hget [sheet args asts]
   (bean-get* sheet args asts :left))
 
-(defn bean-table [sheet args asts]
+(defn bean-frame [sheet args asts]
   (if (cell-ref? (first asts))
     (let [[_ [_ a n]] (first asts)
           address (util/a1->rc a (js/parseInt n))
-          table-name (tables/cell-table address sheet)
-          table (tables/get-table sheet table-name)]
-      (if table-name
-        {:matrix (interpreter/eval-matrix (:start table)
-                                          (:end table)
+          frame-name (frames/cell-frame address sheet)
+          frame (frames/get-frame sheet frame-name)]
+      (if frame-name
+        {:matrix (interpreter/eval-matrix (:start frame)
+                                          (:end frame)
                                           (:grid sheet))
-         :table {:name table-name
+         :frame {:name frame-name
                  :selection (area/area->addresses
-                             (select-keys table [:start :end]))
+                             (select-keys frame [:start :end]))
                  :selection-dirn nil}}
-        (errors/undefined-table-at (str a n))))
-    (errors/invalid-table-args
+        (errors/undefined-frame-at (str a n))))
+    (errors/invalid-frame-args
      (str (:scalar (first args))))))
 
 (defn bean-error [_sheet args]

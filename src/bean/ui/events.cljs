@@ -1,6 +1,6 @@
 (ns bean.ui.events
   (:require [bean.grid :as grid]
-            [bean.tables :as tables]
+            [bean.frames :as frames]
             [bean.ui.provenance :as provenance]
             [bean.ui.db :as db]
             [re-frame.core :as rf]
@@ -102,41 +102,41 @@
    (assoc-in db [:ui :grid :selection] selection)))
 
 (rf/reg-event-fx
- ::select-table
- (fn select-table [{:keys [db]} [_ table-name]]
-   (let [{:keys [start]} (get-in db [:sheet :tables table-name])]
+ ::select-frame
+ (fn select-frame [{:keys [db]} [_ frame-name]]
+   (let [{:keys [start]} (get-in db [:sheet :frames frame-name])]
      (merge
-      {:db (assoc-in db [:ui :grid :selected-table] table-name)}
+      {:db (assoc-in db [:ui :grid :selected-frame] frame-name)}
       (when start {:fx [[:dispatch [::edit-cell start]]]})))))
 
 (rf/reg-event-fx
  ::make-frame
  (fn make-frame [{:keys [db]} [_ area]]
-   (let [frame-number (inc (get-in db [:sheet :last-table-number]))
+   (let [frame-number (inc (get-in db [:sheet :last-frame-number]))
          frame-name (str "Frame " frame-number)]
      {:db (->  db
-               (assoc-in [:sheet :last-table-number] frame-number)
-               (update-in [:sheet] #(tables/make-table % frame-name area)))
-      :fx [[:dispatch [::select-table frame-name]]]})))
+               (assoc-in [:sheet :last-frame-number] frame-number)
+               (update-in [:sheet] #(frames/make-frame % frame-name area)))
+      :fx [[:dispatch [::select-frame frame-name]]]})))
 
 (rf/reg-event-db
  ::add-labels
- (fn add-labels [db [_ table-name addresses dirn]]
+ (fn add-labels [db [_ frame-name addresses dirn]]
    (update-in db [:sheet]
-              #(tables/add-labels % table-name addresses dirn))))
+              #(frames/add-labels % frame-name addresses dirn))))
 
 (rf/reg-event-db
  ::remove-labels
- (fn remove-labels [db [_ table-name addresses]]
+ (fn remove-labels [db [_ frame-name addresses]]
    (->  db
-        (update-in [:sheet] #(tables/unmark-skipped % table-name addresses))
-        (update-in [:sheet] #(tables/remove-labels % table-name addresses)))))
+        (update-in [:sheet] #(frames/unmark-skipped % frame-name addresses))
+        (update-in [:sheet] #(frames/remove-labels % frame-name addresses)))))
 
 (rf/reg-event-db
  ::mark-skip-cells
- (fn mark-skip-cells [db [_ table-name addresses]]
+ (fn mark-skip-cells [db [_ frame-name addresses]]
    (update-in db [:sheet]
-              #(tables/mark-skipped % table-name addresses))))
+              #(frames/mark-skipped % frame-name addresses))))
 
 (rf/reg-event-db
  ::clear-selection

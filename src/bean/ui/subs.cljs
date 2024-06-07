@@ -8,9 +8,9 @@
    (:sheet db)))
 
 (re-frame/reg-sub
- ::tables
+ ::frames
  (fn [db]
-   (get-in db [:sheet :tables])))
+   (get-in db [:sheet :frames])))
 
 (re-frame/reg-sub
  ::ui

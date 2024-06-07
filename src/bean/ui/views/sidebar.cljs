@@ -5,14 +5,14 @@
             [re-frame.core :as rf]
             [bean.area :as area]))
 
-(defn tables-list []
+(defn frames-list []
   (fn []
-    (let [tables @(rf/subscribe [::subs/tables])
+    (let [frames @(rf/subscribe [::subs/frames])
           selection @(rf/subscribe [::subs/selection])]
       [:div
-       [:div {:class :tables-header}
-        [:img {:src "img/table-icon.png"
-               :class :table-icon}]
+       [:div {:class :frames-header}
+        [:img {:src "img/frame-icon.png"
+               :class :frame-icon}]
         [:p {:style {:line-height "1.2rem"}}
          "Frames"]
         [:button {:class :controls-btn
@@ -21,21 +21,21 @@
                   :disabled (area/area-empty? selection)
                   :on-click #(rf/dispatch [::events/make-frame selection])}
          "Make frame"]]
-       [:div {:class :tables-list-items}
+       [:div {:class :frames-list-items}
         [:div
          (doall
-          (for [[table-name] tables]
-            [:div {:key table-name
-                   :class :tables-list-item}
+          (for [[frame-name] frames]
+            [:div {:key frame-name
+                   :class :frames-list-item}
 
-             [:a {:on-click #(rf/dispatch [::events/select-table table-name])}
-              [:img {:src "img/made-table-icon.png"
-                     :class :table-icon}]
-              table-name]]))]]])))
+             [:a {:on-click #(rf/dispatch [::events/select-frame frame-name])}
+              [:img {:src "img/made-frame-icon.png"
+                     :class :frame-icon}]
+              frame-name]]))]]])))
 
 (defn sidebar []
   [:div {:class :sidebar}
    [:div {:class :logo-container}
     [:img {:src "img/logo.png" :class :bean-logo}]]
-   [tables-list]
+   [frames-list]
    [code/text-area]])

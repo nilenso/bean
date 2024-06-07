@@ -8,7 +8,7 @@
             [bean.util :as util]
             [clojure.test :refer [deftest testing is]]
             [bean.area :as area]
-            [bean.tables :as tables]))
+            [bean.frames :as frames]))
 
 (deftest evaluator-test
   (testing "Basic evaluation"
@@ -356,10 +356,10 @@
               :merged-until [1 2]}))))
 
   (testing "Merges labels into a single label"
-    (let [table-name "A table"
+    (let [frame-name "A frame"
           sheet (-> (new-sheet (repeat 5 (repeat 5 "")) "")
                     eval-sheet
-                    (tables/make-table table-name {:start [0 0] :end [2 2]})
-                    (tables/add-label table-name [1 1] :top)
+                    (frames/make-frame frame-name {:start [0 0] :end [2 2]})
+                    (frames/add-label frame-name [1 1] :top)
                     (grid/merge-cells {:start [0 1] :end [1 1]}))]
-      (is (= (get-in sheet [:tables table-name :labels]) {[0 1] {:dirn :top :color nil}})))))
+      (is (= (get-in sheet [:frames frame-name :labels]) {[0 1] {:dirn :top :color nil}})))))

@@ -124,7 +124,7 @@ p {
     margin: auto 0 auto calc(var(--sidebar-left-margin) + 6px);
 }
 
-.table-icon {
+.frame-icon {
     height: 0.8rem;
     margin: auto 5px auto 0;
 }
@@ -134,7 +134,7 @@ p {
     margin: auto 7px auto 2px;
 }
 
-.tables-header {
+.frames-header {
     top: 0;
     height: var(--cell-height);
     width: 100%;
@@ -147,7 +147,7 @@ p {
     border-bottom: 1px solid var(--code-margin);
 }
 
-.tables-list-items {
+.frames-list-items {
     background-image: linear-gradient(var(--code-lines) 0.7px, transparent 0.7px);
     background-position-y: var(--cell-height);
     background-size: 100% var(--cell-height);
@@ -156,12 +156,12 @@ p {
     overflow-y: auto;
 }
 
-.tables-list-item {
+.frames-list-item {
     height: var(--cell-height);
     display: flex;
 }
 
-.tables-list-item a {
+.frames-list-item a {
     cursor: pointer;
     border-bottom: 2px solid #eee;
     font-family: SpaceGrotesk, sans-serif;
@@ -170,16 +170,16 @@ p {
     margin: auto 0 auto 0;
 }
 
-.make-table-form {
+.make-frame-form {
     margin: auto 0 auto 0;
 }
 
-.make-table-input {
+.make-frame-input {
     border: 1px solid #e9e9ed;
     padding: 4px;
 }
 
-.make-table-input:active, .make-table-input:focus {
+.make-frame-input:active, .make-frame-input:focus {
     outline: none;
     /* border: 2px solid #3b5aa3; */
 }
