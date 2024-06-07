@@ -138,9 +138,7 @@
 
 (defn apply-f [sheet f asts]
   (let [args (eval-asts sheet asts)]
-    (if-let [error (first-error args)]
-      error
-      (apply-f-args sheet f args asts))))
+    (apply-f-args sheet f args asts)))
 
 (defn eval-cell [cell sheet]
   (-> (eval-ast (:ast cell) sheet)
