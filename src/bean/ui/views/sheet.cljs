@@ -2,6 +2,7 @@
   (:require [bean.area :as area]
             [bean.grid :as grid]
             [bean.frames :as frames]
+            [bean.ui.paste :as paste]
             [bean.ui.events :as events]
             [bean.ui.styles :as styles]
             [bean.ui.subs :as subs]
@@ -833,3 +834,12 @@
    [:div {:id :grid-container}
     [canvas pixi-app*]
     [cell-input pixi-app*]]])
+
+(defn handle-paste [e]
+  (.preventDefault e)
+  (if-let [pasted-table (paste/parse-table e)]
+    (rf/dispatch [::events/paste-addressed-cells pasted-table])
+    (rf/dispatch [::events/paste-addressed-cells (paste/parse-plaintext e)])))
+
+(.addEventListener js/window "paste" handle-paste)
+;; (.removeEventListener js/window "paste" handle-paste)

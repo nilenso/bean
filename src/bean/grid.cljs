@@ -224,7 +224,8 @@
          depgraph* (cond-> depgraph content-changed?
                            (deps/update-depgraph
                             [:cell address] cell cell*))
-         sheet* (merge sheet {:grid grid* :depgraph depgraph*})
+         sheet* (merge (frames/expand-frames sheet address)
+                       {:grid grid* :depgraph depgraph*})
          other-spillers (-> (interested-spillers updated-addrs grid)
                             (disj address))
          deps-to-reval (concat
@@ -246,10 +247,10 @@
     (reduce
      (fn [sheet* _] (reduce #(eval-cell %2 %1) sheet* addresses)) sheet (range 3))))
 
-(defn update-cell [address sheet content]
+(defn update-cell-content [address sheet content]
   (if (= (:content (util/get-cell (:grid sheet) address)) content "")
     sheet
-    (eval-sheet-a-few-times (eval-cell address (frames/expand-frames sheet address) content))))
+    (eval-sheet-a-few-times (eval-cell address sheet content))))
 
 (defn- merge-cell [sheet address merge-with]
   (let [sheet* (if (not= merge-with address)
@@ -291,6 +292,26 @@
               (reduce #(unset-cell-style %1 %2 :merged-addresses) sheet* merged-addresses)
               (reduce #(unset-cell-style %1 %2 :merged-until) sheet* merged-addresses))))
         sheet)))
+
+;; untested and slightly weird interface, exists for pasting
+;; many cells and handling merged cells etc.
+(defn update-cells-bulk [sheet start addressed-attrs]
+  (->> addressed-attrs
+       (map #(do [(offset (first %) start) (second %)]))
+       (reduce
+        (fn [sheet* [address attrs]]
+          (let [existing-cell (util/get-cell (:grid sheet*) address)
+                new-cell (-> existing-cell
+                             (assoc :content (:content attrs))
+                             (assoc :style (merge (:style existing-cell) (:style attrs))))
+                new-sheet (eval-cell address sheet* new-cell true)]
+            (if (:merge-until attrs)
+              (merge-cells new-sheet
+                           {:start address
+                            :end (offset (:merge-until attrs) start)})
+              new-sheet)))
+        (unmerge-cells sheet (map #(offset % start) (keys addressed-attrs))))
+       eval-sheet-a-few-times))
 
 (defn eval-named
   ([name {:keys [bindings] :as sheet}]

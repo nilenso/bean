@@ -93,7 +93,7 @@
           sheet (as-> (new-sheet) sheet
                   (frames/make-frame sheet frame-name {:start [0 0] :end [2 2]})
                   (frames/add-label sheet frame-name [0 0] :top)
-                  (grid/update-cell [0 0] sheet "A label")
+                  (grid/update-cell-content [0 0] sheet "A label")
                   (frames/mark-skipped sheet frame-name [[2 0]]))]
       (is (= (frames/label-name->cells sheet frame-name "A label") #{[1 0]})))))
 

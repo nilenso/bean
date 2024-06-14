@@ -39,7 +39,14 @@
 (rf/reg-event-db
  ::update-cell
  (fn update-cell [db [_ address content]]
-   (update-in db [:sheet] #(grid/update-cell address % content))))
+   (update-in db [:sheet] #(grid/update-cell-content address % content))))
+
+(rf/reg-event-db
+ ::paste-addressed-cells
+ (fn paste-addressed-cells [db [_ addressed-cells]]
+   (update-in db [:sheet] #(grid/update-cells-bulk %
+                                                   (:start (get-in db [:ui :grid :selection]))
+                                                   addressed-cells))))
 
 (rf/reg-event-fx
  ::merge-cells

@@ -23,6 +23,8 @@
        (map name)
        (str/join " ")))
 
+(def map-on-matrix util/map-on-matrix)
+(def addresses-matrix util/addresses-matrix)
 (def map-on-matrix-addressed util/map-on-matrix-addressed)
 
 (defn color-int->hex [color]
