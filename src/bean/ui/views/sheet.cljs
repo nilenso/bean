@@ -841,5 +841,5 @@
     (rf/dispatch [::events/paste-addressed-cells pasted-table])
     (rf/dispatch [::events/paste-addressed-cells (paste/parse-plaintext e)])))
 
-(.addEventListener js/window "paste" handle-paste)
-;; (.removeEventListener js/window "paste" handle-paste)
+(defn handle-copy [_]
+  (rf/dispatch [::events/copy-selection]))

@@ -34,7 +34,8 @@
        :release {:build-options
                  {:ns-aliases
                   {day8.re-frame.tracing day8.re-frame.tracing-stubs}}}
-       :modules {:main {:entries [bean.ui.main]}}}
+       :modules {:main {:entries [bean.ui.main]
+                        :init-fn bean.ui.main/init}}}
   :test {:target :node-test
          :output-to "tests.js"
          :ns-regexp "-test$"}}}

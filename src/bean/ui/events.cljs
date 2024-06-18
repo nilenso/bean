@@ -1,13 +1,14 @@
 (ns bean.ui.events
-  (:require [bean.grid :as grid]
-            [bean.frames :as frames]
-            [bean.ui.provenance :as provenance]
-            [bean.ui.db :as db]
-            [re-frame.core :as rf]
-            [reagent.core :as rc]
-            [bean.code :as code]
+  (:require [bean.code :as code]
             [bean.code-errors :as code-errors]
-            [bean.ui.util :as util]))
+            [bean.frames :as frames]
+            [bean.grid :as grid]
+            [bean.ui.db :as db]
+            [bean.ui.paste :as paste]
+            [bean.ui.provenance :as provenance]
+            [bean.ui.util :as util]
+            [re-frame.core :as rf]
+            [reagent.core :as rc]))
 
 (rf/reg-event-db
  ::initialize-db
@@ -47,6 +48,22 @@
    (update-in db [:sheet] #(grid/update-cells-bulk %
                                                    (:start (get-in db [:ui :grid :selection]))
                                                    addressed-cells))))
+
+(rf/reg-fx
+ ::copy-to-clipboard
+ (fn [[plain-text html]]
+   (.write (.-clipboard js/navigator)
+           [(new js/ClipboardItem
+                 #js {"text/plain" (new js/Blob [plain-text] {:type "text/plain"})
+                      "text/html" (new js/Blob [html] {:type "text/html"})})])))
+
+(rf/reg-event-fx
+ ::copy-selection
+ (fn copy-selection [{:keys [db]}]
+   (let [selection (get-in db [:ui :grid :selection])]
+     {:fx [[::copy-to-clipboard
+            [(paste/selection->plain-text selection (:sheet db))
+             (paste/selection->html selection (:sheet db))]]]})))
 
 (rf/reg-event-fx
  ::merge-cells

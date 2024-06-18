@@ -1,7 +1,8 @@
 (ns bean.ui.main
-  (:require [bean.ui.views.root :as root]
-            [bean.ui.events :as events]
+  (:require [bean.ui.events :as events]
+            [bean.ui.views.sheet :as sheet]
             [bean.ui.routes :as routes]
+            [bean.ui.views.root :as root]
             [re-frame.core :as rf]
             [reagent.dom :as r]))
 
@@ -11,6 +12,10 @@
    [root/routed]
    (.getElementById js/document "app"))
   (rf/dispatch [::events/reload-bindings]))
+
+(defn init []
+  (.addEventListener js/window "paste" (fn [e] (sheet/handle-paste e)))
+  (.addEventListener js/window "copy" (fn [e] (sheet/handle-copy e))))
 
 (defn  ^:export main []
   (rf/dispatch-sync [::events/initialize-db])
