@@ -166,7 +166,7 @@
   ([content-grid code tests]
    (let [parsed-grid (parse-grid content-grid)]
      {:grid parsed-grid
-      :code code
+      :code-in-editor code
       :tests tests
       :bindings default-bindings
       :depgraph (deps/make-depgraph parsed-grid)})))

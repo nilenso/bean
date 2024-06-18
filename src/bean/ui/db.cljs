@@ -7,7 +7,11 @@
    (vec
     (for [_ (range num-rows)]
       (vec (map (fn [_] "") (range num-cols)))))
-   ""))
+"add:{x+y}
+inc:{x+1}
+sum:{x.reduce({x + y})}
+count:{x.reduce(inc 0)}
+concatt:{x.concat(y)}"))
 
 (def Cell
   [:map
