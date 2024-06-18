@@ -14,6 +14,7 @@
   (rf/dispatch [::events/reload-bindings]))
 
 (defn init []
+  (.addEventListener js/window "keydown" (fn [e] (sheet/handle-global-kbd e)))
   (.addEventListener js/window "paste" (fn [e] (sheet/handle-paste e)))
   (.addEventListener js/window "copy" (fn [e] (sheet/handle-copy e))))
 

@@ -42,6 +42,12 @@
  (fn update-cell [db [_ address content]]
    (update-in db [:sheet] #(grid/update-cell-content address % content))))
 
+(rf/reg-event-fx
+ ::handle-global-kbd
+ (fn handle-global-kbd [{:keys [db]} [_ e]]
+   (when-let [[r c] (:start (get-in db [:ui :grid :selection]))]
+     {:fx [[:dispatch [::edit-cell [r c]]]]})))
+
 (rf/reg-event-db
  ::paste-addressed-cells
  (fn paste-addressed-cells [db [_ addressed-cells]]

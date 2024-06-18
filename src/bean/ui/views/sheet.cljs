@@ -123,10 +123,19 @@
      #(grid-selection-end (i->area %) pixi-app)
      pixi-app)))
 
+(def last-click (atom {:time 0 :rc []}))
+
+(defn- cell-double-click [rc sheet]
+  (edit-cell rc sheet))
+
 (defn- cell-pointer-down [rc grid-g sheet row-heights col-widths pixi-app]
   (submit-cell-input)
   (rf/dispatch [::events/clear-edit-cell])
-  (edit-cell rc sheet)
+  (rf/dispatch-sync [::events/set-selection {:start rc :end rc}])
+  (when (and (< (- (js/Date.now) (:time @last-click)) 300)
+             (= (:rc @last-click) rc))
+    (cell-double-click rc sheet))
+  (reset! last-click {:time (js/Date.now) :rc rc})
   (grid-selection-start
    (util/merged-or-self rc sheet)
    grid-g row-heights col-widths pixi-app))
@@ -137,17 +146,19 @@
 
 ;; TODO: use the reframe keyboard library here
 (defn- handle-cell-navigation [e [r c] sheet]
-  (let [[mr mc] (get-in sheet [:grid r c :style :merged-until])
-        move-to-cell (cond
-                       (and (= (.-keyCode e) 13) (.-shiftKey e)) [(dec r) c]
-                       (and (= (.-keyCode e) 9) (.-shiftKey e)) [r (dec c)]
-                       (= (.-keyCode e) 13) [(if mr (inc mr) (inc r)) c]
-                       (= (.-keyCode e) 9) [r (if mc (inc mc) (inc c))])
-        [move-to-r move-to-c] move-to-cell]
-    (when (and (nat-int? move-to-r) (nat-int? move-to-c))
-      (.preventDefault e)
-      (submit-cell-input)
-      (edit-cell move-to-cell sheet))))
+  (if (= (.-keyCode e) 27)
+    (rf/dispatch [::events/clear-edit-cell])
+    (let [[mr mc] (get-in sheet [:grid r c :style :merged-until])
+          move-to-cell (cond
+                         (and (= (.-keyCode e) 13) (.-shiftKey e)) [(dec r) c]
+                         (and (= (.-keyCode e) 9) (.-shiftKey e)) [r (dec c)]
+                         (= (.-keyCode e) 13) [(if mr (inc mr) (inc r)) c]
+                         (= (.-keyCode e) 9) [r (if mc (inc mc) (inc c))])
+          [move-to-r move-to-c] move-to-cell]
+      (when (and (nat-int? move-to-r) (nat-int? move-to-c))
+        (.preventDefault e)
+        (submit-cell-input)
+        (edit-cell move-to-cell sheet)))))
 
 (defn- center-text! [bitmap-text x y h w]
   (let [text-h (.-height bitmap-text)
@@ -732,6 +743,11 @@
                            (.-y scaled-xy)])
          ")")))
 
+(defn- cell-paste-text [e]
+  (.preventDefault e)
+  (.execCommand js/document "insertText" false
+   (.getData (.-clipboardData e) "text/plain")))
+
 (defn- cell-input [pixi-app]
   (when-let [[r c] @(rf/subscribe [::subs/editing-cell])]
     (let [sheet (rf/subscribe [::subs/sheet])
@@ -763,7 +779,8 @@
                                  (:grid @pixi-app) row-heights col-widths pixi-app)
               :on-pointer-up #(let [canvas (.querySelector js/document "#grid-container canvas")]
                                 (.dispatchEvent canvas (new js/MouseEvent "pointerup" %)))
-              :on-key-down #(handle-cell-navigation % [r c] @sheet)}
+              :on-key-down #(handle-cell-navigation % [r c] @sheet)
+              :on-paste cell-paste-text}
        (:content cell)])))
 
 (defn- canvas* []
@@ -835,11 +852,26 @@
     [canvas pixi-app*]
     [cell-input pixi-app*]]])
 
+(defn- editing-text? []
+  (let [focused-element (.-activeElement js/document)
+        tag-name (and focused-element (.-tagName focused-element))]
+    (or (= (.toLowerCase tag-name) "span")
+        (= (.toLowerCase tag-name) "textarea"))))
+
+(defn ctrl-or-meta? [e]
+  (or (.-ctrlKey e) (.-metaKey e)))
+
+(defn handle-global-kbd [e]
+  (when (and (not (editing-text?)) (not (ctrl-or-meta? e)))
+    (rf/dispatch [::events/handle-global-kbd e])))
+
 (defn handle-paste [e]
-  (.preventDefault e)
-  (if-let [pasted-table (paste/parse-table e)]
-    (rf/dispatch [::events/paste-addressed-cells pasted-table])
-    (rf/dispatch [::events/paste-addressed-cells (paste/parse-plaintext e)])))
+  (when-not (editing-text?)
+    (.preventDefault e)
+    (if-let [pasted-table (paste/parse-table e)]
+      (rf/dispatch [::events/paste-addressed-cells pasted-table])
+      (rf/dispatch [::events/paste-addressed-cells (paste/parse-plaintext e)]))))
 
 (defn handle-copy [_]
-  (rf/dispatch [::events/copy-selection]))
+  (when-not (editing-text?)
+    (rf/dispatch [::events/copy-selection])))
