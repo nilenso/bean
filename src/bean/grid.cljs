@@ -240,7 +240,9 @@
                        (util/map-on-matrix-addressed
                         (fn [address item]
                           (when (and (not= (:content item) "")
-                                     (not (nil? (:content item))))
+                                     (not (nil? (:content item)))
+                                     ;; only reval formulas
+                                     (= (first (:content item)) "="))
                             address)))
                        (mapcat identity)
                        (remove nil?))]
@@ -312,6 +314,16 @@
               new-sheet)))
         (unmerge-cells sheet (map #(offset % start) (keys addressed-attrs))))
        eval-sheet-a-few-times))
+
+(defn add-frame-labels [sheet frame-name addresses dirn]
+  (-> (reduce #(set-cell-style %1 %2 :bold true) sheet addresses)
+      (frames/add-labels frame-name addresses dirn)
+      eval-sheet-a-few-times))
+
+(defn remove-frame-labels [sheet frame-name addresses]
+  (-> (reduce #(set-cell-style %1 %2 :bold false) sheet addresses)
+      (frames/remove-labels frame-name addresses)
+      eval-sheet-a-few-times))
 
 (defn pasted-area [pasted-at addresses]
   (let [{:keys [start end]} (area/addresses->area addresses)]

@@ -159,14 +159,14 @@
  ::add-labels
  (fn add-labels [db [_ frame-name addresses dirn]]
    (update-in db [:sheet]
-              #(frames/add-labels % frame-name addresses dirn))))
+              #(grid/add-frame-labels % frame-name addresses dirn))))
 
 (rf/reg-event-db
  ::remove-labels
  (fn remove-labels [db [_ frame-name addresses]]
    (->  db
         (update-in [:sheet] #(frames/unmark-skipped % frame-name addresses))
-        (update-in [:sheet] #(frames/remove-labels % frame-name addresses)))))
+        (update-in [:sheet] #(grid/remove-frame-labels % frame-name addresses)))))
 
 (rf/reg-event-db
  ::mark-skip-cells
