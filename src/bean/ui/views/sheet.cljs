@@ -136,8 +136,7 @@
              (= (:rc @last-click) rc))
     (cell-double-click rc sheet))
   (reset! last-click {:time (js/Date.now) :rc rc})
-  (grid-selection-start
-   (util/merged-or-self rc sheet)
+  (grid-selection-start rc
    grid-g row-heights col-widths pixi-app))
 
 (defn- grid-pointer-down [i grid-g sheet row-heights col-widths pixi-app]
@@ -452,7 +451,7 @@
 
 (defn- draw-frames
   ([] (new pixi/Graphics))
-  ([^js g textures {:keys [frames] :as sheet} {:keys [selection selected-frame]} row-heights col-widths]
+  ([^js g textures {:keys [frames] :as sheet} {:keys [selection]} row-heights col-widths]
    (-> g (.clear) (.removeChildren))
    (doseq [[frame-name frame-data] frames]
      (let [[x y w h] (area->xywh frame-data row-heights col-widths)
@@ -470,11 +469,10 @@
        (draw-frame-name highlight frame-name x y)
        (.addChild g (draw-label-bounds textures sheet frame-name (:labels frame-data) row-heights col-widths))
 
-       (when (= selected-frame frame-name)
-         (let [label-controls (draw-label-controls textures frame-name selection)]
-           (.addChild g label-controls)
-           (set! (.-x label-controls) (+ x w 5))
-           (set! (.-y label-controls) y)))))))
+       (let [label-controls (draw-label-controls textures frame-name selection)]
+         (.addChild g label-controls)
+         (set! (.-x label-controls) (+ x w 5))
+         (set! (.-y label-controls) y))))))
 
 (defn- draw-cell-backgrounds
   ([] (let [g (new pixi/Graphics)]
@@ -774,8 +772,7 @@
                       :line-height (str (- (cell-h r cell row-heights) 12) "px")
                       :background-color (when background (util/color-int->hex background))
                       :fontWeight (if bold? "bold" "normal")}
-              :on-pointer-down #(grid-selection-start
-                                 (util/merged-or-self [r c] sheet)
+              :on-pointer-down #(grid-selection-start [r c]
                                  (:grid @pixi-app) row-heights col-widths pixi-app)
               :on-pointer-up #(let [canvas (.querySelector js/document "#grid-container canvas")]
                                 (.dispatchEvent canvas (new js/MouseEvent "pointerup" %)))

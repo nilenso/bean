@@ -143,9 +143,7 @@
  ::select-frame
  (fn select-frame [{:keys [db]} [_ frame-name]]
    (let [{:keys [start]} (get-in db [:sheet :frames frame-name])]
-     (merge
-      {:db (assoc-in db [:ui :grid :selected-frame] frame-name)}
-      (when start {:fx [[:dispatch [::edit-cell start]]]})))))
+     (when start {:fx [[:dispatch [::edit-cell start]]]}))))
 
 (rf/reg-event-fx
  ::make-frame
