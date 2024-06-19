@@ -295,7 +295,7 @@
 
 ;; untested and slightly weird interface, exists for pasting
 ;; many cells and handling merged cells etc.
-(defn update-cells-bulk [sheet start addressed-attrs]
+(defn update-cells-bulk [sheet {:keys [start]} addressed-attrs]
   (->> addressed-attrs
        (map #(do [(offset (first %) start) (second %)]))
        (reduce
@@ -312,6 +312,13 @@
               new-sheet)))
         (unmerge-cells sheet (map #(offset % start) (keys addressed-attrs))))
        eval-sheet-a-few-times))
+
+(defn clear-selection [sheet {:keys [start end]}]
+  (->> (util/addresses-matrix start end)
+       (mapcat identity)
+       (map #(do [% {:content ""}]))
+       (into {})
+       (update-cells-bulk sheet start)))
 
 (defn eval-named
   ([name {:keys [bindings] :as sheet}]

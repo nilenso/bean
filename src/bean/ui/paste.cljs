@@ -77,8 +77,8 @@
 
 (defn hiccup-matrix->html [matrix]
   (hr/hiccup-to-html
-   [[:body {} [:table {}
-               (into [:tbody {}] matrix)]]]))
+   [[:table {}
+     (into [:tbody {}] matrix)]]))
 
 (defn hickory-table->cells [hickory-table]
   (loop [hiccup-cells (->>
