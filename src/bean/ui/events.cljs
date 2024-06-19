@@ -52,12 +52,16 @@
          {:db (update-in db [:sheet] #(grid/clear-selection % selection))}
          {:fx [[:dispatch [::edit-cell [r c]]]]})))))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  ::paste-addressed-cells
- (fn paste-addressed-cells [db [_ addressed-cells]]
-   (update-in db [:sheet] #(grid/update-cells-bulk %
-                                                   (get-in db [:ui :grid :selection])
-                                                   addressed-cells))))
+ (fn paste-addressed-cells [{:keys [db]} [_ addressed-cells]]
+   (let [selection (get-in db [:ui :grid :selection])]
+     {:db (update-in db [:sheet] #(grid/update-cells-bulk %
+                                                          selection
+                                                          addressed-cells))
+      :fx [[:dispatch [::set-selection (grid/pasted-area
+                                        (:start selection)
+                                        (keys addressed-cells))]]]})))
 
 (rf/reg-fx
  ::copy-to-clipboard

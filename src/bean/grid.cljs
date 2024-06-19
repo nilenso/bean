@@ -313,6 +313,11 @@
         (unmerge-cells sheet (map #(offset % start) (keys addressed-attrs))))
        eval-sheet-a-few-times))
 
+(defn pasted-area [pasted-at addresses]
+  (let [{:keys [start end]} (area/addresses->area addresses)]
+    {:start (offset start pasted-at)
+     :end (offset end pasted-at)}))
+
 (defn clear-selection [sheet {:keys [start end]}]
   (->> (util/addresses-matrix start end)
        (mapcat identity)
