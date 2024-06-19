@@ -859,7 +859,9 @@
   (or (.-ctrlKey e) (.-metaKey e)))
 
 (defn handle-global-kbd [e]
-  (when (and (not (editing-text?)) (not (ctrl-or-meta? e)))
+  (when (and (not (editing-text?)) (not (or (ctrl-or-meta? e)
+                                            (= (.-key e) "Shift")
+                                            (= (.-key e) "Escape"))))
     (rf/dispatch [::events/handle-global-kbd e])))
 
 (defn handle-paste [e]

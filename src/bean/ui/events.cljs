@@ -50,7 +50,9 @@
        (if (or (= (.-key e) "Backspace")
                (= (.-key e) "Delete"))
          {:db (update-in db [:sheet] #(grid/clear-selection % selection))}
-         {:fx [[:dispatch [::edit-cell [r c]]]]})))))
+         (if (= (count (.-key e)) 1)
+           {:fx [[:dispatch [::edit-cell [r c] (.-key e)]]]}
+           {:fx [[:dispatch [::edit-cell [r c]]]]}))))))
 
 (rf/reg-event-fx
  ::paste-addressed-cells
@@ -118,16 +120,21 @@
 
 (rf/reg-fx
  ::focus-element
- (fn [el-id]
-   (rc/after-render  #(some-> js/document (.getElementById el-id) .focus))))
+ (fn [[el-id text]]
+   (rc/after-render
+    #(let [el (-> js/document (.getElementById el-id))]
+       (when text (set! (.-innerHTML el) text))
+       (.focus el)
+       (.selectAllChildren (.getSelection js/window) el)
+       (.collapseToEnd (.getSelection js/window))))))
 
 (rf/reg-event-fx
  ::edit-cell
- (fn edit-cell [{:keys [db]} [_ rc]]
+ (fn edit-cell [{:keys [db]} [_ rc text]]
    (let [rc* (util/merged-or-self rc (:sheet db))]
      {:db (assoc-in db [:ui :grid :editing-cell] rc*)
       :fx [[:dispatch [::set-selection {:start rc* :end (util/merged-until-or-self rc* (:sheet db))}]]
-           [::focus-element "cell-input"]]})))
+           [::focus-element ["cell-input" text]]]})))
 
 (rf/reg-event-db
  ::clear-edit-cell
