@@ -16,7 +16,8 @@
 (defn init []
   (.addEventListener js/window "keydown" (fn [e] (sheet/handle-global-kbd e)))
   (.addEventListener js/window "paste" (fn [e] (sheet/handle-paste e)))
-  (.addEventListener js/window "copy" (fn [e] (sheet/handle-copy e))))
+  (.addEventListener js/window "copy" (fn [e] (sheet/handle-copy e)))
+  (.addEventListener js/window "cut" (fn [e] (sheet/handle-cut e))))
 
 (defn  ^:export main []
   (rf/dispatch-sync [::events/initialize-db])

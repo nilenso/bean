@@ -875,3 +875,7 @@
 (defn handle-copy [_]
   (when-not (editing-text?)
     (rf/dispatch [::events/copy-selection])))
+
+(defn handle-cut [_]
+  (when-not (editing-text?)
+    (rf/dispatch [::events/cut-selection])))

@@ -42,6 +42,11 @@
  (fn update-cell [db [_ address content]]
    (update-in db [:sheet] #(grid/update-cell-content address % content))))
 
+(rf/reg-event-db
+ ::clear-area
+ (fn clear-area [db [_ area]]
+   (update-in db [:sheet] #(grid/clear-area % area))))
+
 (rf/reg-event-fx
  ::handle-global-kbd
  (fn handle-global-kbd [{:keys [db]} [_ e]]
@@ -50,7 +55,7 @@
        (let [[mr mc] (get-in db [:sheet :grid r c :style :merged-until])]
          (if (or (= (.-key e) "Backspace")
                  (= (.-key e) "Delete"))
-           {:db (update-in db [:sheet] #(grid/clear-area % selection))}
+           {:fx [[:dispatch [::clear-area selection]]]}
            (if-let [move-to (cond
                               (= (.-key e) "ArrowUp") [(dec r) c]
                               (= (.-key e) "ArrowLeft") [r (dec c)]
@@ -87,6 +92,12 @@
      {:fx [[::copy-to-clipboard
             [(paste/selection->plain-text selection (:sheet db))
              (paste/selection->html selection (:sheet db))]]]})))
+
+(rf/reg-event-fx
+ ::cut-selection
+ (fn cut-selection [{:keys [db]}]
+   {:fx [[:dispatch [::copy-selection]]
+         [:dispatch [::clear-area (get-in db [:ui :grid :selection])]]]}))
 
 (rf/reg-event-fx
  ::merge-cells
@@ -189,11 +200,6 @@
  (fn mark-skip-cells [db [_ frame-name addresses]]
    (update-in db [:sheet]
               #(frames/mark-skipped % frame-name addresses))))
-
-(rf/reg-event-db
- ::clear-selection
- (fn [db [_]]
-   (assoc-in db [:ui :grid :selection] nil)))
 
 (rf/reg-event-db
  ::explain
