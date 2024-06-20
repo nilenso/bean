@@ -47,12 +47,19 @@
  (fn handle-global-kbd [{:keys [db]} [_ e]]
    (let [selection (get-in db [:ui :grid :selection])]
      (when-let [[r c] (:start selection)]
-       (if (or (= (.-key e) "Backspace")
-               (= (.-key e) "Delete"))
-         {:db (update-in db [:sheet] #(grid/clear-selection % selection))}
-         (if (= (count (.-key e)) 1)
-           {:fx [[:dispatch [::edit-cell [r c] (.-key e)]]]}
-           {:fx [[:dispatch [::edit-cell [r c]]]]}))))))
+       (let [[mr mc] (get-in db [:sheet :grid r c :style :merged-until])]
+         (if (or (= (.-key e) "Backspace")
+                 (= (.-key e) "Delete"))
+           {:db (update-in db [:sheet] #(grid/clear-selection % selection))}
+           (if-let [move-to (cond
+                              (= (.-key e) "ArrowUp") [(dec r) c]
+                              (= (.-key e) "ArrowLeft") [r (dec c)]
+                              (= (.-key e) "ArrowDown") [(if mr (inc mr) (inc r)) c]
+                              (= (.-key e) "ArrowRight") [r (if mc (inc mc) (inc c))])]
+             {:fx [[:dispatch [::set-selection {:start move-to :end move-to}]]]}
+             (if (= (count (.-key e)) 1)
+               {:fx [[:dispatch [::edit-cell [r c] (.-key e)]]]}
+               {:fx [[:dispatch [::edit-cell [r c]]]]}))))))))
 
 (rf/reg-event-fx
  ::paste-addressed-cells

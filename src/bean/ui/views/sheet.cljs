@@ -853,6 +853,7 @@
   (let [focused-element (.-activeElement js/document)
         tag-name (and focused-element (.-tagName focused-element))]
     (or (= (.toLowerCase tag-name) "span")
+        (= (.toLowerCase tag-name) "input")
         (= (.toLowerCase tag-name) "textarea"))))
 
 (defn ctrl-or-meta? [e]
