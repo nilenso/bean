@@ -1,6 +1,7 @@
 (ns bean.ui.events
   (:require [bean.code :as code]
             [bean.code-errors :as code-errors]
+            [day8.re-frame.undo :as undo :refer [undoable]]
             [bean.frames :as frames]
             [bean.grid :as grid]
             [bean.ui.db :as db]
@@ -39,11 +40,13 @@
 
 (rf/reg-event-db
  ::update-cell
+ (undoable)
  (fn update-cell [db [_ address content]]
    (update-in db [:sheet] #(grid/update-cell-content address % content))))
 
 (rf/reg-event-db
  ::clear-area
+ (undoable)
  (fn clear-area [db [_ area]]
    (update-in db [:sheet] #(grid/clear-area % area))))
 
@@ -51,23 +54,37 @@
  ::handle-global-kbd
  (fn handle-global-kbd [{:keys [db]} [_ e]]
    (let [selection (get-in db [:ui :grid :selection])]
-     (when-let [[r c] (:start selection)]
-       (let [[mr mc] (get-in db [:sheet :grid r c :style :merged-until])]
-         (if (or (= (.-key e) "Backspace")
-                 (= (.-key e) "Delete"))
-           {:fx [[:dispatch [::clear-area selection]]]}
-           (if-let [move-to (cond
-                              (= (.-key e) "ArrowUp") [(dec r) c]
-                              (= (.-key e) "ArrowLeft") [r (dec c)]
-                              (= (.-key e) "ArrowDown") [(if mr (inc mr) (inc r)) c]
-                              (= (.-key e) "ArrowRight") [r (if mc (inc mc) (inc c))])]
-             {:fx [[:dispatch [::set-selection {:start move-to :end move-to}]]]}
-             (if (= (count (.-key e)) 1)
-               {:fx [[:dispatch [::edit-cell [r c] (.-key e)]]]}
-               {:fx [[:dispatch [::edit-cell [r c]]]]}))))))))
+     (cond
+       (and (= (.-key e) "z") (or (.-ctrlKey e) (.-metaKey e))
+            (.-shiftKey e))
+       (rf/dispatch [:redo])
+
+       (and (= (.-key e) "z") (or (.-ctrlKey e) (.-metaKey e)))
+       (rf/dispatch [:undo])
+
+       (or (.-ctrlKey e) (.-metaKey e)
+           (= (.-key e) "Shift")
+           (= (.-key e) "Escape")) nil
+
+       :else
+       (when-let [[r c] (:start selection)]
+         (let [[mr mc] (get-in db [:sheet :grid r c :style :merged-until])]
+           (if (or (= (.-key e) "Backspace")
+                   (= (.-key e) "Delete"))
+             {:fx [[:dispatch [::clear-area selection]]]}
+             (if-let [move-to (cond
+                                (= (.-key e) "ArrowUp") [(dec r) c]
+                                (= (.-key e) "ArrowLeft") [r (dec c)]
+                                (= (.-key e) "ArrowDown") [(if mr (inc mr) (inc r)) c]
+                                (= (.-key e) "ArrowRight") [r (if mc (inc mc) (inc c))])]
+               {:fx [[:dispatch [::set-selection {:start move-to :end move-to}]]]}
+               (if (= (count (.-key e)) 1)
+                 {:fx [[:dispatch [::edit-cell [r c] (.-key e)]]]}
+                 {:fx [[:dispatch [::edit-cell [r c]]]]})))))))))
 
 (rf/reg-event-fx
  ::paste-addressed-cells
+ (undoable)
  (fn paste-addressed-cells [{:keys [db]} [_ addressed-cells]]
    (let [selection (get-in db [:ui :grid :selection])]
      {:db (update-in db [:sheet] #(grid/update-cells-bulk %
@@ -95,29 +112,34 @@
 
 (rf/reg-event-fx
  ::cut-selection
+ (undoable)
  (fn cut-selection [{:keys [db]}]
    {:fx [[:dispatch [::copy-selection]]
          [:dispatch [::clear-area (get-in db [:ui :grid :selection])]]]}))
 
 (rf/reg-event-fx
  ::merge-cells
+ (undoable)
  (fn merge-cells [{:keys [db]} [_ area]]
    {:db (update-in db [:sheet] #(grid/merge-cells % area))
     :fx [[:dispatch [::edit-cell (:start area)]]]}))
 
 (rf/reg-event-fx
  ::unmerge-cells
+ (undoable)
  (fn unmerge-cells [{:keys [db]} [_ addresses]]
    {:db (update-in db [:sheet] #(grid/unmerge-cells % addresses))
     :fx [[:dispatch [::edit-cell (first addresses)]]]}))
 
 (rf/reg-event-db
  ::set-cell-backgrounds
+ (undoable)
  (fn set-cell-backgrounds [db [_ addresses background]]
    (update-in db [:sheet] #(grid/set-cell-backgrounds % addresses background))))
 
 (rf/reg-event-db
  ::toggle-cell-bold
+ (undoable)
  (fn toggle-cell-bold [db [_ addresses]]
    (update-in db [:sheet] #(grid/toggle-cell-bolds % addresses))))
 
@@ -130,11 +152,13 @@
 
 (rf/reg-event-db
  ::resize-row
+ (undoable)
  (fn resize-row [db [_ row height]]
    (assoc-in db [:sheet :grid-dimensions :row-heights row] height)))
 
 (rf/reg-event-db
  ::resize-col
+ (undoable)
  (fn resize-col [db [_ col width]]
    (assoc-in db [:sheet :grid-dimensions :col-widths col] width)))
 
@@ -176,6 +200,7 @@
 
 (rf/reg-event-fx
  ::make-frame
+ (undoable)
  (fn make-frame [{:keys [db]} [_ area]]
    (let [frame-number (inc (get-in db [:sheet :last-frame-number]))
          frame-name (str "Frame " frame-number)]
@@ -186,12 +211,14 @@
 
 (rf/reg-event-db
  ::add-labels
+ (undoable)
  (fn add-labels [db [_ frame-name addresses dirn]]
    (update-in db [:sheet]
               #(grid/add-frame-labels % frame-name addresses dirn))))
 
 (rf/reg-event-db
  ::remove-labels
+ (undoable)
  (fn remove-labels [db [_ frame-name addresses]]
    (->  db
         (update-in [:sheet] #(frames/unmark-skipped % frame-name addresses))
@@ -199,6 +226,7 @@
 
 (rf/reg-event-db
  ::mark-skip-cells
+ (undoable)
  (fn mark-skip-cells [db [_ frame-name addresses]]
    (update-in db [:sheet]
               #(frames/mark-skipped % frame-name addresses))))

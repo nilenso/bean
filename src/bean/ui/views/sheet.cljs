@@ -853,15 +853,11 @@
         tag-name (and focused-element (.-tagName focused-element))]
     (or (= (.toLowerCase tag-name) "span")
         (= (.toLowerCase tag-name) "input")
+        (= (.toLowerCase tag-name) "div")
         (= (.toLowerCase tag-name) "textarea"))))
 
-(defn ctrl-or-meta? [e]
-  (or (.-ctrlKey e) (.-metaKey e)))
-
 (defn handle-global-kbd [e]
-  (when (and (not (editing-text?)) (not (or (ctrl-or-meta? e)
-                                            (= (.-key e) "Shift")
-                                            (= (.-key e) "Escape"))))
+  (when (not (editing-text?))
     (rf/dispatch [::events/handle-global-kbd e])))
 
 (defn handle-paste [e]
