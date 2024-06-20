@@ -81,7 +81,7 @@
 
 (defn- submit-cell-input []
   (when-let [el (.getElementById js/document "cell-input")]
-    (rf/dispatch [::events/submit-cell-input (str (.-textContent el))])
+    (rf/dispatch-sync [::events/submit-cell-input (str (.-textContent el))])
     ;; Reagent does not clear the element when input moves to a blank cell.
     (set! (.-innerHTML el) nil)))
 
@@ -130,8 +130,7 @@
 
 (defn- cell-pointer-down [rc grid-g sheet row-heights col-widths pixi-app]
   (submit-cell-input)
-  (rf/dispatch [::events/clear-edit-cell])
-  (rf/dispatch-sync [::events/set-selection {:start rc :end rc}])
+  (rf/dispatch [::events/set-selection {:start rc :end rc}])
   (when (and (< (- (js/Date.now) (:time @last-click)) 300)
              (= (:rc @last-click) rc))
     (cell-double-click rc sheet))

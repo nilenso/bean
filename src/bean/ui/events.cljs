@@ -124,7 +124,9 @@
 (rf/reg-event-fx
  ::submit-cell-input
  (fn submit-cell-input [{:keys [db]} [_ content]]
-   {:fx [[:dispatch [::update-cell (get-in db [:ui :grid :editing-cell]) content]]]}))
+   (let [editing-cell (get-in db [:ui :grid :editing-cell])]
+     {:fx [[:dispatch [::clear-edit-cell]]
+           [:dispatch [::update-cell editing-cell content]]]})))
 
 (rf/reg-event-db
  ::resize-row
@@ -140,7 +142,7 @@
  ::focus-element
  (fn [[el-id text]]
    (rc/after-render
-    #(let [el (-> js/document (.getElementById el-id))]
+    #(when-let [el (-> js/document (.getElementById el-id))]
        (when text (set! (.-innerHTML el) text))
        (.focus el)
        (.selectAllChildren (.getSelection js/window) el)
