@@ -372,7 +372,7 @@
 
 (defn eval-code
   ;; Suppressing errors so we let the grid evaluate before showing any errors in the code
-  ([sheet] (eval-code sheet (:code sheet)))
+  ([sheet] (eval-code sheet (:code-in-editor sheet)))
   ([sheet code]
    (let [res (let [code-ast (parser/parse-statement code)
                    parse-error (parser/error code-ast)]
