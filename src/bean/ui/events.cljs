@@ -50,7 +50,7 @@
        (let [[mr mc] (get-in db [:sheet :grid r c :style :merged-until])]
          (if (or (= (.-key e) "Backspace")
                  (= (.-key e) "Delete"))
-           {:db (update-in db [:sheet] #(grid/clear-selection % selection))}
+           {:db (update-in db [:sheet] #(grid/clear-area % selection))}
            (if-let [move-to (cond
                               (= (.-key e) "ArrowUp") [(dec r) c]
                               (= (.-key e) "ArrowLeft") [r (dec c)]
@@ -151,7 +151,9 @@
 (rf/reg-event-db
  ::set-selection
  (fn [db [_ selection]]
-   (assoc-in db [:ui :grid :selection] selection)))
+   (if (util/area-inside? (:sheet db) selection)
+     (assoc-in db [:ui :grid :selection] selection)
+     db)))
 
 (rf/reg-event-fx
  ::select-frame

@@ -37,3 +37,8 @@
   (let [[r* c*] (merged-or-self rc sheet)]
     (or (get-in sheet [:grid r* c* :style :merged-until]) rc)))
 
+(defn area-inside? [sheet {:keys [start end]}]
+  (and
+   (nat-int? (first start)) (nat-int? (second start))
+   (< (first end) (get-in sheet [:grid-dimensions :num-rows]))
+   (< (second end) (get-in sheet [:grid-dimensions :num-cols]))))

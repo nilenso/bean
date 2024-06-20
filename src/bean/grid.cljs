@@ -330,7 +330,7 @@
     {:start (offset start pasted-at)
      :end (offset end pasted-at)}))
 
-(defn clear-selection [sheet {:keys [start end]}]
+(defn clear-area [sheet {:keys [start end]}]
   (->> (util/addresses-matrix start end)
        (mapcat identity)
        (map #(do [% {:content ""}]))
