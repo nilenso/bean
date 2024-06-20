@@ -57,10 +57,10 @@
      (cond
        (and (= (.-key e) "z") (or (.-ctrlKey e) (.-metaKey e))
             (.-shiftKey e))
-       (rf/dispatch [:redo])
+       (when (undo/redos?) (rf/dispatch [:redo]))
 
        (and (= (.-key e) "z") (or (.-ctrlKey e) (.-metaKey e)))
-       (rf/dispatch [:undo])
+       (when (undo/undos?) (rf/dispatch [:undo]))
 
        (or (.-ctrlKey e) (.-metaKey e)
            (= (.-key e) "Shift")
