@@ -18,8 +18,8 @@
 
 (def sizes {:world-h 10000
             :world-w 10000
-            :num-rows 50
-            :num-cols 20
+            :num-rows 80
+            :num-cols 16
             :cell-h 30
             :cell-w 110
             :cell-padding 5
