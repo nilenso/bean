@@ -239,6 +239,16 @@
              (provenance/sentence-proof expression (:sheet db)))))
 
 (rf/reg-event-db
+ ::resize-frame
+ (fn resize-frame [db [_ frame-name end]]
+   (let [start (get-in (:sheet db) [:frames frame-name :start])]
+     (when (and (not= (get-in (:sheet db) [:frames frame-name :end]) end)
+                (>= (first end) (first start))
+                (>= (second end) (second start)))
+       (update-in db [:sheet]
+                  #(grid/resize-frame % frame-name {:start start :end end}))))))
+
+(rf/reg-event-db
  ::display-help
  (fn display-help [db [_ flag]]
    (assoc-in db [:ui :help-display] flag)))

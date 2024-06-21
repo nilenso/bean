@@ -340,6 +340,31 @@
     grid)
    g))
 
+(defn- frame-resize-end [pixi-app]
+  (remove-listener! :frame-resize-move pixi-app))
+
+(defn- frame-resize-start [e frame-name grid-g row-heights col-widths pixi-app]
+  (.stopPropagation e)
+  (reset-listener!
+   :frame-resize-move grid-g "globalpointermove"
+   #(rf/dispatch-sync [::events/resize-frame frame-name (i->rc e grid-g row-heights col-widths)])
+   pixi-app)
+  (reset-listener!
+   :frame-resize-end grid-g "pointerup"
+   #(frame-resize-end pixi-app)
+   pixi-app))
+
+(defn- draw-frame-resizer [^js g frame-name x y w h grid-g row-heights col-widths pixi-app]
+  (let [width 10
+        resizer (new pixi/Graphics)
+        opacity 0.2]
+    (set! (.-eventMode resizer) "static")
+    (set! (.-cursor resizer) "nwse-resize")
+    (.beginFill resizer 0x000000 opacity)
+    (.on resizer "pointerdown" #(frame-resize-start % frame-name grid-g row-heights col-widths pixi-app))
+    (.drawRect resizer (- (+ x w) width) (- (+ y h) width) width width)
+    (.addChild g resizer)))
+
 (defn- draw-frame-name [^js g frame-name x y]
   (let [font-size (:frame-name-font styles/sizes)
         text-bitmap (new pixi/BitmapText frame-name
@@ -450,7 +475,7 @@
 
 (defn- draw-frames
   ([] (new pixi/Graphics))
-  ([^js g textures {:keys [frames] :as sheet} {:keys [selection]} row-heights col-widths]
+  ([^js g textures {:keys [frames] :as sheet} {:keys [selection]} grid-g row-heights col-widths pixi-app]
    (-> g (.clear) (.removeChildren))
    (doseq [[frame-name frame-data] frames]
      (let [[x y w h] (area->xywh frame-data row-heights col-widths)
@@ -465,7 +490,8 @@
                                      w (+ h extra-hitarea-y)))
        (.lineStyle border (:frame-border styles/sizes) (:frame-border styles/colors) 0.5 0.5)
        (.drawRect border x y w h)
-       (draw-frame-name highlight frame-name x y)
+       (draw-frame-name highlight frame-name x y) 
+       (draw-frame-resizer g frame-name x y w h grid-g row-heights col-widths pixi-app)
        (.addChild g (draw-label-bounds textures sheet frame-name (:labels frame-data) row-heights col-widths))
 
        (let [label-controls (draw-label-controls textures frame-name selection)]
@@ -680,7 +706,7 @@
     (draw-merged-cells (:merged-cells @pixi-app) sheet row-heights col-widths)
     (draw-cell-backgrounds (:cell-backgrounds @pixi-app) sheet row-heights col-widths)
     (draw-cell-text (:cell-text @pixi-app) sheet row-heights col-widths)
-    (draw-frames (:frames @pixi-app) (:textures @pixi-app) sheet grid-ui row-heights col-widths)
+    (draw-frames (:frames @pixi-app) (:textures @pixi-app) sheet grid-ui (:grid @pixi-app) row-heights col-widths pixi-app)
     (draw-selection (:selection @pixi-app) (:selection grid-ui) row-heights col-widths)
     (draw-top-heading (:top-heading @pixi-app) col-widths v)
     (draw-left-heading (:left-heading @pixi-app) row-heights v)
@@ -696,8 +722,8 @@
           spills (.addChild grid (draw-spills))
           merged-cells (.addChild grid (draw-merged-cells))
           cell-text (.addChild grid (draw-cell-text))
-          frames (.addChild grid (draw-frames))
           selection (.addChild grid (draw-selection))
+          frames (.addChild grid (draw-frames))
           top-heading (.addChild c (draw-top-heading v))
           left-heading (.addChild c (draw-left-heading v))
           corner (.addChild c (draw-corner v))]

@@ -330,6 +330,10 @@
     {:start (offset start pasted-at)
      :end (offset end pasted-at)}))
 
+(defn resize-frame [sheet frame-name area]
+  (-> (frames/resize-frame sheet frame-name area)
+      eval-sheet-a-few-times))
+
 (defn clear-area [sheet {:keys [start end]}]
   (->> (util/addresses-matrix start end)
        (mapcat identity)
