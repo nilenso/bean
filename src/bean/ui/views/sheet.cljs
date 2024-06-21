@@ -13,21 +13,24 @@
             [re-frame.core :as rf]
             [reagent.core :as rc]))
 
-(defn- add-listener! [name g event f pixi-app]
+(defonce ^:private pixi-app (atom nil))
+(defonce ^:private pixi-listeners (atom nil))
+
+(defn- add-listener! [name g event f]
   (.on g event f)
-  (swap! pixi-app assoc-in [:listeners name]
+  (swap! pixi-listeners assoc name
          {:object g
           :event event
           :handler-fn f}))
 
-(defn- remove-listener! [name pixi-app]
-  (when-let [old-listener (get-in @pixi-app [:listeners name])]
+(defn- remove-listener! [name]
+  (when-let [old-listener (get @pixi-listeners name)]
     (let [{:keys [object event handler-fn]} old-listener]
       (.off object event handler-fn))))
 
-(defn- reset-listener! [name g event f pixi-app]
-  (remove-listener! name pixi-app)
-  (add-listener! name g event f pixi-app))
+(defn- reset-listener! [name g event f]
+  (remove-listener! name)
+  (add-listener! name g event f))
 
 (defn px->index [px offsets]
   (if (> px (reduce + offsets))
@@ -97,50 +100,46 @@
   (rf/dispatch-sync [::events/select-frame (frames/cell-frame rc sheet)])
   (rf/dispatch [::events/edit-cell rc]))
 
-(defn- grid-selection-end [area pixi-app]
-  (remove-listener! :grid-selection-move pixi-app)
-  (remove-listener! :grid-selection-up pixi-app)
-  (remove-listener! :grid-selection-up-outside pixi-app)
+(defn- grid-selection-end [area]
+  (remove-listener! :grid-selection-move)
+  (remove-listener! :grid-selection-up)
+  (remove-listener! :grid-selection-up-outside)
   (rf/dispatch-sync [::events/set-selection area]))
 
-(defn- grid-selection-move [area row-heights col-widths pixi-app]
+(defn- grid-selection-move [area row-heights col-widths]
   (.clear (:selection @pixi-app))
   (selection->rect (:selection @pixi-app) area row-heights col-widths))
 
-(defn- grid-selection-start [start grid-g row-heights col-widths pixi-app]
+(defn- grid-selection-start [start grid-g row-heights col-widths]
   (let [i->area #(let [rc (i->rc % grid-g row-heights col-widths)]
                    (area/bounds->area start rc))]
     (reset-listener!
      :grid-selection-move grid-g "globalpointermove"
-     #(grid-selection-move (i->area %) row-heights col-widths pixi-app)
-     pixi-app)
+     #(grid-selection-move (i->area %) row-heights col-widths))
     (reset-listener!
      :grid-selection-up grid-g "pointerup"
-     #(grid-selection-end (i->area %) pixi-app)
-     pixi-app)
+     #(grid-selection-end (i->area %)))
     (reset-listener!
      :grid-selection-up-outside grid-g "pointerupoutside"
-     #(grid-selection-end (i->area %) pixi-app)
-     pixi-app)))
+     #(grid-selection-end (i->area %)))))
 
 (def last-click (atom {:time 0 :rc []}))
 
 (defn- cell-double-click [rc sheet]
   (edit-cell rc sheet))
 
-(defn- cell-pointer-down [rc grid-g sheet row-heights col-widths pixi-app]
+(defn- cell-pointer-down [rc grid-g sheet row-heights col-widths]
   (submit-cell-input)
   (rf/dispatch [::events/set-selection {:start rc :end rc}])
   (when (and (< (- (js/Date.now) (:time @last-click)) 500)
              (= (:rc @last-click) rc))
     (cell-double-click rc sheet))
   (reset! last-click {:time (js/Date.now) :rc rc})
-  (grid-selection-start rc
-   grid-g row-heights col-widths pixi-app))
+  (grid-selection-start rc grid-g row-heights col-widths))
 
-(defn- grid-pointer-down [i grid-g sheet row-heights col-widths pixi-app]
+(defn- grid-pointer-down [i grid-g sheet row-heights col-widths]
   (let [rc (i->rc i grid-g row-heights col-widths)]
-    (cell-pointer-down rc grid-g sheet row-heights col-widths pixi-app)))
+    (cell-pointer-down rc grid-g sheet row-heights col-widths)))
 
 ;; TODO: use the reframe keyboard library here
 (defn- handle-cell-navigation [e [r c] sheet]
@@ -340,28 +339,26 @@
     grid)
    g))
 
-(defn- frame-resize-end [pixi-app]
-  (remove-listener! :frame-resize-move pixi-app))
+(defn- frame-resize-end []
+  (remove-listener! :frame-resize-move))
 
-(defn- frame-resize-start [e frame-name grid-g row-heights col-widths pixi-app]
+(defn- frame-resize-start [e frame-name grid-g row-heights col-widths]
   (.stopPropagation e)
   (reset-listener!
    :frame-resize-move grid-g "globalpointermove"
-   #(rf/dispatch-sync [::events/resize-frame frame-name (i->rc e grid-g row-heights col-widths)])
-   pixi-app)
+   #(rf/dispatch-sync [::events/resize-frame frame-name (i->rc e grid-g row-heights col-widths)]))
   (reset-listener!
    :frame-resize-end grid-g "pointerup"
-   #(frame-resize-end pixi-app)
-   pixi-app))
+   frame-resize-end))
 
-(defn- draw-frame-resizer [^js g frame-name x y w h grid-g row-heights col-widths pixi-app]
+(defn- draw-frame-resizer [^js g frame-name x y w h grid-g row-heights col-widths]
   (let [width 10
         resizer (new pixi/Graphics)
         opacity 0.2]
     (set! (.-eventMode resizer) "static")
     (set! (.-cursor resizer) "nwse-resize")
     (.beginFill resizer 0x000000 opacity)
-    (.on resizer "pointerdown" #(frame-resize-start % frame-name grid-g row-heights col-widths pixi-app))
+    (.on resizer "pointerdown" #(frame-resize-start % frame-name grid-g row-heights col-widths))
     (.drawRect resizer (- (+ x w) width) (- (+ y h) width) width width)
     (.addChild g resizer)))
 
@@ -475,7 +472,7 @@
 
 (defn- draw-frames
   ([] (new pixi/Graphics))
-  ([^js g textures {:keys [frames] :as sheet} {:keys [selection]} grid-g row-heights col-widths pixi-app]
+  ([^js g textures {:keys [frames] :as sheet} {:keys [selection]} grid-g row-heights col-widths]
    (-> g (.clear) (.removeChildren))
    (doseq [[frame-name frame-data] frames]
      (let [[x y w h] (area->xywh frame-data row-heights col-widths)
@@ -490,8 +487,8 @@
                                      w (+ h extra-hitarea-y)))
        (.lineStyle border (:frame-border styles/sizes) (:frame-border styles/colors) 0.5 0.5)
        (.drawRect border x y w h)
-       (draw-frame-name highlight frame-name x y) 
-       (draw-frame-resizer g frame-name x y w h grid-g row-heights col-widths pixi-app)
+       (draw-frame-name highlight frame-name x y)
+       (draw-frame-resizer g frame-name x y w h grid-g row-heights col-widths)
        (.addChild g (draw-label-bounds textures sheet frame-name (:labels frame-data) row-heights col-widths))
 
        (let [label-controls (draw-label-controls textures frame-name selection)]
@@ -643,7 +640,7 @@
      (set! (.. g -position -x) (:heading-left-width styles/sizes))
      (set! (.. g -position -y) (:cell-h styles/sizes))
      g))
-  ([g sheet row-heights col-widths pixi-app]
+  ([g sheet row-heights col-widths]
    (letfn [(grid-line*
              [sx sy ex ey]
              (grid-line g sx sy ex ey))
@@ -652,8 +649,7 @@
      (.clear g)
      (reset-listener!
       :grid-pointerdown g "pointerdown"
-      #(grid-pointer-down % g sheet row-heights col-widths pixi-app)
-      pixi-app)
+      #(grid-pointer-down % g sheet row-heights col-widths))
      (dorun (->> row-heights (reductions +) (map draw-horizontal)))
      (dorun (->> col-widths (reductions +) (map draw-vertical)))
      g)))
@@ -698,21 +694,21 @@
       (.then (.loadBundle pixi/Assets "fonts") cb))
     (cb)))
 
-(defn repaint [sheet {grid-ui :grid} pixi-app]
+(defn repaint [sheet {grid-ui :grid}]
   (let [{:keys [row-heights col-widths]} (:grid-dimensions sheet)
         v (:viewport @pixi-app)]
-    (draw-grid (:grid @pixi-app) sheet row-heights col-widths pixi-app)
+    (draw-grid (:grid @pixi-app) sheet row-heights col-widths)
     (draw-spills (:spills @pixi-app) sheet row-heights col-widths)
     (draw-merged-cells (:merged-cells @pixi-app) sheet row-heights col-widths)
     (draw-cell-backgrounds (:cell-backgrounds @pixi-app) sheet row-heights col-widths)
     (draw-cell-text (:cell-text @pixi-app) sheet row-heights col-widths)
-    (draw-frames (:frames @pixi-app) (:textures @pixi-app) sheet grid-ui (:grid @pixi-app) row-heights col-widths pixi-app)
+    (draw-frames (:frames @pixi-app) (:textures @pixi-app) sheet grid-ui (:grid @pixi-app) row-heights col-widths)
     (draw-selection (:selection @pixi-app) (:selection grid-ui) row-heights col-widths)
     (draw-top-heading (:top-heading @pixi-app) col-widths v)
     (draw-left-heading (:left-heading @pixi-app) row-heights v)
     (draw-corner (:corner @pixi-app) v)))
 
-(defn setup [sheet ui pixi-app]
+(defn setup [sheet ui]
   (make-fonts-then
    #(let [app (make-app)
           v (.addChild (.-stage app) (make-viewport app))
@@ -745,7 +741,7 @@
                           :add-skip-label (.from pixi/Texture "/img/skip-label.png")
                           :stripes (.from pixi/Texture "/img/stripes.jpg")
                           :trash-label (.from pixi/Texture "/img/trash-label.png")}})
-      (repaint sheet ui pixi-app))))
+      (repaint sheet ui))))
 
 (defn- input-transform-css [rc ^js viewport row-heights col-widths]
   (let [offset-t (:cell-h styles/sizes)
@@ -769,9 +765,9 @@
 (defn- cell-paste-text [e]
   (.preventDefault e)
   (.execCommand js/document "insertText" false
-   (.getData (.-clipboardData e) "text/plain")))
+                (.getData (.-clipboardData e) "text/plain")))
 
-(defn- cell-input [pixi-app]
+(defn- cell-input []
   (when-let [[r c] @(rf/subscribe [::subs/editing-cell])]
     (let [sheet (rf/subscribe [::subs/sheet])
           {:keys [row-heights col-widths]} (:grid-dimensions @sheet)
@@ -783,8 +779,8 @@
           background (get-in cell [:style :background])
           bold? (get-in cell [:style :bold])
           merged? (get-in cell [:style :merged-until])]
-      (reset-listener! :cell-input-reposition-move viewport "moved" reposition pixi-app)
-      (reset-listener! :cell-input-reposition-move-end viewport "moved-end" reposition pixi-app)
+      (reset-listener! :cell-input-reposition-move viewport "moved" reposition)
+      (reset-listener! :cell-input-reposition-move-end viewport "moved-end" reposition)
       [:span {:id :cell-input
               :content-editable true
               :suppressContentEditableWarning true
@@ -798,7 +794,7 @@
                       :background-color (when background (util/color-int->hex background))
                       :fontWeight (if bold? "bold" "normal")}
               :on-pointer-down #(grid-selection-start [r c]
-                                 (:grid @pixi-app) row-heights col-widths pixi-app)
+                                                      (:grid @pixi-app) row-heights col-widths)
               :on-pointer-up #(let [canvas (.querySelector js/document "#grid-container canvas")]
                                 (.dispatchEvent canvas (new js/MouseEvent "pointerup" %)))
               :on-key-down #(handle-cell-navigation % [r c] @sheet)
@@ -810,30 +806,29 @@
    {:display-name :grid-canvas
     :component-did-mount
     (fn [this]
-      (let [[sheet ui pixi-app] (rest (rc/argv this))]
+      (let [[sheet ui] (rest (rc/argv this))]
         (prn "Setting up canvas")
-        (setup sheet ui pixi-app)))
+        (setup sheet ui)))
 
     :component-did-update
     (fn [this _]
-      (let [[sheet ui pixi-app] (rest (rc/argv this))]
+      (let [[sheet ui] (rest (rc/argv this))]
         (when @pixi-app
           (prn "Repaint canvas")
-          (repaint sheet ui pixi-app))))
+          (repaint sheet ui))))
 
     :component-will-unmount
     (fn [this]
-      (let [[_ _ pixi-app] (rest (rc/argv this))]
+      (let [[_ _] (rest (rc/argv this))]
         (.destroy (:viewport @pixi-app))))
 
     :reagent-render
     (fn [])}))
 
-(defn canvas [pixi-app]
+(defn canvas []
   [canvas*
    @(rf/subscribe [::subs/sheet])
-   @(rf/subscribe [::subs/ui])
-   pixi-app])
+   @(rf/subscribe [::subs/ui])])
 
 (defn controls []
   (let [selection @(rf/subscribe [::subs/selection])
@@ -865,14 +860,12 @@
                                                   (area/area->addresses selection)
                                                   color]))} ""])]]))
 
-(defonce ^:private pixi-app* (atom nil))
-
 (defn sheet []
   [:div {:class :sheet-container}
    [controls]
    [:div {:id :grid-container}
-    [canvas pixi-app*]
-    [cell-input pixi-app*]]])
+    [canvas]
+    [cell-input]]])
 
 (defn- editing-text? []
   (let [focused-element (.-activeElement js/document)
