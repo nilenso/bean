@@ -131,7 +131,7 @@
 (defn- cell-pointer-down [rc grid-g sheet row-heights col-widths pixi-app]
   (submit-cell-input)
   (rf/dispatch [::events/set-selection {:start rc :end rc}])
-  (when (and (< (- (js/Date.now) (:time @last-click)) 300)
+  (when (and (< (- (js/Date.now) (:time @last-click)) 500)
              (= (:rc @last-click) rc))
     (cell-double-click rc sheet))
   (reset! last-click {:time (js/Date.now) :rc rc})
