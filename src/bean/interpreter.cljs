@@ -95,9 +95,22 @@
       :FunctionInvocation (apply-f sheet
                                    (eval-sub-ast arg)
                                    (rest args))
-      :FunctionChain (let [[expr [_ fn-name & fn-args]] args]
+      :FrameLookup (let [[_ frame-name] arg]
+                     (eval-sub-ast
+                      [:FunctionInvocation
+                       [:Name "frame"]
+                       [:Expression [:QuotedString frame-name]]]))
+      :FunctionChain (let [[expr [node-type*
+                                  [_ name* :as name-node]
+                                  & fn-args]] args]
                        (eval-sub-ast
-                        (concat [:FunctionInvocation fn-name expr] fn-args)))
+                        (case node-type*
+                          :LabelLookup
+                          [:FunctionInvocation
+                           [:Name "get"] expr
+                           [:Expression [:Value [:QuotedString name*]]]]
+                          :FunctionInvocation
+                          (concat [:FunctionInvocation name-node expr] fn-args))))
       :Expression (if (util/is-expression? arg)
                     (let [[left op right] args]
                       (apply-op (eval-sub-ast op)

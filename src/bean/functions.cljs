@@ -11,6 +11,10 @@
   (let [[expression-type] ast]
     (= expression-type :CellRef)))
 
+(defn quoted-string? [[_ ast]]
+  (let [[expression-type] ast]
+    (= expression-type :QuotedString)))
+
 ;; Functions don't work for matrices,
 ;; they need the thing as apply-op does
 (defn bean-concat [_sheet args]
@@ -111,23 +115,35 @@
 (defn bean-hget [sheet args asts]
   (bean-get* sheet args asts :left))
 
+(defn bean-frame* [sheet frame frame-name]
+  {:matrix (interpreter/eval-matrix (:start frame)
+                                    (:end frame)
+                                    (:grid sheet))
+   :frame {:name frame-name
+           :selection (area/area->addresses
+                       (select-keys frame [:start :end]))
+           :selection-dirn nil}})
+
 (defn bean-frame [sheet args asts]
-  (if (cell-ref? (first asts))
+  (cond
+    (cell-ref? (first asts))
     (let [[_ [_ a n]] (first asts)
           address (util/a1->rc a (js/parseInt n))
           frame-name (frames/cell-frame address sheet)
           frame (frames/get-frame sheet frame-name)]
       (if frame-name
-        {:matrix (interpreter/eval-matrix (:start frame)
-                                          (:end frame)
-                                          (:grid sheet))
-         :frame {:name frame-name
-                 :selection (area/area->addresses
-                             (select-keys frame [:start :end]))
-                 :selection-dirn nil}}
+        (bean-frame* sheet frame frame-name)
         (errors/undefined-frame-at (str a n))))
-    (errors/invalid-frame-args
-     (str (:scalar (first args))))))
+
+    (quoted-string? (first asts))
+    (let [[_ [_ frame-name]] (first asts)
+          frame (frames/get-frame sheet frame-name)]
+      (if frame
+        (bean-frame* sheet frame frame-name)
+        (errors/undefined-frame-at frame-name)))
+
+    :else (errors/invalid-frame-args
+           (str (:scalar (first args))))))
 
 (defn bean-error [_sheet args]
   (let [str-err (str (:error (first args)))]

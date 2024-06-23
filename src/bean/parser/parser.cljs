@@ -20,12 +20,17 @@
     MatrixRef = CellRef <':'> CellRef
 
     Operation = '+' | '*' | '=' | '<' | '>'
-    Expression = Value | CellRef | MatrixRef | FunctionChain | Expression Operation Expression | FunctionInvocation | FunctionDefinition | Name
+    Expression = (Value | CellRef | MatrixRef | FunctionChain |
+                Expression Operation Expression | FunctionInvocation |
+                FunctionDefinition | FrameLookup) / Name
+
     FunctionInvocation = (FunctionDefinition | Name) <'('> [Expression {<' '> Expression}] <')'>
     FunctionDefinition = <'{'> Expression <'}'>
-    FunctionChain = Expression <'.'> FunctionInvocation
+    FunctionChain = Expression [<'.'> (FunctionInvocation | LabelLookup)]
 
-    Name = #'[a-z]+'
+    Name = #'[a-zA-Z0-9 ]+(?<! )'
+    FrameLookup = <'$'> Name
+    LabelLookup = Name
 
     Value = Integer / <'\"'> QuotedString <'\"'>
     QuotedString = #'[^\"]+'
