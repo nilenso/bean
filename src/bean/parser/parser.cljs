@@ -24,7 +24,7 @@
                 Expression Operation Expression | FunctionInvocation |
                 FunctionDefinition | FrameLookup) / Name
 
-    FunctionInvocation = (FunctionDefinition | Name) <'('> [Expression {<' '> Expression}] <')'>
+    FunctionInvocation = (FunctionDefinition | Name) <'('> [Expression {<','> Expression}] <')'>
     FunctionDefinition = <'{'> Expression <'}'>
     FunctionChain = Expression [<'.'> (FunctionInvocation | LabelLookup)]
 

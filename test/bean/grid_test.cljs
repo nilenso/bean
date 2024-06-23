@@ -149,14 +149,14 @@
   (testing "Function invocation"
     (is (= (util/map-on-matrix
             #(select-keys % [:scalar :content :error :representation])
-            (:grid (eval-sheet (new-sheet [["1" "=concat(\"hello \" A1 A2)" ""]
+            (:grid (eval-sheet (new-sheet [["1" "=concat(\"hello \", A1, A2)" ""]
                                            ["2" "" ""]
                                            ["=A1+A2" "" ""]
                                            ["=A3+1" "" ""]
                                            ["=A1+A2+A3+A4+10" "" ""]]
                                           ""))))
            [[{:content "1" :scalar 1 :representation "1"}
-             {:content "=concat(\"hello \" A1 A2)" :scalar "hello 12" :representation "hello 12"}
+             {:content "=concat(\"hello \", A1, A2)" :scalar "hello 12" :representation "hello 12"}
              {:content "" :scalar "" :representation ""}]
             [{:content "2" :scalar 2 :representation "2"}
              {:content "" :scalar "" :representation ""}
@@ -174,11 +174,11 @@
   (testing "Inlined function invocation"
     (is (= (util/map-on-matrix
             #(select-keys % [:scalar :content :error :representation])
-            (:grid (eval-sheet (new-sheet [["1" "={x+y+z}(9 A1 A2)"]
+            (:grid (eval-sheet (new-sheet [["1" "={x+y+z}(9, A1, A2)"]
                                            ["2" ""]]
                                           ""))))
            [[{:content "1" :scalar 1 :representation "1"}
-             {:content "={x+y+z}(9 A1 A2)" :scalar 12 :representation "12"}]
+             {:content "={x+y+z}(9, A1, A2)" :scalar 12 :representation "12"}]
             [{:content "2" :scalar 2 :representation "2"}
              {:content "" :scalar "" :representation ""}]]))))
 
@@ -296,7 +296,7 @@
 (deftest named-reference-evaluation-test
   (testing "A named reference is evaluated"
     (is (= [["1" "2" "3"]]
-           (->> (new-sheet [["1" "2" "=addthree(1 1 1)"]] "addthree:{x+y+z}")
+           (->> (new-sheet [["1" "2" "=addthree(1, 1, 1)"]] "addthree:{x+y+z}")
                 eval-sheet
                 :grid
                 (util/map-on-matrix :representation)))))

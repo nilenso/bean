@@ -25,7 +25,8 @@
                             [:Expression [:Value [:QuotedString "hello"]]]
                             [:Expression [:CellRef "A" "3"]]
                             [:Expression [:CellRef "A" "4"]]]]]
-           (parse "=concat(\"hello\" A3 A4)")))))
+           (parse "=concat(\"hello\", A3, A4)")
+           (parse "=concat(\"hello\",A3 ,A4)")))))
 
 (deftest string-parsing-test
   (testing "Empty strings are parsed"
