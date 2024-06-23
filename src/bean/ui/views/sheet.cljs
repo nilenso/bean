@@ -488,13 +488,14 @@
        (.lineStyle border (:frame-border styles/sizes) (:frame-border styles/colors) 0.5 0.5)
        (.drawRect border x y w h)
        (draw-frame-name highlight frame-name x y)
-       (draw-frame-resizer g frame-name x y w h grid-g row-heights col-widths)
        (.addChild g (draw-label-bounds textures sheet frame-name (:labels frame-data) row-heights col-widths))
 
        (let [label-controls (draw-label-controls textures frame-name selection)]
          (.addChild g label-controls)
          (set! (.-x label-controls) (+ x w 5))
-         (set! (.-y label-controls) y))))))
+         (set! (.-y label-controls) y))
+
+       (draw-frame-resizer g frame-name x y w h grid-g row-heights col-widths)))))
 
 (defn- draw-cell-backgrounds
   ([] (let [g (new pixi/Graphics)]
