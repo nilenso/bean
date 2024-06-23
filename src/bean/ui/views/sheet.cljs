@@ -413,7 +413,7 @@
   (let [g (new pixi/Graphics)]
     (.lineStyle g 2 0xcccccc 1 0.5)
     (.beginFill g 0xffffff)
-    (.drawRoundedRect g 0 0 30 112 5)
+    (.drawRoundedRect g 0 0 30 137 5)
     (set! (.-eventMode g) "static")
     (.on g "pointerdown" #(.stopPropagation %))
     (button! (new pixi/Sprite (:add-top-label icons))
@@ -422,11 +422,14 @@
     (button! (new pixi/Sprite (:add-left-label icons))
              g 5 30 20
              #(add-label frame-name selection :left))
-    (button! (new pixi/Sprite (:add-skip-label icons))
+    (button! (new pixi/Sprite (:add-top-left-label icons))
              g 5 55 20
+             #(add-label frame-name selection :top-left))
+    (button! (new pixi/Sprite (:add-skip-label icons))
+             g 5 80 20
              #(mark-skip-cells frame-name selection))
     (button! (new pixi/Sprite (:trash-label icons))
-             g 5 80 20
+             g 5 105 20
              #(remove-label frame-name selection))
     g))
 
@@ -441,6 +444,11 @@
       (set! (.. bg -tileScale -x) 0.7)
       (set! (.. bg -tileScale -y) 1.7)
       (.addChild g bg))))
+
+(defn- draw-top-left-label-indicator [^js g cell-end-x cell-end-y]
+  (.drawRect g (- cell-end-x 15) (- cell-end-y 15) 15 15)
+  (.drawRect g (- cell-end-x 10) (- cell-end-y 10) 10 10)
+  (.drawRect g (- cell-end-x 3) (- cell-end-y 3) 3 3))
 
 (defn- draw-label-bounds [textures sheet frame-name labels row-heights col-widths]
   (let [xs (reductions + 0 col-widths)
@@ -460,12 +468,19 @@
             :left (when (= r label-r)
                     (.drawRect g
                                (nth xs c) (+ (nth ys r) label-r)
-                               (nth col-widths c) 4))))
+                               (nth col-widths c) 4))
+            :top-left nil))
         (.beginFill g color 0.25)
         (.drawRect g
                    (nth xs label-c) (nth ys label-r)
                    (cell-w label-c (get-in sheet [:grid label-r label-c]) col-widths)
-                   (cell-h label-r (get-in sheet [:grid label-r label-c]) row-heights)))
+                   (cell-h label-r (get-in sheet [:grid label-r label-c]) row-heights))
+        (when (= dirn :top-left)
+          (draw-top-left-label-indicator g
+           (+ (nth xs label-c)
+              (cell-w label-c (get-in sheet [:grid label-r label-c]) col-widths))
+           (+ (nth ys label-r)
+              (cell-h label-r (get-in sheet [:grid label-r label-c]) row-heights)))))
       (draw-skipped-cells g textures sheet skipped-cells row-heights col-widths xs ys)
       (.endFill g))
     g))
@@ -739,6 +754,7 @@
                :corner corner
                :textures {:add-top-label (.from pixi/Texture "/img/top-label.png")
                           :add-left-label (.from pixi/Texture "/img/left-label.png")
+                          :add-top-left-label (.from pixi/Texture "/img/top-left-label.png")
                           :add-skip-label (.from pixi/Texture "/img/skip-label.png")
                           :stripes (.from pixi/Texture "/img/stripes.jpg")
                           :trash-label (.from pixi/Texture "/img/trash-label.png")}})

@@ -102,11 +102,27 @@
        [r* c*]))
    (sort-by (fn [[[r _] _]] r) labels)))
 
+(defn- top-left-blocking-label [sheet [r c] labels]
+  (or (some
+       (fn [[[r* c*] {:keys [dirn]}]]
+         (when (= dirn :top-left)
+           (cond
+             (and (= r* (last-row [r c] sheet))
+                  (> c* (last-col [r c] sheet))) [nil (dec c*)]
+             (and (= c* (last-col [r c] sheet))
+                  (> r* (last-row [r c] sheet))) [(dec r*) nil]
+             (and (> r* (last-row [r c] sheet))
+                  (> c* (last-col [r c] sheet))) [r* c*])))
+       (sort-by (fn [[[r _] _]] r) (dissoc labels [r c])))
+      (top-blocking-label sheet [r c] labels)
+      (left-blocking-label sheet [r c] labels)))
+
 (defn blocking-label [sheet frame-name label]
   (let [{:keys [labels] :as frame} (get-frame sheet frame-name)
         {:keys [dirn]} (get-in frame [:labels label])]
     (case dirn
       :top (top-blocking-label sheet label labels)
+      :top-left (top-left-blocking-label sheet label labels)
       :left (left-blocking-label sheet label labels))))
 
 (defn label->cells [sheet frame-name label]
@@ -126,7 +142,9 @@
                   :top [(if br (dec br) frame-end-r)
                         (min (last-col label sheet) frame-end-c)]
                   :left [(min (last-row label sheet) frame-end-r)
-                         (if bc (dec bc) frame-end-c)]))}) cells
+                         (if bc (dec bc) frame-end-c)]
+                  :top-left [(if br br frame-end-r)
+                             (if bc bc frame-end-c)]))}) cells
         (apply disj cells (filter #(get labels %) cells))
         (apply disj cells merged-with-labels)))))
 
