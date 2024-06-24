@@ -23,7 +23,7 @@
      (reduce str "" arg))
    args))
 
-(defn- new-frame-result [sheet frame-result new-selection]
+(defn- new-frame-result [sheet frame-result new-selection & [skips]]
   (let [new-selection (set new-selection)]
     {:matrix (util/map-on-matrix
               #(if (get new-selection %)
@@ -31,7 +31,8 @@
                  {:scalar "" :representation ""})
               (area/addresses->address-matrix new-selection))
      :frame (merge frame-result
-                   {:selection new-selection})}))
+                   {:selection new-selection
+                    :skips skips})}))
 
 (defn bean-row [sheet args]
   (let [frame-result (:frame (first args))
@@ -95,14 +96,17 @@
   (let [frame-result (:frame (first args))
         label (:scalar (second args))
         existing-selection (:selection frame-result)
-        vget-cells (frames/label-name->cells
-                    sheet
-                    (:name frame-result) label dirn)
-        new-selection (set/intersection
-                       vget-cells
-                       existing-selection)]
+        get-cells (frames/label-name->cells
+                   sheet
+                   (:name frame-result) label dirn)
+        new-selection (set/union
+                       (set/intersection (:cells get-cells) existing-selection)
+                       (set/intersection (:skips frame-result) (:skips get-cells)))]
     (if (frames/label? sheet (:name frame-result) label dirn)
-      (new-frame-result sheet frame-result new-selection)
+      (new-frame-result sheet frame-result new-selection
+                        (set/union
+                         (:skips frame-result)
+                         (:skips get-cells)))
       (errors/label-not-found
        (:scalar (interpreter/eval-ast (second asts) sheet))))))
 

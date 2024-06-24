@@ -157,15 +157,31 @@
      (:skip-cells frame))))
 
 (defn label-name->cells [sheet frame-name label-name & [dirn]]
-  ;; Excludes skip labels
-  (->> (keys (:labels (get-frame sheet frame-name)))
-       (filter #(get-label sheet frame-name % dirn))
-       (filter #(when (= label-name
-                         (:scalar (util/get-cell (:grid sheet) %)))
-                  %))
-       (map #(label->cells sheet frame-name %))
-       (apply set/union)
-       (#(apply disj % (skipped-cells sheet frame-name)))))
+  (let [labels (->> (keys (:labels (get-frame sheet frame-name)))
+                    (filter #(get-label sheet frame-name % dirn))
+                    (filter #(when (= label-name
+                                      (:scalar (util/get-cell (:grid sheet) %)))
+                               %)))
+        skip-label? #(get-in sheet [:frames frame-name :skip-cells %])
+        all-skipped-cells (skipped-cells sheet frame-name)
+        label-cells (->> labels
+                         (map #(do [% (label->cells sheet frame-name %)]))
+                         (into {}))
+        ;; we keep track of the cells that were skipped at each step separately
+        ;; so if a skip label is used at any step it can still access the skipped cells
+        ;; in the function chain.
+        skips (->> label-cells
+                   vals
+                   (apply set/union)
+                   (set/intersection all-skipped-cells))]
+    {:cells (->> label-cells
+                 (map
+                  (fn [[label cells]]
+                    (if (skip-label? label)
+                      cells
+                      (set/difference cells skips))))
+                 (apply set/union))
+     :skips skips}))
 
 (defn mark-skipped [sheet frame-name addresses]
   (update-in sheet [:frames frame-name :skip-cells] #(apply conj % (set addresses))))
@@ -186,7 +202,7 @@
                                               (< updated-c (inc (second end)))
                                               (>= updated-c (second start)))
                                      frame-name)) (:frames sheet))]
-    
+
     (let [[end-r end-c] (:end (get-frame sheet at-end-of-frame))]
       (resize-frame sheet at-end-of-frame {:end [(inc end-r) end-c]}))
     sheet))

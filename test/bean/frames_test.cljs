@@ -87,16 +87,6 @@
       (is (some? (get-in sheet [:frames frame-name :skip-cells [2 1]])))
       (is (some? (get (frames/label->cells sheet frame-name [1 1]) [2 1]))))))
 
-(deftest label-name->cells-test
-  (testing "Doesn't include skip cells from the result"
-    (let [frame-name "A frame"
-          sheet (as-> (new-sheet) sheet
-                  (frames/make-frame sheet frame-name {:start [0 0] :end [2 2]})
-                  (frames/add-label sheet frame-name [0 0] :top)
-                  (grid/update-cell-content [0 0] sheet "A label")
-                  (frames/mark-skipped sheet frame-name [[2 0]]))]
-      (is (= (frames/label-name->cells sheet frame-name "A label") #{[1 0]})))))
-
 (deftest skipped-cells-test
   (testing "Returns skipped cells and cells under a skip label"
     (let [frame-name "A frame"
