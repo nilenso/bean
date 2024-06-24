@@ -206,7 +206,7 @@
          frame-name (str "Frame " frame-number)]
      {:db (->  db
                (assoc-in [:sheet :last-frame-number] frame-number)
-               (update-in [:sheet] #(frames/make-frame % frame-name area)))
+               (update-in [:sheet] #(grid/make-frame % frame-name area)))
       :fx [[:dispatch [::select-frame frame-name]]]})))
 
 (rf/reg-event-db
