@@ -4,11 +4,11 @@
 
 (deftest parser-test
   (testing "Basic Parsing"
-    (is (= [:CellContents [:Integer "4"]]
+    (is (= [:CellContents [:Number "4"]]
            (parse "4")))
     (is (= [:CellContents [:String "foo"]]
            (parse "foo")))
-    (is (= [:CellContents [:Expression [:Value [:Integer "89"]]]]
+    (is (= [:CellContents [:Expression [:Value [:Number "89"]]]]
            (parse "=89")))
     (is (= [:CellContents [:Expression [:Value [:QuotedString "foo"]]]]
            (parse "=\"foo\"")))
@@ -42,11 +42,11 @@
     (is (= [:Program]
            (parse-statement "")))
     (is (= [:Program
-            [:LetStatement [:Name "foo"] [:Expression [:Value [:Integer "99"]]]]
+            [:LetStatement [:Name "foo"] [:Expression [:Value [:Number "99"]]]]
             [:LetStatement [:Name "bar"] [:Expression
                                           [:Expression [:CellRef "A" "1"]]
                                           [:Operation "+"]
-                                          [:Expression [:Value [:Integer "9"]]]]]]
+                                          [:Expression [:Value [:Number "9"]]]]]]
            (parse-statement "foo:99\n\n\nbar   :A1+9"))))
   (let [src "foo:99\n\n\nbar   :A1+9"
         evald (parse-statement src)]

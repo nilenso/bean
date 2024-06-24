@@ -36,6 +36,6 @@
                            [:cell [0 1]]
                            (get-in grid [0 1])
                            {:content "2"
-                            :ast [:CellContents [:Integer "2"]]
+                            :ast [:CellContents [:Number "2"]]
                             :scalar 2
                             :representation "2"}))))))

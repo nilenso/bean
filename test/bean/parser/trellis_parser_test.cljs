@@ -12,18 +12,18 @@
             [:Program
              [:LetStatement
               [:Name "foo"]
-              [:Expression [:Value [:Integer "10"]]]]]
+              [:Expression [:Value [:Number "10"]]]]]
             [["1" "2"] ["3" "4"]]
             [:TestProgram
              [:AssertionStatement
               [:Expression [:CellRef "A" "1"]]
-              [:Expression [:Value [:Integer "1"]]]]]])))
+              [:Expression [:Value [:Number "1"]]]]]])))
   (testing "Parsing tests code"
     (is (= (trellis-parser/parse-tests "A1=8\n1+1=10")
            [:TestProgram
             [:AssertionStatement
              [:Expression [:CellRef "A" "1"]]
-             [:Expression [:Value [:Integer "8"]]]]
+             [:Expression [:Value [:Number "8"]]]]
             [:AssertionStatement
-             [:Expression [:Expression [:Value [:Integer "1"]]] [:Operation "+"] [:Expression [:Value [:Integer "1"]]]]
-             [:Expression [:Value [:Integer "10"]]]]]))))
+             [:Expression [:Expression [:Value [:Number "1"]]] [:Operation "+"] [:Expression [:Value [:Number "1"]]]]
+             [:Expression [:Value [:Number "10"]]]]]))))

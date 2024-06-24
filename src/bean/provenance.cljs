@@ -57,7 +57,7 @@
                        (sub-ast-proof right)))
                     (sub-ast-proof arg))
       :Value (sub-ast-proof arg)
-      :Integer (self-evident (scalar))
+      :Number (self-evident (scalar))
       :String (self-evident (scalar))
       :QuotedString (self-evident (scalar))
       :Operation (self-evident arg))))

@@ -12,14 +12,14 @@
   ;; TODO: Integers are currently just natural numbers
   "
     CellContents = <'='> Expression / RawValue / Epsilon
-    <RawValue> =  Integer / String
-    Integer = #'[0-9]+'
+    <RawValue> =  Number / String
+    Number = #'[-]?[0-9]+([.][0-9]+)?'
     String = #'.*'
 
     CellRef = #'[A-Z]+' #'[1-9][0-9]*'
     MatrixRef = CellRef <':'> CellRef
 
-    Operation = '+' | '*' | '=' | '<' | '>'
+    Operation = '+' | '*' | '=' | '<' | '>' | '/' | '-'
     Expression = (Value | CellRef | MatrixRef | FunctionChain |
                 Expression Operation Expression | FunctionInvocation |
                 FunctionDefinition | FrameLookup) / Name
@@ -32,7 +32,7 @@
     FrameLookup = <'$'> Name
     LabelLookup = Name
 
-    Value = Integer / <'\"'> QuotedString <'\"'>
+    Value = Number / <'\"'> QuotedString <'\"'>
     QuotedString = #'[^\"]+'
     ")
 

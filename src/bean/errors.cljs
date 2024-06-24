@@ -41,22 +41,10 @@
   {:error "Matrices should be same size."
    :representation "Matrices should be same size."})
 
-(defn type-mismatch-+-op []
-  {:error "+ only works for Integers"
-   :representation "+ only works for Integers"})
+(defn divide-by-zero []
+  {:error "cannot divide by zero"
+   :representation "cannot divide by zero"})
 
-(defn type-mismatch-<-op []
-  {:error "< only works for Integers"
-   :representation "< only works for Integers"})
-
-(defn type-mismatch->-op []
-  {:error "> only works for Integers"
-   :representation "> only works for Integers"})
-
-(defn type-mismatch-=-op []
-  {:error "= only works for Integers"
-   :representation "= only works for Integers"})
-
-(defn type-mismatch-*-op []
-  {:error "* only works for Integers"
-   :representation "* only works for Integers"})
+(defn type-mismatch-op [op-str]
+  (let [e (str op-str " only works for Integers")]
+    {:error e :representation e}))

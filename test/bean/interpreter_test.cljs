@@ -49,12 +49,12 @@
                  (new-sheet) [:bindings]
                  merge
                  {"one" {:content "{1}"
-                         :ast [:Expression [:FunctionDefinition [:Expression [:Value [:Integer "1"]]]]]
-                         :scalar [:Expression [:Value [:Integer "1"]]]
+                         :ast [:Expression [:FunctionDefinition [:Expression [:Value [:Number "1"]]]]]
+                         :scalar [:Expression [:Value [:Number "1"]]]
                          :representation ""}
                   "inc" {:content "{x+1}"
-                         :ast [:Expression [:FunctionDefinition [:Expression [:Expression [:Name "x"]] [:Operation "+"] [:Expression [:Value [:Integer "1"]]]]]]
-                         :scalar [:Expression [:Expression [:Name "x"]] [:Operation "+"] [:Expression [:Value [:Integer "1"]]]]
+                         :ast [:Expression [:FunctionDefinition [:Expression [:Expression [:Name "x"]] [:Operation "+"] [:Expression [:Value [:Number "1"]]]]]]
+                         :scalar [:Expression [:Expression [:Name "x"]] [:Operation "+"] [:Expression [:Value [:Number "1"]]]]
                          :representation ""}
                   "add" {:content "{x+y}"
                          :ast [:Expression [:FunctionDefinition [:Expression [:Expression [:Name "x"]] [:Operation "+"] [:Expression [:Name "y"]]]]]

@@ -88,11 +88,11 @@
           evaluated-sheet (eval-sheet (new-sheet grid ""))
           matrix (get-in evaluated-sheet [:grid 1 1 :matrix])]
       (is (= matrix [[{:content "1"
-                       :ast [:CellContents [:Integer "1"]]
+                       :ast [:CellContents [:Number "1"]]
                        :scalar 1
                        :representation "1"}]
                      [{:content "2"
-                       :ast [:CellContents [:Integer "2"]]
+                       :ast [:CellContents [:Number "2"]]
                        :scalar 2
                        :representation "2"}]]))
       (is (= (get-in evaluated-sheet [:grid 1 1 :scalar]) 1))

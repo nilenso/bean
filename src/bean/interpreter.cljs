@@ -118,11 +118,13 @@
                                 (eval-sub-ast right)))
                     (eval-sub-ast arg))
       :Value (eval-sub-ast arg)
-      :Integer (ast-result (js/parseInt arg))
+      :Number (ast-result (js/Number.parseFloat arg))
       :String (ast-result arg)
       :QuotedString (ast-result arg)
       :Operation (ast-result (case arg
                                "+" operators/bean-op-+
+                               "-" operators/bean-op-minus
+                               "/" operators/bean-op-div
                                "*" operators/bean-op-*
                                "<" operators/bean-op-<
                                ">" operators/bean-op->
