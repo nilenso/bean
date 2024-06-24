@@ -325,6 +325,10 @@
       (frames/remove-labels frame-name addresses)
       eval-sheet-a-few-times))
 
+(defn mark-skip-cells [sheet frame-name addresses]
+  (-> (frames/mark-skipped sheet frame-name addresses)
+      eval-sheet-a-few-times))
+
 (defn pasted-area [pasted-at addresses]
   (let [{:keys [start end]} (area/addresses->area addresses)]
     {:start (offset start pasted-at)

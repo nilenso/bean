@@ -229,7 +229,7 @@
  (undoable)
  (fn mark-skip-cells [db [_ frame-name addresses]]
    (update-in db [:sheet]
-              #(frames/mark-skipped % frame-name addresses))))
+              #(grid/mark-skip-cells % frame-name addresses))))
 
 (rf/reg-event-db
  ::explain
