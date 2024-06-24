@@ -335,8 +335,9 @@
      :end (offset end pasted-at)}))
 
 (defn resize-frame [sheet frame-name area]
-  (-> (frames/resize-frame sheet frame-name area)
-      eval-sheet-a-few-times))
+  (if-let [sheet* (frames/resize-frame sheet frame-name area)]
+    (eval-sheet-a-few-times sheet*)
+    sheet))
 
 (defn clear-area [sheet {:keys [start end]}]
   (->> (util/addresses-matrix start end)

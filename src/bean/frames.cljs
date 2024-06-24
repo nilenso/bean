@@ -3,11 +3,14 @@
             [bean.util :as util]
             [clojure.set :as set]))
 
+(defn overlaps? [sheet frame-name area]
+  (some
+   #(area/overlap? % area)
+   (vals (dissoc (:frames sheet) frame-name))))
+
 (defn make-frame [sheet frame-name area]
   (if (and (not (area/area-empty? area))
-           (not (some
-                 #(area/overlap? % area)
-                 (vals (:frames sheet)))))
+           (not (overlaps? sheet frame-name area)))
     (assoc-in sheet [:frames frame-name]
               (merge area {:labels {}
                            :skip-cells #{}}))
@@ -194,7 +197,8 @@
     (update-in sheet [:frames frame-name :skip-cells] #(apply disj % addresses*))))
 
 (defn resize-frame [sheet frame-name area]
-  (update-in sheet [:frames frame-name] merge area))
+  (when-not (overlaps? sheet frame-name area)
+    (update-in sheet [:frames frame-name] merge area)))
 
 (defn expand-frames [sheet [updated-r updated-c]]
   (if-let [at-end-of-frame (some (fn [[frame-name {:keys [start end]}]]
@@ -202,7 +206,9 @@
                                               (< updated-c (inc (second end)))
                                               (>= updated-c (second start)))
                                      frame-name)) (:frames sheet))]
-
-    (let [[end-r end-c] (:end (get-frame sheet at-end-of-frame))]
-      (resize-frame sheet at-end-of-frame {:end [(inc end-r) end-c]}))
+    (let [start (:start (get-frame sheet at-end-of-frame))
+          [end-r end-c] (:end (get-frame sheet at-end-of-frame))]
+      (or (resize-frame sheet at-end-of-frame {:start start
+                                               :end [(inc end-r) end-c]})
+          sheet))
     sheet))

@@ -30,8 +30,13 @@
   (= start end))
 
 (defn overlap? [area-a area-b]
+  (prn area-a area-b)
   (let [{[a-r1 a-c1] :start [a-r2 a-c2] :end} area-a
         {[b-r1 b-c1] :start [b-r2 b-c2] :end} area-b]
+    (prn a-r2 b-r1
+         a-r1 b-r2
+         a-c2 b-c1
+         a-c1 b-c2)
     (not
      (or (< a-r2 b-r1)
          (> a-r1 b-r2)

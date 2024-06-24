@@ -492,14 +492,8 @@
    (doseq [[frame-name frame-data] frames]
      (let [[x y w h] (area->xywh frame-data row-heights col-widths)
            border (new pixi/Graphics)
-           highlight (new pixi/Graphics)
-           extra-hitarea-y (+ (* 2 (:frame-name-padding styles/sizes))
-                              (:frame-name-font styles/sizes))]
+           highlight (new pixi/Graphics)]
        (-> g (.addChild border) (.addChild highlight))
-       (set! (.-eventMode border) "static")
-       (set! (.-hitArea border) (new pixi/Rectangle
-                                     x (- y extra-hitarea-y)
-                                     w (+ h extra-hitarea-y)))
        (.lineStyle border (:frame-border styles/sizes) (:frame-border styles/colors) 0.5 0.5)
        (.drawRect border x y w h)
        (draw-frame-name highlight frame-name x y)
