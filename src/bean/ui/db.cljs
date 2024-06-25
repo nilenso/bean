@@ -10,7 +10,7 @@
 "add:{x+y}
 inc:{x+1}
 sum:{x.reduce({x + y})}
-count:{x.reduce(inc 0)}
+count:{x.reduce(inc, 0)}
 concatt:{x.concat(y)}"))
 
 (def Cell
