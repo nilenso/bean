@@ -18,4 +18,5 @@
 (defn routed []
   (let [route (rf/subscribe [::subs/route])]
     (case (:handler @route)
-      :root [root-page])))
+      :root [root-page]
+      [root-page])))

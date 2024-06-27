@@ -1,13 +1,14 @@
 (ns bean.ui.events
   (:require [bean.code :as code]
             [bean.code-errors :as code-errors]
-            [day8.re-frame.undo :as undo :refer [undoable]]
             [bean.frames :as frames]
             [bean.grid :as grid]
             [bean.ui.db :as db]
+            [bean.ui.demos :as demos]
             [bean.ui.paste :as paste]
             [bean.ui.provenance :as provenance]
             [bean.ui.util :as util]
+            [day8.re-frame.undo :as undo :refer [undoable]]
             [re-frame.core :as rf]
             [reagent.core :as rc]))
 
@@ -51,6 +52,58 @@
    (update-in db [:sheet] #(grid/clear-area % area))))
 
 (rf/reg-event-fx
+ ::export-demos
+ (fn [{:keys [db]} [_]]
+   (.then
+    (demos/get-demos)
+    #(demos/download-edn-as-file
+      (if-let [current-demo-name (get-in db [:ui :current-demo-name])]
+        (assoc % current-demo-name (select-keys (:sheet db) [:grid
+                                                             :depgraph
+                                                             :frames
+                                                             :last-frame-number
+                                                             :grid-dimensions
+                                                             :code-in-editor]))
+        %)))
+   {}))
+
+(rf/reg-event-fx
+ ::reset-demos
+ (undoable)
+ (fn [{:keys [db]} _]
+  ;; This is a bit of a hammer, should be able to reset better.
+   {:fx [[:dispatch [::initialize-db]]
+         [:dispatch [::load-demo-names (get-in db [:ui :demo-names])]]]}))
+
+(rf/reg-event-db
+ ::load-demo
+ (undoable)
+ (fn [db [_ demo-name demo]]
+   (-> db
+       (assoc-in [:ui :current-demo-name] demo-name)
+       (update-in [:sheet] merge demo))))
+
+(rf/reg-event-fx
+ ::select-demo
+ (fn [_ [_ demo-name]]
+   (.then (demos/get-demo demo-name)
+          #(rf/dispatch [::load-demo demo-name %]))
+   {}))
+
+(rf/reg-event-db
+ ::load-demo-names
+ (fn [db [_ demo-names]]
+   (assoc-in db [:ui :demo-names] demo-names)))
+
+(rf/reg-event-db
+ ::fetch-demos
+ (fn [db []]
+   (-> (demos/fetch-demos)
+       (.then #(demos/get-demos))
+       (.then #(rf/dispatch [::load-demo-names (keys %)])))
+   db))
+
+(rf/reg-event-fx
  ::handle-global-kbd
  (fn handle-global-kbd [{:keys [db]} [_ e]]
    (let [selection (get-in db [:ui :grid :selection])]
@@ -61,6 +114,9 @@
 
        (and (= (.-key e) "z") (or (.-ctrlKey e) (.-metaKey e)))
        (when (undo/undos?) (rf/dispatch [:undo]))
+
+       (and (= (.-key e) "e") (or (.-ctrlKey e) (.-metaKey e)))
+       {:fx [[:dispatch [::export-demos]]]}
 
        (or (.-ctrlKey e) (.-metaKey e)
            (= (.-key e) "Shift")

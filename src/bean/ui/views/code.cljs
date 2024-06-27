@@ -34,4 +34,5 @@
         :content-editable ""
         :on-change #(rf/dispatch [::events/update-code (.-value (.-target %))])
         :spell-check false
+        :value (code/get-code @sheet)
         :default-value (code/get-code @sheet)}]]]))

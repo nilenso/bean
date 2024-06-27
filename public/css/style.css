@@ -410,6 +410,13 @@ p {
     vertical-align: middle;
 }
 
+.controls-demos {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
 .set-background-btn {
     width: 15px;
     height: 15px;

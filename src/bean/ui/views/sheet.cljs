@@ -688,7 +688,7 @@
                 :worldHeight (:world-h styles/sizes)
                 :worldWidth (:world-w styles/sizes)})]
     (-> v
-        (.clampZoom #js {:maxHeight 10000 :maxWidth 10000})
+        (.clampZoom #js {:maxHeight 3000 :maxWidth 3000})
         (.drag #js {:clampWheel true :pressDrag false})
         (.wheel #js {:trackpadPinch true :wheelZoom false})
         (.clamp #js {:direction "all"}))))
@@ -843,7 +843,9 @@
 
 (defn controls []
   (let [selection @(rf/subscribe [::subs/selection])
-        sheet @(rf/subscribe [::subs/sheet])]
+        sheet @(rf/subscribe [::subs/sheet])
+        demo-names @(rf/subscribe [::subs/demo-names])
+        current-demo-name @(rf/subscribe [::subs/current-demo-name])]
     [:div {:class :controls-container}
      [:button {:class [:controls-btn
                        (when (grid/all-bold? sheet (area/area->addresses selection))
@@ -869,7 +871,20 @@
                   :on-mouse-down #(when selection
                                     (rf/dispatch [::events/set-cell-backgrounds
                                                   (area/area->addresses selection)
-                                                  color]))} ""])]]))
+                                                  color]))} ""])]
+     [:div {:class :controls-demos}
+      [:p {:style {:display :inline :margin-right "15px"}} "Demos"]
+      (for [demo demo-names]
+        [:button {:key demo
+                  :class [:controls-btn
+                          (when (= current-demo-name demo)
+                            :pressed)]
+                  :on-click #(rf/dispatch [::events/select-demo demo])}
+         demo])
+      [:button {:key "reset-demo"
+                :class [:controls-btn]
+                :on-click #(rf/dispatch [::events/reset-demos])}
+       "Reset"]]]))
 
 (defn sheet []
   [:div {:class :sheet-container}

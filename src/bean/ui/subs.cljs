@@ -28,6 +28,16 @@
    (get-in db [:ui :grid :selection])))
 
 (re-frame/reg-sub
+ ::demo-names
+ (fn [db]
+   (get-in db [:ui :demo-names])))
+
+(re-frame/reg-sub
+ ::current-demo-name
+ (fn [db]
+   (get-in db [:ui :current-demo-name])))
+
+(re-frame/reg-sub
  ::route
  (fn [db]
    (:route db)))
