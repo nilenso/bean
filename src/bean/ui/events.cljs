@@ -223,7 +223,7 @@
  (fn [[el-id text]]
    (rc/after-render
     #(when-let [el (-> js/document (.getElementById el-id))]
-       (when text (set! (.-innerHTML el) text))
+       (set! (.-innerHTML el) (or text ""))
        (.focus el)
        (.selectAllChildren (.getSelection js/window) el)
        (.collapseToEnd (.getSelection js/window))))))
@@ -231,10 +231,11 @@
 (rf/reg-event-fx
  ::edit-cell
  (fn edit-cell [{:keys [db]} [_ rc text]]
-   (let [rc* (util/merged-or-self rc (:sheet db))]
+   (let [rc* (util/merged-or-self rc (:sheet db))
+         content (get-in db (flatten [:sheet :grid rc* :content]))]
      {:db (assoc-in db [:ui :grid :editing-cell] rc*)
       :fx [[:dispatch [::set-selection {:start rc* :end (util/merged-until-or-self rc* (:sheet db))}]]
-           [::focus-element ["cell-input" text]]]})))
+           [::focus-element ["cell-input" (or text content)]]]})))
 
 (rf/reg-event-db
  ::clear-edit-cell

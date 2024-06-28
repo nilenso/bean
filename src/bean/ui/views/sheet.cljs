@@ -84,9 +84,7 @@
 
 (defn- submit-cell-input []
   (when-let [el (.getElementById js/document "cell-input")]
-    (rf/dispatch-sync [::events/submit-cell-input (str (.-textContent el))])
-    ;; Reagent does not clear the element when input moves to a blank cell.
-    (set! (.-innerHTML el) nil)))
+    (rf/dispatch-sync [::events/submit-cell-input (str (.-textContent el))])))
 
 (defn- selection->rect [^js g area row-heights col-widths]
   (when (:start area)
