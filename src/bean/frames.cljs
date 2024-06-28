@@ -148,7 +148,7 @@
                          (if bc (dec bc) frame-end-c)]
                   :top-left [(if br br frame-end-r)
                              (if bc bc frame-end-c)]))}) cells
-        (apply disj cells (filter #(get labels %) cells))
+        (disj cells label)
         (apply disj cells merged-with-labels)))))
 
 (defn skipped-cells [sheet frame-name]
