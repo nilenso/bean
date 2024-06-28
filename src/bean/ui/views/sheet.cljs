@@ -467,8 +467,8 @@
                               2 (nth row-heights r)))
             :left (when (= r label-r)
                     (.drawRect g
-                               (nth xs c) (+ (nth ys r) label-r)
-                               (nth col-widths c) 4))
+                               (nth xs c) (+ (nth ys r) (* label-r 0.5))
+                               (nth col-widths c) 2))
             :top-left nil))
         (.beginFill g color 0.25)
         (.drawRect g
