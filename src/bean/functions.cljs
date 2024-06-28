@@ -4,7 +4,6 @@
             [bean.interpreter :as interpreter]
             [bean.frames :as frames]
             [bean.util :as util]
-            [clojure.set :as set]
             [clojure.string]))
 
 (defn cell-ref? [[_ ast]]
@@ -23,48 +22,61 @@
      (reduce str "" arg))
    args))
 
-(defn- new-frame-result [sheet frame-result new-selection & [skips]]
-  (let [new-selection (set new-selection)]
-    {:matrix (util/map-on-matrix
-              #(if (get new-selection %)
-                 (util/get-cell (:grid sheet) %)
-                 {:scalar "" :representation ""})
-              (area/addresses->address-matrix new-selection))
-     :frame (merge frame-result
-                   {:selection new-selection
-                    :skips skips})}))
+(defn- address-matrix->cells-matrix [sheet matrix]
+  (util/map-on-matrix
+   #(if %
+      (util/get-cell (:grid sheet) %)
+      {:scalar "" :representation ""})
+   matrix))
+
+(defn- remove-nil-columns [matrix]
+  (let [columns (apply map vector matrix)
+        non-nil-columns (remove #(every? nil? %) columns)]
+    (if (empty? non-nil-columns)
+      []
+      (apply map vector non-nil-columns))))
+
+(defn- remove-nil-rows [matrix]
+  (remove #(every? nil? %) matrix))
+
+(defn minimum-matrix [matrix]
+  (if (not (first (first matrix)))
+    [[nil]]
+    matrix))
 
 (defn bean-row [sheet args]
-  (let [frame-result (:frame (first args))
-        selection (:selection frame-result)
-        frame (frames/get-frame sheet (:name frame-result))
-        [start-r start-c] (:start frame)
-        [end-r end-c] (:end frame)
-        cols (range start-c (inc end-c))
-        labels (set (keys (:labels frame)))]
-    (as-> (for [col cols]
-            (for [[r _] selection]
-              [r col])) rcs
-      (mapcat identity rcs)
-      (set rcs)
-      (apply disj rcs labels)
-      (new-frame-result sheet frame-result rcs))))
+  (if-not (:error (first args))
+    (let [frame-result (:frame (first args))
+          selection (:selection frame-result)
+          frame (frames/get-frame sheet (:name frame-result))
+          [start-r start-c] (:start frame)
+          [end-r end-c] (:end frame)
+          cols (range start-c (inc end-c))
+          rows (map first (mapcat identity selection))
+          new-selection (->> (for [r rows]
+                               (for [col cols]
+                                 [r col]))
+                             minimum-matrix)]
+      {:matrix (address-matrix->cells-matrix sheet new-selection)
+       :frame (merge frame-result {:selection new-selection})})
+    (first args)))
 
 (defn bean-col [sheet args]
-  (let [frame-result (:frame (first args))
-        selection (:selection frame-result)
-        frame (frames/get-frame sheet (:name frame-result))
-        [start-r start-c] (:start frame)
-        [end-r end-c] (:end frame)
-        rows (range start-r (inc end-r))
-        labels (set (keys (:labels frame)))]
-    (as-> (for [row rows]
-            (for [[_ c] selection]
-              [row c])) rcs
-      (mapcat identity rcs)
-      (set rcs)
-      (apply disj rcs labels)
-      (new-frame-result sheet frame-result rcs))))
+  (if-not (:error (first args))
+    (let [frame-result (:frame (first args))
+          selection (:selection frame-result)
+          frame (frames/get-frame sheet (:name frame-result))
+          [start-r start-c] (:start frame)
+          [end-r end-c] (:end frame)
+          cols (set (map second (mapcat identity selection)))
+          rows (range start-r (inc end-r))
+          new-selection (->> (for [r rows]
+                               (for [col cols]
+                                 [r col]))
+                             minimum-matrix)]
+      {:matrix (address-matrix->cells-matrix sheet new-selection)
+       :frame (merge frame-result {:selection new-selection})})
+    (first args)))
 
 (defn bean-reduce [sheet args]
   (let [frame-result (:frame (first args))
@@ -72,6 +84,7 @@
         f* #(interpreter/apply-f-args sheet f [%1 %2])
         val* (first (drop 2 args))
         col* (->> (:selection frame-result)
+                  (mapcat identity)
                   sort
                   (map #(util/get-cell (:grid sheet) %))
                   (remove #(clojure.string/blank? (:scalar %))))]
@@ -79,36 +92,71 @@
       (reduce f* val* col*)
       (reduce f* col*))))
 
-;; This doesn't work for matrices right now
+;; These don't work for matrices right now
 ;; It should: eval-matrix should perhaps return a :selection also
 (defn bean-filter [sheet args]
-  (let [frame-result (:frame (first args))
-        f (second args)
-        selection (:selection frame-result)]
-    (->> selection
-         (filter
-          #(:scalar
-            (interpreter/apply-f-args sheet f
-             [(util/get-cell (:grid sheet) %)])))
-         (new-frame-result sheet frame-result))))
+  (if-not (:error (first args))
+    (let [frame-result (:frame (first args))
+          f (second args)
+          new-selection (->> (:selection frame-result)
+                             (util/map-on-matrix
+                              #(when (:scalar
+                                      (interpreter/apply-f-args
+                                       sheet f [(util/get-cell (:grid sheet) %)]))
+                                 %))
+                             remove-nil-columns
+                             remove-nil-rows
+                             minimum-matrix)]
+      {:matrix (address-matrix->cells-matrix sheet new-selection)
+       :frame (merge frame-result {:selection new-selection})})
+    (first args)))
+
+(defn bean-match [sheet args]
+  (if-not (:error (first args))
+    (let [from-frame (:frame (first args))
+          to-frame (:frame (second args))]
+      (when (and from-frame to-frame)
+        (let [first-match
+              (reduce
+               #(if (get %1 %2)
+                  %1
+                  (assoc %1 (:representation (util/get-cell (:grid sheet) %2)) %2))
+               {}
+               (mapcat identity (:selection to-frame)))
+
+              new-selection
+              (->> (util/map-on-matrix
+                                  #(get first-match (:representation (util/get-cell (:grid sheet) %)))
+                                  (:selection from-frame))
+                                 remove-nil-columns
+                                 remove-nil-rows
+                                 minimum-matrix)]
+          {:matrix (address-matrix->cells-matrix sheet new-selection)
+           :frame {:selection new-selection
+                   :name (:name to-frame)}})))
+    (first args)))
 
 (defn- bean-get* [sheet args asts & [dirn]]
-  (let [frame-result (:frame (first args))
-        label (:scalar (second args))
-        existing-selection (:selection frame-result)
-        get-cells (frames/label-name->cells
-                   sheet
-                   (:name frame-result) label dirn)
-        new-selection (set/union
-                       (set/intersection (:cells get-cells) existing-selection)
-                       (set/intersection (:skips frame-result) (:skips get-cells)))]
-    (if (frames/label? sheet (:name frame-result) label dirn)
-      (new-frame-result sheet frame-result new-selection
-                        (set/union
-                         (:skips frame-result)
-                         (:skips get-cells)))
-      (errors/label-not-found
-       (:scalar (interpreter/eval-ast (second asts) sheet))))))
+  (if-not (:error (first args))
+    (let [frame-result (:frame (first args))
+          label (:scalar (second args))]
+      (if (frames/label? sheet (:name frame-result) label dirn)
+        (let [label-cells (frames/label-name->cells
+                           sheet
+                           (:name frame-result) label dirn)
+              new-selection (->> (:selection frame-result)
+                                 (util/map-on-matrix
+                                  #(when (or (contains? (:cells label-cells) %)
+                                             (and (contains? (:skips frame-result) %)
+                                                  (contains? (:skips label-cells) %))) %))
+                                 remove-nil-columns
+                                 remove-nil-rows
+                                 minimum-matrix)]
+          {:matrix (address-matrix->cells-matrix sheet new-selection)
+           :frame (merge frame-result {:selection new-selection})})
+        (errors/label-not-found
+         (:scalar (interpreter/eval-ast (second asts) sheet)))))
+    (first args)))
 
 (defn bean-get [sheet args asts]
   (bean-get* sheet args asts))
@@ -124,9 +172,7 @@
                                     (:end frame)
                                     (:grid sheet))
    :frame {:name frame-name
-           :selection (area/area->addresses
-                       (select-keys frame [:start :end]))
-           :selection-dirn nil}})
+           :selection (area/area->address-matrix frame)}})
 
 (defn bean-frame [sheet args asts]
   (cond

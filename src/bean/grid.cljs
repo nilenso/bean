@@ -32,6 +32,8 @@
           :representation "f"}
    "col" {:scalar functions/bean-col
           :representation "f"}
+   "match" {:scalar functions/bean-match
+             :representation "f"}
    "error" {:scalar functions/bean-error
             :representation "f"}})
 
