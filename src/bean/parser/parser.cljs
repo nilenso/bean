@@ -20,9 +20,9 @@
     MatrixRef = CellRef <':'> CellRef
 
     Operation = '+' | '*' | '=' | '<' | '>' | '/' | '-'
-    Expression = (Value | CellRef | MatrixRef | FunctionChain |
-                Expression Operation Expression | FunctionInvocation |
-                FunctionDefinition | FrameLookup) / Name
+    Expression = (Value | CellRef | MatrixRef | FrameLookup |
+                 FunctionChain | Expression Operation Expression |
+                 FunctionInvocation | FunctionDefinition) / Name
 
     FunctionInvocation = (FunctionDefinition | Name) <'('> [Expression {<','> Expression}] <')'>
     FunctionDefinition = <'{'> Expression <'}'>
