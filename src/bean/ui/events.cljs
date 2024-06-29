@@ -231,11 +231,12 @@
 (rf/reg-event-fx
  ::edit-cell
  (fn edit-cell [{:keys [db]} [_ rc text]]
-   (let [rc* (util/merged-or-self rc (:sheet db))
-         content (get-in db (flatten [:sheet :grid rc* :content]))]
-     {:db (assoc-in db [:ui :grid :editing-cell] rc*)
-      :fx [[:dispatch [::set-selection {:start rc* :end (util/merged-until-or-self rc* (:sheet db))}]]
-           [::focus-element ["cell-input" (or text content)]]]})))
+   (let [rc* (util/merged-or-self rc (:sheet db))]
+     (when (get-in db (flatten [:sheet :grid rc*]))
+       (let [content (get-in db (flatten [:sheet :grid rc* :content]))]
+         {:db (assoc-in db [:ui :grid :editing-cell] rc*)
+          :fx [[:dispatch [::set-selection {:start rc* :end (util/merged-until-or-self rc* (:sheet db))}]]
+               [::focus-element ["cell-input" (or text content)]]]})))))
 
 (rf/reg-event-db
  ::clear-edit-cell
