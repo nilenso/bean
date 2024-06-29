@@ -27,7 +27,7 @@
   "Note: This doesn't bother with escaping yet. Fragile & breaks with any excess '%'"
 
   "
-   TrellisFile = Program <SectionSep> CommaSeparatedContent <SectionSep> TestProgram
+   TrellisFile = Program <SectionSep> CommaSeparatedContent <SectionSep> TestProgram ['\n']
    SectionSep = '\n'+ '%' '\n'+
    ")
 
