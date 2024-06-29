@@ -53,11 +53,10 @@
           [end-r end-c] (:end frame)
           cols (range start-c (inc end-c))
           rows (map first (mapcat identity selection))
-          new-selection (->> (for [r rows]
-                               (for [col cols]
-                                 [r col]))
-                             minimum-matrix)]
-      {:matrix (address-matrix->cells-matrix sheet new-selection)
+          new-selection (for [r rows]
+                          (for [col cols]
+                            [r col]))]
+      {:matrix (address-matrix->cells-matrix sheet (minimum-matrix new-selection))
        :frame (merge frame-result {:selection new-selection})})
     (first args)))
 
@@ -70,11 +69,10 @@
           [end-r end-c] (:end frame)
           cols (set (map second (mapcat identity selection)))
           rows (range start-r (inc end-r))
-          new-selection (->> (for [r rows]
-                               (for [col cols]
-                                 [r col]))
-                             minimum-matrix)]
-      {:matrix (address-matrix->cells-matrix sheet new-selection)
+          new-selection (for [r rows]
+                          (for [col cols]
+                            [r col]))]
+      {:matrix (address-matrix->cells-matrix sheet (minimum-matrix new-selection))
        :frame (merge frame-result {:selection new-selection})})
     (first args)))
 
@@ -95,7 +93,8 @@
 ;; These don't work for matrices right now
 ;; It should: eval-matrix should perhaps return a :selection also
 (defn bean-filter [sheet args]
-  (if-not (:error (first args))
+  (if (and (not (:error (first args)))
+           (second args))
     (let [frame-result (:frame (first args))
           f (second args)
           new-selection (->> (:selection frame-result)
@@ -105,9 +104,8 @@
                                        sheet f [(util/get-cell (:grid sheet) %)]))
                                  %))
                              remove-nil-columns
-                             remove-nil-rows
-                             minimum-matrix)]
-      {:matrix (address-matrix->cells-matrix sheet new-selection)
+                             remove-nil-rows)]
+      {:matrix (address-matrix->cells-matrix sheet (minimum-matrix new-selection))
        :frame (merge frame-result {:selection new-selection})})
     (first args)))
 
@@ -126,12 +124,11 @@
 
               new-selection
               (->> (util/map-on-matrix
-                                  #(get first-match (:representation (util/get-cell (:grid sheet) %)))
-                                  (:selection from-frame))
-                                 remove-nil-columns
-                                 remove-nil-rows
-                                 minimum-matrix)]
-          {:matrix (address-matrix->cells-matrix sheet new-selection)
+                    #(get first-match (:representation (util/get-cell (:grid sheet) %)))
+                    (:selection from-frame))
+                   remove-nil-columns
+                   remove-nil-rows)]
+          {:matrix (address-matrix->cells-matrix sheet (minimum-matrix new-selection))
            :frame {:selection new-selection
                    :name (:name to-frame)}})))
     (first args)))
@@ -150,9 +147,8 @@
                                              (and (contains? (:skips frame-result) %)
                                                   (contains? (:skips label-cells) %))) %))
                                  remove-nil-columns
-                                 remove-nil-rows
-                                 minimum-matrix)]
-          {:matrix (address-matrix->cells-matrix sheet new-selection)
+                                 remove-nil-rows)]
+          {:matrix (address-matrix->cells-matrix sheet (minimum-matrix new-selection))
            :frame (merge frame-result {:selection new-selection})})
         (errors/label-not-found
          (:scalar (interpreter/eval-ast (second asts) sheet)))))

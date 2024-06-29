@@ -278,6 +278,15 @@
    (assoc-in db [:ui :renaming-frame] frame-name)))
 
 (rf/reg-event-db
+ ::highlight-matrix
+ (undoable)
+ (fn highlight-matrix [db [_ content]]
+   (assoc-in db [:ui :grid :highlighted-cells]
+             (set (mapcat identity (get-in
+                                    (grid/eval-content (:sheet db) content)
+                                    [:frame :selection]))))))
+
+(rf/reg-event-db
  ::rename-frame
  (undoable)
  (fn edit-frame [db [_ old-name new-name]]

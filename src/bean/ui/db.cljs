@@ -58,4 +58,5 @@ average:{x.sum() / x.count()}"))
                                          :col-widths (vec (repeat num-cols (:cell-w styles/sizes)))}))
      :ui {:help-display false
           :grid {:editing-cell nil
-                 :selection nil}}}))
+                 :selection nil
+                 :highlighted-cells #{}}}}))

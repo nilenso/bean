@@ -510,10 +510,10 @@
                    (cell-h label-r (get-in sheet [:grid label-r label-c]) row-heights))
         (when (= dirn :top-left)
           (draw-top-left-label-indicator g
-           (+ (nth xs label-c)
-              (cell-w label-c (get-in sheet [:grid label-r label-c]) col-widths))
-           (+ (nth ys label-r)
-              (cell-h label-r (get-in sheet [:grid label-r label-c]) row-heights)))))
+                                         (+ (nth xs label-c)
+                                            (cell-w label-c (get-in sheet [:grid label-r label-c]) col-widths))
+                                         (+ (nth ys label-r)
+                                            (cell-h label-r (get-in sheet [:grid label-r label-c]) row-heights)))))
       (draw-skipped-cells g textures sheet skipped-cells row-heights col-widths xs ys)
       (.endFill g))
     g))
@@ -642,6 +642,16 @@
    (when selection
      (selection->rect g selection row-heights col-widths))))
 
+(defn- draw-highlighted-cells
+  [^js grid-g highlighted-cells row-heights col-widths]
+  (.beginFill grid-g "0xaa0011" 0.25)
+  (doall
+   (map
+    #(let [[x y w h]
+           (area->xywh {:start % :end %} row-heights col-widths)]
+       (.drawRect grid-g x y w h))
+    highlighted-cells)))
+
 (defn- draw-cell-text
   ([] (new pixi/Graphics))
   ([^js g {:keys [grid]} row-heights col-widths]
@@ -747,6 +757,7 @@
     (draw-cell-text (:cell-text @pixi-app) sheet row-heights col-widths)
     (draw-frames (:frames @pixi-app) (:textures @pixi-app) sheet grid-ui (:grid @pixi-app) row-heights col-widths)
     (draw-selection (:selection @pixi-app) (:selection grid-ui) row-heights col-widths)
+    (draw-highlighted-cells (:grid @pixi-app) (:highlighted-cells grid-ui) row-heights col-widths)
     (draw-top-heading (:top-heading @pixi-app) col-widths v)
     (draw-left-heading (:left-heading @pixi-app) row-heights v)
     (draw-corner (:corner @pixi-app) v)))
@@ -842,6 +853,7 @@
               :on-pointer-up #(let [canvas (.querySelector js/document "#grid-container canvas")]
                                 (.dispatchEvent canvas (new js/MouseEvent "pointerup" %)))
               :on-key-down #(handle-cell-navigation % [r c] @sheet)
+              :on-input #(rf/dispatch [::events/highlight-matrix (.-textContent (.-target %))])
               :on-paste cell-paste-text}
        (:content cell)])))
 

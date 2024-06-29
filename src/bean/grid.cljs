@@ -143,6 +143,9 @@
 (defn parse-grid [grid]
   (util/map-on-matrix value/from-cell grid))
 
+(defn eval-content [sheet content]
+  (interpreter/eval-ast (parser/parse content) sheet))
+
 (defn- eval-cell* [cell sheet]
   (if-not (empty-spilled-cell? cell)
     (let [parsed-cell (assoc cell :ast (parser/parse (:content cell)))]
