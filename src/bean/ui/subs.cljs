@@ -33,6 +33,11 @@
    (get-in db [:ui :demo-names])))
 
 (re-frame/reg-sub
+ ::renaming-frame
+ (fn [db]
+   (get-in db [:ui :renaming-frame])))
+
+(re-frame/reg-sub
  ::current-demo-name
  (fn [db]
    (get-in db [:ui :current-demo-name])))

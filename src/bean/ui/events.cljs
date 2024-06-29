@@ -267,6 +267,22 @@
       :fx [[:dispatch [::select-frame frame-name]]]})))
 
 (rf/reg-event-db
+ ::renaming-frame
+ (undoable)
+ (fn edit-frame [db [_ frame-name]]
+   (assoc-in db [:ui :renaming-frame] frame-name)))
+
+(rf/reg-event-db
+ ::rename-frame
+ (undoable)
+ (fn edit-frame [db [_ old-name new-name]]
+   (prn new-name)
+   (let [frame (get-in (:sheet db) [:frames old-name])]
+     (-> db
+         (update-in [:sheet :frames] dissoc old-name)
+         (assoc-in [:sheet :frames new-name] frame)))))
+
+(rf/reg-event-db
  ::add-labels
  (undoable)
  (fn add-labels [db [_ frame-name addresses dirn]]

@@ -171,15 +171,15 @@ p {
 }
 
 .make-frame-form {
-    margin: auto 0 auto 0;
+    margin: 2px 0 auto 0;
 }
 
-.make-frame-input {
+.frame-name-input {
     border: 1px solid #e9e9ed;
     padding: 4px;
 }
 
-.make-frame-input:active, .make-frame-input:focus {
+.frame-name-input:active, .frame-name-input:focus {
     outline: none;
     /* border: 2px solid #3b5aa3; */
 }
