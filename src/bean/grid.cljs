@@ -345,6 +345,14 @@
     (eval-sheet-a-few-times sheet*)
     sheet))
 
+(defn rename-frame [sheet old-name new-name]
+  (if-let [frame (get-in sheet [:frames old-name])]
+    (-> sheet
+        (update :frames dissoc old-name)
+        (assoc-in [:frames new-name] frame)
+        eval-sheet-a-few-times)
+    sheet))
+
 (defn clear-area [sheet {:keys [start end]}]
   (->> (util/addresses-matrix start end)
        (mapcat identity)

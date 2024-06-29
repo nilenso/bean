@@ -277,10 +277,7 @@
  ::rename-frame
  (undoable)
  (fn edit-frame [db [_ old-name new-name]]
-   (let [frame (get-in (:sheet db) [:frames old-name])]
-     (-> db
-         (update-in [:sheet :frames] dissoc old-name)
-         (assoc-in [:sheet :frames new-name] frame)))))
+   (update db :sheet #(grid/rename-frame % old-name new-name))))
 
 (rf/reg-event-db
  ::add-labels
