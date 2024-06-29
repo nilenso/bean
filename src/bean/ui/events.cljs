@@ -276,7 +276,6 @@
  ::rename-frame
  (undoable)
  (fn edit-frame [db [_ old-name new-name]]
-   (prn new-name)
    (let [frame (get-in (:sheet db) [:frames old-name])]
      (-> db
          (update-in [:sheet :frames] dissoc old-name)
