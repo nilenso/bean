@@ -60,13 +60,20 @@
            rmatrix)}
     (errors/matrix-size-mismatch-error)))
 
+(defn- scalar-op-matrix [op scalar matrix]
+  (apply-results #(apply %1 [%2 %3]) [op scalar] matrix))
+
+(defn- matrix-op-scalar [op scalar matrix]
+  (apply-results #(apply %1 [%3 %2]) [op scalar] matrix))
+
 (defn apply-op [op left right]
   (let [lmatrix (:matrix left)
         rmatrix (:matrix right)]
     (cond
       (and lmatrix rmatrix) (matrix-op-matrix lmatrix op rmatrix)
-      lmatrix (apply-results #(apply %1 [%2 %3]) [op right] lmatrix)
-      rmatrix (apply-results #(apply %1 [%3 %2]) [op left] rmatrix)
+      ;; doesnt work for noncommutative operators
+      lmatrix (matrix-op-scalar op right lmatrix)
+      rmatrix (scalar-op-matrix op left rmatrix)
       :else (apply-results #(apply %1 [%2 %3]) [op left right]))))
 
 (declare apply-f)

@@ -271,11 +271,18 @@
                (update-in [:sheet] #(grid/make-frame % frame-name area)))
       :fx [[:dispatch [::select-frame frame-name]]]})))
 
-(rf/reg-event-db
+(rf/reg-event-fx
+ ::select-frame
+ (fn select-table [{:keys [db]} [_ frame-name]]
+   (let [area (get-in db [:sheet :frames frame-name])]
+     (when area {:fx [[:dispatch [::set-selection area]]]}))))
+
+(rf/reg-event-fx
  ::renaming-frame
  (undoable)
- (fn edit-frame [db [_ frame-name]]
-   (assoc-in db [:ui :renaming-frame] frame-name)))
+ (fn edit-frame [{:keys [db]} [_ frame-name]]
+   {:db (assoc-in db [:ui :renaming-frame] frame-name)
+    :fx [[:dispatch [::select-frame frame-name]]]}))
 
 (rf/reg-event-db
  ::highlight-matrix
