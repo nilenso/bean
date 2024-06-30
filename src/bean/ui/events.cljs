@@ -279,7 +279,6 @@
 
 (rf/reg-event-fx
  ::renaming-frame
- (undoable)
  (fn edit-frame [{:keys [db]} [_ frame-name]]
    {:db (assoc-in db [:ui :renaming-frame] frame-name)
     :fx [[:dispatch [::select-frame frame-name]]]}))

@@ -54,10 +54,17 @@
     (for [c (range start-c (inc end-c))]
       [r c])))
 
-(defn random-color-hex []
-  (+ (bit-shift-left (rand-int 256) 16)
-     (bit-shift-left (rand-int 256) 8)
-     (rand-int 256)))
+(defn random-color-hex
+  ([]
+   (random-color-hex (rand-int 1000000)))
+  ([seed]
+   (let [hash (hash seed)
+         r (mod (bit-shift-right hash 16) 256)
+         g (mod (bit-shift-right hash 8) 256)
+         b (mod hash 256)]
+     (+ (bit-shift-left r 16)
+        (bit-shift-left g 8)
+        b))))
 
 (defn merged-or-self [[r c] sheet]
   (or (get-in sheet [:grid r c :style :merged-with]) [r c]))

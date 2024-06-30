@@ -36,4 +36,4 @@
             :frame-name-padding 3})
 
 (def cell-background-colors
-  [nil 0xcccccc 0xffc9c9 0xb2f2bb 0xa5d8ff 0xffec99])
+  [nil 0xcccccc 0xb2f2bb 0xa5d8ff 0xffec99])
