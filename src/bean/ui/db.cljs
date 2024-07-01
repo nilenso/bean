@@ -55,7 +55,8 @@ average:{x.sum() / x.count()}"))
                 (assoc :grid-dimensions {:num-rows num-rows
                                          :num-cols num-cols
                                          :row-heights (vec (repeat num-rows (:cell-h styles/sizes)))
-                                         :col-widths (vec (repeat num-cols (:cell-w styles/sizes)))}))
+                                         :col-widths (vec (repeat num-cols (:cell-w styles/sizes)))})
+                (assoc :frames {}))
      :ui {:help-display false
           :grid {:editing-cell nil
                  :selection nil

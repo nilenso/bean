@@ -307,7 +307,7 @@
           (let [existing-cell (util/get-cell (:grid sheet*) address)
                 new-cell (-> existing-cell
                              (assoc :content (:content attrs))
-                             (assoc :style (merge (:style existing-cell) (:style attrs))))
+                             (assoc :style (:style attrs)))
                 new-sheet (eval-cell address sheet* new-cell true)]
             (if (:merge-until attrs)
               (merge-cells new-sheet
@@ -387,7 +387,7 @@
 (defn clear-area [sheet {:keys [start end]}]
   (->> (util/addresses-matrix start end)
        (mapcat identity)
-       (map #(do [% {:content ""}]))
+       (map #(do [% {:content "" :style {}}]))
        (into {})
        (update-cells-bulk sheet start)))
 

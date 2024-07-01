@@ -40,7 +40,7 @@
   (remove #(every? nil? %) matrix))
 
 (defn minimum-matrix [matrix]
-  (if (not (first (first matrix)))
+  (if (zero? (count (first matrix)))
     [[nil]]
     matrix))
 
@@ -124,7 +124,8 @@
 
               new-selection
               (->> (util/map-on-matrix
-                    #(get first-match (:representation (util/get-cell (:grid sheet) %)))
+                    #(let [value (:representation (util/get-cell (:grid sheet) %))]
+                       (get first-match value))
                     (:selection from-frame))
                    remove-nil-columns
                    remove-nil-rows)]
@@ -147,7 +148,11 @@
                                              (and (contains? (:skips frame-result) %)
                                                   (contains? (:skips label-cells) %))) %))
                                  remove-nil-columns
-                                 remove-nil-rows)]
+                                 remove-nil-rows
+                                ;;  Hack for null references cells
+                                ;;  these come from top left labels
+                                 (util/map-on-matrix
+                                  #(or % [79 15])))]
           {:matrix (address-matrix->cells-matrix sheet (minimum-matrix new-selection))
            :frame (merge frame-result {:selection new-selection})})
         (errors/label-not-found

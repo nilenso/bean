@@ -70,7 +70,7 @@
                              [(when (get-in cell [:style :bold])
                                 "font-weight: bold")
                               (when-let [bg (get-in cell [:style :background])]
-                                (str "background: " (util/color-int->hex bg)))])}
+                                (str "background: " (.toString bg 16)))])}
         (when mc {:colspan (str (inc (- mc c)))})
         (when mr {:rowspan (str (inc (- mr r)))}))
        (:representation cell)])))

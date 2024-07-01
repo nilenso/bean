@@ -10,7 +10,8 @@
             [bean.ui.util :as util]
             [day8.re-frame.undo :as undo :refer [undoable]]
             [re-frame.core :as rf]
-            [reagent.core :as rc]))
+            [reagent.core :as rc]
+            [bean.area :as area]))
 
 (rf/reg-event-db
  ::initialize-db
@@ -50,6 +51,13 @@
  (undoable)
  (fn clear-area [db [_ area]]
    (update-in db [:sheet] #(grid/clear-area % area))))
+
+(rf/reg-event-fx
+ ::save-to-slot
+ ;;  for repl usage only
+ (fn set-demo [{:keys [db]} [_ frame-name]]
+   {:db (assoc-in db [:ui :current-demo-name] frame-name)
+    :fx [[:dispatch [::export-demos]]]}))
 
 (rf/reg-event-fx
  ::export-demos
@@ -255,12 +263,6 @@
    (assoc-in db [:ui :grid :selection] nil)))
 
 (rf/reg-event-fx
- ::select-frame
- (fn select-frame [{:keys [db]} [_ frame-name]]
-   (let [{:keys [start]} (get-in db [:sheet :frames frame-name])]
-     (when start {:fx [[:dispatch [::edit-cell start]]]}))))
-
-(rf/reg-event-fx
  ::make-frame
  (undoable)
  (fn make-frame [{:keys [db]} [_ area]]
@@ -285,7 +287,6 @@
 
 (rf/reg-event-db
  ::highlight-matrix
- (undoable)
  (fn highlight-matrix [db [_ content]]
    (assoc-in db [:ui :grid :highlighted-cells]
              (set (mapcat identity (get-in

@@ -487,7 +487,9 @@
   (let [xs (reductions + 0 col-widths)
         ys (reductions + 0 row-heights)
         g (new pixi/Graphics)]
-    (let [skipped-cells (frames/skipped-cells sheet frame-name)]
+    (let [frame (get-in sheet [:frames frame-name])
+          skipped-cells (frames/skipped-cells sheet frame-name)
+          [fr fc] (:start frame)]
       (doseq [[[label-r label-c :as label] {:keys [color dirn]}] labels]
         (doseq [[r c] (frames/label->cells sheet frame-name label)]
           (if (get skipped-cells [r c])
@@ -496,11 +498,11 @@
           (case dirn
             :top (when (= c label-c)
                    (.drawRect g
-                              (+ (nth xs c) (* label-c 1.5)) (nth ys r)
+                              (+ (nth xs c) (* (- label-r fr) 2.5)) (nth ys r)
                               2 (nth row-heights r)))
             :left (when (= r label-r)
                     (.drawRect g
-                               (nth xs c) (+ (nth ys r) (* label-r 0.5))
+                               (nth xs c) (+ (nth ys r) (* (- label-c fc) 2.5))
                                (nth col-widths c) 2))
             :top-left nil))
         (.beginFill g color 0.25)
