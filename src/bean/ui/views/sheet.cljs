@@ -757,7 +757,7 @@
     (draw-cell-text (:cell-text @pixi-app) sheet row-heights col-widths)
     (draw-frames (:frames @pixi-app) (:textures @pixi-app) sheet grid-ui (:grid @pixi-app) row-heights col-widths)
     (draw-selection (:selection @pixi-app) (:selection grid-ui) row-heights col-widths)
-    (draw-highlighted-cells (:grid @pixi-app) (:highlighted-cells grid-ui) row-heights col-widths)
+    (when (:editing-cell grid-ui) (draw-highlighted-cells (:grid @pixi-app) (:highlighted-cells grid-ui) row-heights col-widths))
     (draw-top-heading (:top-heading @pixi-app) col-widths v)
     (draw-left-heading (:left-heading @pixi-app) row-heights v)
     (draw-corner (:corner @pixi-app) v)))
@@ -853,6 +853,7 @@
               :on-pointer-up #(let [canvas (.querySelector js/document "#grid-container canvas")]
                                 (.dispatchEvent canvas (new js/MouseEvent "pointerup" %)))
               :on-key-down #(handle-cell-navigation % [r c] @sheet)
+              :on-focus #(rf/dispatch [::events/highlight-matrix (.-textContent (.-target %))])
               :on-input #(rf/dispatch [::events/highlight-matrix (.-textContent (.-target %))])
               :on-paste cell-paste-text}
        (:content cell)])))
