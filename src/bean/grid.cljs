@@ -33,12 +33,9 @@
    "col" {:scalar functions/bean-col
           :representation "f"}
    "match" {:scalar functions/bean-match
-             :representation "f"}
+            :representation "f"}
    "error" {:scalar functions/bean-error
             :representation "f"}})
-
-(defn- offset [[start-r start-c] [offset-rows offset-cols]]
-  [(+ start-r offset-rows) (+ start-c offset-cols)])
 
 (defn- set-error [grid address error]
   (update-in grid
@@ -99,7 +96,7 @@
       spill into the (previously common) cell successfully"
       (reduce
        #(let [{:keys [spilled-from relative-address]} %2
-              [r c] (offset spilled-from relative-address)
+              [r c] (util/offset spilled-from relative-address)
               existing-spillers (get-in %1 [r c :interested-spillers] #{})
               spillers* (conj existing-spillers spilled-from)]
           (assoc-in %1 [r c :interested-spillers] spillers*))
@@ -112,7 +109,7 @@
        if the spillage conflicts with existing content (or spillage)."
       (reduce
        #(let [{:keys [relative-address]} %2
-              address* (offset spiller relative-address)
+              address* (util/offset spiller relative-address)
               cell (util/get-cell %1 address*)
               blank? (empty? (:content cell))
               spilled-by-other? (:spilled-from cell)
@@ -127,7 +124,7 @@
 
     (spilled-addrs
       [spillage]
-      (->> spillage (map #(offset spiller (:relative-address %))) set))
+      (->> spillage (map #(util/offset spiller (:relative-address %))) set))
 
     (spill
       [grid spillage]
@@ -301,7 +298,7 @@
 ;; many cells and handling merged cells etc.
 (defn update-cells-bulk [sheet {:keys [start]} addressed-attrs]
   (->> addressed-attrs
-       (map #(do [(offset (first %) start) (second %)]))
+       (map #(do [(util/offset (first %) start) (second %)]))
        (reduce
         (fn [sheet* [address attrs]]
           (let [existing-cell (util/get-cell (:grid sheet*) address)
@@ -312,14 +309,37 @@
             (if (:merge-until attrs)
               (merge-cells new-sheet
                            {:start address
-                            :end (offset (:merge-until attrs) start)})
+                            :end (util/offset (:merge-until attrs) start)})
               new-sheet)))
-        (unmerge-cells sheet (map #(offset % start) (keys addressed-attrs))))
+        (unmerge-cells sheet (map #(util/offset % start) (keys addressed-attrs))))
        eval-sheet-a-few-times))
 
 (defn make-frame [sheet frame-name addresses]
   (-> (frames/make-frame sheet frame-name addresses)
       eval-sheet-a-few-times))
+
+(defn- move-merged-cell [cell move-by]
+  (cond-> cell
+    (get-in cell [:style :merged-until])
+    (update-in [:style :merged-until] #(util/offset % move-by))
+
+    (get-in cell [:style :merged-addresses])
+    (update-in [:style :merged-addresses] #(map (fn [address] (util/offset address move-by)) %))
+
+    (get-in cell [:style :merged-with])
+    (update-in [:style :merged-with] #(util/offset % move-by))))
+
+(defn move-cells
+  [sheet {:keys [start end]} move-to]
+  (let [addresses (area/area->addresses {:start start :end end})
+        move-by (util/distance start move-to)
+        cleared-sheet (reduce
+                       #(assoc-in %1 (flatten [:grid %2]) {:content "" :representation ""})
+                       sheet addresses)]
+    (reduce #(assoc-in %1
+              (flatten [:grid (util/offset move-by %2)])
+              (move-merged-cell (util/get-cell (:grid sheet) %2) move-by))
+            cleared-sheet addresses)))
 
 (defn add-frame-labels [sheet frame-name addresses dirn]
   (-> (reduce #(set-cell-style %1 %2 :bold true) sheet addresses)
@@ -337,8 +357,8 @@
 
 (defn pasted-area [pasted-at addresses]
   (let [{:keys [start end]} (area/addresses->area addresses)]
-    {:start (offset start pasted-at)
-     :end (offset end pasted-at)}))
+    {:start (util/offset start pasted-at)
+     :end (util/offset end pasted-at)}))
 
 (defn resize-frame [sheet frame-name area]
   (if-let [sheet* (frames/resize-frame sheet frame-name area)]
@@ -352,6 +372,14 @@
         (assoc-in [:frames new-name] frame)
         eval-sheet-a-few-times)
     sheet))
+
+(defn move-frame [sheet frame-name move-to]
+  (let [{:keys [start end]} (get-in sheet [:frames frame-name])
+        new-area {:start move-to :end (util/offset move-to (util/distance start end))}]
+    ;; check for overlaps first
+    (-> (move-cells sheet {:start start :end end} move-to)
+        (frames/move-frame frame-name new-area)
+        eval-sheet-a-few-times)))
 
 (defn clear-area [sheet {:keys [start end]}]
   (->> (util/addresses-matrix start end)

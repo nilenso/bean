@@ -246,9 +246,13 @@
 (rf/reg-event-db
  ::set-selection
  (fn [db [_ selection]]
-   (if (util/area-inside? (:sheet db) selection)
-     (assoc-in db [:ui :grid :selection] selection)
-     db)))
+   (when (util/area-inside? (:sheet db) selection)
+     (assoc-in db [:ui :grid :selection] selection))))
+
+(rf/reg-event-db
+ ::clear-selection
+ (fn [db [_]]
+   (assoc-in db [:ui :grid :selection] nil)))
 
 (rf/reg-event-fx
  ::select-frame
@@ -317,6 +321,12 @@
                 (>= (second end) (second start)))
        (update-in db [:sheet]
                   #(grid/resize-frame % frame-name {:start start :end end}))))))
+
+(rf/reg-event-db
+ ::move-frame
+ (undoable)
+ (fn move-frame [db [_ frame-name move-to]]
+   (update-in db [:sheet] #(grid/move-frame % frame-name move-to))))
 
 (rf/reg-event-db
  ::display-help

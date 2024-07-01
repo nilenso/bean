@@ -196,9 +196,34 @@
          (set (mapcat #(label->cells sheet frame-name %) addresses)))]
     (update-in sheet [:frames frame-name :skip-cells] #(apply disj % addresses*))))
 
+(defn- remove-outside-labels [sheet frame-name]
+  (let [labels (get-in sheet [:frames frame-name :labels])
+        {:keys [start end]} (get-in sheet [:frames frame-name])]
+    (reduce
+     #(if-not (area/overlap?
+               {:start start :end end}
+               {:start %2 :end %2})
+        (update-in %1 [:frames frame-name :labels] dissoc %2)
+        %1) sheet
+     (keys labels))))
+
 (defn resize-frame [sheet frame-name area]
   (when-not (overlaps? sheet frame-name area)
-    (update-in sheet [:frames frame-name] merge area)))
+    (-> (update-in sheet [:frames frame-name] merge area)
+        (remove-outside-labels frame-name))))
+
+(defn- move-labels [sheet frame-name move-from move-to]
+  (assoc-in
+   sheet [:frames frame-name :labels]
+   (update-keys
+    (get-in sheet [:frames frame-name :labels])
+    #(util/offset move-to (util/distance move-from %)))))
+
+(defn move-frame [sheet frame-name area]
+  (let [start (get-in sheet [:frames frame-name :start])]
+    (-> (update-in sheet [:frames frame-name] merge area)
+        (move-labels frame-name start (:start area))
+        (remove-outside-labels frame-name))))
 
 (defn expand-frames [sheet [updated-r updated-c]]
   (if-let [at-end-of-frame (some (fn [[frame-name {:keys [start end]}]]

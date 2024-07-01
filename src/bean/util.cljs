@@ -61,3 +61,9 @@
 
 (defn merged-or-self [[r c] sheet]
   (or (get-in sheet [:grid r c :style :merged-with]) [r c]))
+
+(defn offset [[start-r start-c] [offset-rows offset-cols]]
+  [(+ start-r offset-rows) (+ start-c offset-cols)])
+
+(defn distance [[r1 c1] [r2 c2]]
+  [(- r2 r1) (- c2 c1)])

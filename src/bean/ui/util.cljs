@@ -26,6 +26,8 @@
 (def map-on-matrix util/map-on-matrix)
 (def addresses-matrix util/addresses-matrix)
 (def map-on-matrix-addressed util/map-on-matrix-addressed)
+(def offset util/offset)
+(def distance util/distance)
 
 (defn color-int->hex [color]
   (str "#" (.toString color 16)))

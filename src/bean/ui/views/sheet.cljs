@@ -94,6 +94,14 @@
       (.lineStyle g (:selection-border styles/sizes) color 1 1)
       (.drawRect g x y w h))))
 
+(defn- frame-rect [^js g area row-heights col-widths]
+  (when (:start area)
+    (let [[x y w h] (area->xywh area row-heights col-widths)
+          color (:frame-border styles/colors)]
+      (.beginFill g color 0.05)
+      (.lineStyle g (:frame-border styles/sizes) color 0.15 1)
+      (.drawRect g x y w h))))
+
 (defn- edit-cell [rc sheet]
   (rf/dispatch-sync [::events/select-frame (frames/cell-frame rc sheet)])
   (rf/dispatch [::events/edit-cell rc]))
@@ -337,9 +345,6 @@
     grid)
    g))
 
-(defn- frame-resize-end []
-  (remove-listener! :frame-resize-move))
-
 (defn- frame-resize-start [e frame-name grid-g row-heights col-widths]
   (.stopPropagation e)
   (reset-listener!
@@ -347,7 +352,7 @@
    #(rf/dispatch-sync [::events/resize-frame frame-name (i->rc e grid-g row-heights col-widths)]))
   (reset-listener!
    :frame-resize-end grid-g "pointerup"
-   frame-resize-end))
+   #(remove-listener! :frame-resize-move)))
 
 (defn- draw-frame-resizer [^js g frame-name x y w h grid-g row-heights col-widths]
   (let [width 10
@@ -360,7 +365,34 @@
     (.drawRect resizer (- (+ x w) width) (- (+ y h) width) width width)
     (.addChild g resizer)))
 
-(defn- draw-frame-name [^js g frame-name x y]
+(defn- frame-move-end [g frame-name area]
+  (remove-listener! :frame-move-move)
+  (remove-listener! :frame-move-end)
+  (rf/dispatch-sync [::events/move-frame frame-name (:start area)])
+  (.destroy g))
+
+(defn frame-move-move [g area row-heights col-widths]
+  (.clear g)
+  (frame-rect g area row-heights col-widths))
+
+(defn- frame-move-start [e ^js grid-g frame-name {:keys [start end]} row-heights col-widths]
+  (.stopPropagation e)
+  (rf/dispatch [::events/clear-edit-cell])
+  (rf/dispatch [::events/clear-selection])
+  (let [g (new pixi/Graphics)
+        moved-to #(let [[r c] (i->rc % grid-g row-heights col-widths)]
+                    {:start [(inc r) c]
+                     :end (util/offset [(inc r) c] (util/distance start end))})]
+    (.addChild grid-g g)
+    (set! (.-eventMode g) "none")
+    (reset-listener!
+     :frame-move-move grid-g "globalpointermove"
+     #(frame-move-move g (moved-to %) row-heights col-widths))
+    (reset-listener!
+     :frame-move-end grid-g "pointerup"
+     #(frame-move-end g frame-name (moved-to %)))))
+
+(defn- draw-frame-name [^js g frame-name frame-data x y grid-g row-heights col-widths]
   (let [font-size (:frame-name-font styles/sizes)
         text-bitmap (new pixi/BitmapText frame-name
                          #js {:fontName "SpaceGrotesk"
@@ -376,6 +408,9 @@
     (set! (.-x text-bitmap) (+ x padding))
     (set! (.-y text-bitmap) (- y (padded font-size)))
     (.addChild g text-bitmap)
+    (set! (.-eventMode text-bitmap) "static")
+    (set! (.-cursor text-bitmap) "move")
+    (.on text-bitmap "pointerdown" #(frame-move-start % grid-g frame-name frame-data row-heights col-widths))
     g))
 
 (defn- button! [sprite ^js g x y w on-click]
@@ -494,7 +529,7 @@
        (-> g (.addChild border) (.addChild highlight))
        (.lineStyle border (:frame-border styles/sizes) (:frame-border styles/colors) 0.5 0.5)
        (.drawRect border x y w h)
-       (draw-frame-name highlight frame-name x y)
+       (draw-frame-name highlight frame-name frame-data x y grid-g row-heights col-widths)
        (.addChild g (draw-label-bounds textures sheet frame-name (:labels frame-data) row-heights col-widths))
 
        (let [label-controls (draw-label-controls textures frame-name selection)]
