@@ -154,9 +154,10 @@
 
 (defn apply-f-args [sheet f args & [asts]]
   (let [fn-ast (:scalar f)]
-    (if (fn? fn-ast)
-      (apply-system-f sheet fn-ast args asts)
-      (apply-user-f sheet fn-ast args))))
+    (cond
+      (:error f) f
+      (fn? fn-ast) (apply-system-f sheet fn-ast args asts)
+      :else (apply-user-f sheet fn-ast args))))
 
 (defn apply-f [sheet f asts]
   (let [args (eval-asts sheet asts)]

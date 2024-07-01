@@ -25,6 +25,10 @@
   {:error (str "label \"" label-name "\" doesn't exist")
    :representation (str "label \"" label-name "\" doesn't exist")})
 
+(defn function-not-found []
+  {:error "function not found"
+   :representation "function not found"})
+
 (defn spill-error []
   {:error "Spill error"
    :representation "Spill error"})
