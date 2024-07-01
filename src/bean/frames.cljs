@@ -60,7 +60,7 @@
   (some
    (fn [[label label-data]]
      (and (= label-name
-             (:scalar (util/get-cell (:grid sheet) label)))
+             (str (:scalar (util/get-cell (:grid sheet) label))))
           (if dirn (= (:dirn label-data) dirn) true)))
    (:labels (get-frame sheet frame-name))))
 
@@ -166,8 +166,8 @@
 (defn label-name->cells [sheet frame-name label-name & [dirn]]
   (let [labels (->> (keys (:labels (get-frame sheet frame-name)))
                     (filter #(get-label sheet frame-name % dirn))
-                    (filter #(when (= label-name
-                                      (:scalar (util/get-cell (:grid sheet) %)))
+                    (filter #(when (= (str label-name)
+                                      (str (:scalar (util/get-cell (:grid sheet) %))))
                                %)))
         skip-label? #(get-in sheet [:frames frame-name :skip-cells %])
         all-skipped-cells (skipped-cells sheet frame-name)
