@@ -44,6 +44,14 @@
     [[nil]]
     matrix))
 
+(defn bean-transpose [sheet args]
+  (if-not (:error (first args))
+    (let [frame-result (:frame (first args))
+          new-selection (apply mapv vector (:selection frame-result))]
+      {:matrix (address-matrix->cells-matrix sheet (minimum-matrix new-selection))
+       :frame (merge frame-result {:selection new-selection})})
+    (first args)))
+
 (defn bean-row [sheet args]
   (if-not (:error (first args))
     (let [frame-result (:frame (first args))
