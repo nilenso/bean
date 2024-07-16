@@ -16,6 +16,10 @@
 (defonce ^:private pixi-app (atom nil))
 (defonce ^:private pixi-listeners (atom nil))
 
+(def target-fps 60)
+(def frame-interval (/ 1000 target-fps))
+(defonce last-frame-time (atom 0))
+
 (defn- add-listener! [name g event f]
   (.on g event f)
   (swap! pixi-listeners assoc name
@@ -31,6 +35,14 @@
 (defn- reset-listener! [name g event f]
   (remove-listener! name)
   (add-listener! name g event f))
+
+(defn pixi-repaint []
+  (let [current-time (.getTime (new js/Date))
+        delta-time (- current-time @last-frame-time)]
+    (when (> delta-time frame-interval)
+      (reset! last-frame-time (- current-time (mod delta-time frame-interval)))
+      (js/requestAnimationFrame
+       #(.render (.-renderer (:app @pixi-app)) (.-stage (:app @pixi-app)))))))
 
 (defn px->index [px offsets]
   (if (> px (reduce + offsets))
@@ -92,15 +104,17 @@
           color (:selection styles/colors)]
       (.beginFill g color (:selection-alpha styles/colors))
       (.lineStyle g (:selection-border styles/sizes) color 1 1)
-      (.drawRect g x y w h))))
+      (.drawRect g x y w h)
+      (pixi-repaint))))
 
 (defn- frame-rect [^js g area row-heights col-widths]
   (when (:start area)
     (let [[x y w h] (area->xywh area row-heights col-widths)
           color (:frame-border styles/colors)]
-      (.beginFill g color 0.05)
+      (.beginFill g color 0.1)
       (.lineStyle g (:frame-border styles/sizes) color 0.15 1)
-      (.drawRect g x y w h))))
+      (.drawRect g x y w h)
+      (pixi-repaint))))
 
 (defn- edit-cell [rc sheet]
   (rf/dispatch-sync [::events/select-frame (frames/cell-frame rc sheet)])
@@ -715,6 +729,8 @@
              #js {:autoResize true
                   :resizeTo (.getElementById js/document "grid-container")
                   :resolution (.-devicePixelRatio js/window)
+                  :autoStart false
+                  :sharedTicker false
                   :backgroundColor (:sheet-background styles/colors)
                   :autoDensity true})]
     (.appendChild
@@ -762,7 +778,8 @@
     (when (:editing-cell grid-ui) (draw-highlighted-cells (:grid @pixi-app) (:highlighted-cells grid-ui) row-heights col-widths))
     (draw-top-heading (:top-heading @pixi-app) col-widths v)
     (draw-left-heading (:left-heading @pixi-app) row-heights v)
-    (draw-corner (:corner @pixi-app) v)))
+    (draw-corner (:corner @pixi-app) v)
+    (pixi-repaint)))
 
 (defn setup [sheet ui]
   (make-fonts-then
@@ -780,7 +797,8 @@
           left-heading (.addChild c (draw-left-heading v))
           corner (.addChild c (draw-corner v))]
       (reset! pixi-app
-              {:viewport v
+              {:app app
+               :viewport v
                :container c
                :grid grid
                :spills spills
@@ -798,6 +816,8 @@
                           :add-skip-label (.from pixi/Texture "/img/skip-label.png")
                           :stripes (.from pixi/Texture "/img/stripes.jpg")
                           :trash-label (.from pixi/Texture "/img/trash-label.png")}})
+      (doseq [e ["moved" "zoomed" "moved-end" "zoomed-end"]]
+        (.on v e pixi-repaint))
       (repaint sheet ui))))
 
 (defn- input-transform-css [rc ^js viewport row-heights col-widths]
