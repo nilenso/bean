@@ -338,13 +338,20 @@
   [sheet {:keys [start end]} move-to]
   (let [addresses (area/area->addresses {:start start :end end})
         move-by (util/distance start move-to)
+        empty-cell {:content "" :representation ""}
         cleared-sheet (reduce
-                       #(assoc-in %1 (flatten [:grid %2]) {:content "" :representation ""})
-                       sheet addresses)]
+                       #(assoc-in %1 (flatten [:grid %2]) empty-cell)
+                       sheet addresses)
+        unspilled-addresses (filter
+                             #(let [cell (util/get-cell (:grid sheet) %)]
+                                (or (:spilled-into cell)
+                                    (nil? (:spilled-from cell))))
+                             addresses)]
     (reduce #(assoc-in %1
-              (flatten [:grid (util/offset move-by %2)])
-              (move-merged-cell (util/get-cell (:grid sheet) %2) move-by))
-            cleared-sheet addresses)))
+                       (flatten [:grid (util/offset move-by %2)])
+                       (move-merged-cell (util/get-cell (:grid sheet) %2) move-by))
+            cleared-sheet
+            unspilled-addresses)))
 
 (defn add-frame-labels [sheet frame-name addresses dirn]
   (-> (reduce #(set-cell-style %1 %2 :bold true) sheet addresses)
