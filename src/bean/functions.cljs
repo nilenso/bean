@@ -75,7 +75,7 @@
           frame (frames/get-frame sheet (:name frame-result))
           [start-r start-c] (:start frame)
           [end-r end-c] (:end frame)
-          cols (set (map second (mapcat identity selection)))
+          cols (map second (mapcat identity selection))
           rows (range start-r (inc end-r))
           new-selection (for [r rows]
                           (for [col cols]
