@@ -939,20 +939,7 @@
                   :on-mouse-down #(when selection
                                     (rf/dispatch [::events/set-cell-backgrounds
                                                   (area/area->addresses selection)
-                                                  color]))} ""])]
-     [:div {:class :controls-demos}
-      [:p {:style {:display :inline :margin-right "15px"}} "Demos"]
-      (for [demo demo-names]
-        [:button {:key demo
-                  :class [:controls-btn
-                          (when (= current-demo-name demo)
-                            :pressed)]
-                  :on-click #(rf/dispatch [::events/select-demo demo])}
-         demo])
-      [:button {:key "reset-demo"
-                :class [:controls-btn]
-                :on-click #(rf/dispatch [::events/reset-demos])}
-       "Reset"]]]))
+                                                  color]))} ""])]]))
 
 (defn sheet []
   [:div {:class :sheet-container}
