@@ -8,15 +8,15 @@
             [bean.ui.paste :as paste]
             [bean.ui.provenance :as provenance]
             [bean.ui.util :as util]
+            [bean.ui.interceptors :refer [savepoint]]
             [day8.re-frame.undo :as undo :refer [undoable]]
             [re-frame.core :as rf]
-            [reagent.core :as rc]
-            [bean.area :as area]))
+            [reagent.core :as rc]))
 
 (rf/reg-event-db
  ::initialize-db
- (fn [_ _]
-   (db/initial-app-db)))
+ (fn [_ [_ init-sheet]]
+   (update-in (db/initial-app-db) [:sheet] merge init-sheet)))
 
 (rf/reg-event-db
  ::update-code
@@ -27,6 +27,7 @@
 
 (rf/reg-event-db
  ::evaluate-code
+ (savepoint)
  (fn evaluate-code [db _]
    (-> db
        (update-in [:sheet] code/reevaluate)
@@ -42,13 +43,15 @@
 
 (rf/reg-event-db
  ::update-cell
- (undoable)
+ [(undoable)
+  (savepoint)]
  (fn update-cell [db [_ address content]]
    (update-in db [:sheet] #(grid/update-cell-content address % content))))
 
 (rf/reg-event-db
  ::clear-area
- (undoable)
+ [(undoable)
+  (savepoint)]
  (fn clear-area [db [_ area]]
    (update-in db [:sheet] #(grid/clear-area % area))))
 
@@ -77,7 +80,8 @@
 
 (rf/reg-event-fx
  ::reset-demos
- (undoable)
+ [(undoable)
+  (savepoint)]
  (fn [{:keys [db]} _]
   ;; This is a bit of a hammer, should be able to reset better.
    {:fx [[:dispatch [::initialize-db]]
@@ -85,7 +89,8 @@
 
 (rf/reg-event-db
  ::load-demo
- (undoable)
+ [(undoable)
+  (savepoint)]
  (fn [db [_ demo-name demo]]
    (-> db
        (assoc-in [:ui :current-demo-name] demo-name)
@@ -148,7 +153,8 @@
 
 (rf/reg-event-fx
  ::paste-addressed-cells
- (undoable)
+ [(undoable)
+  (savepoint)]
  (fn paste-addressed-cells [{:keys [db]} [_ addressed-cells]]
    (let [selection (get-in db [:ui :grid :selection])]
      {:db (update-in db [:sheet] #(grid/update-cells-bulk %
@@ -176,34 +182,39 @@
 
 (rf/reg-event-fx
  ::cut-selection
- (undoable)
+ [(undoable)
+  (savepoint)]
  (fn cut-selection [{:keys [db]}]
    {:fx [[:dispatch [::copy-selection]]
          [:dispatch [::clear-area (get-in db [:ui :grid :selection])]]]}))
 
 (rf/reg-event-fx
  ::merge-cells
- (undoable)
+ [(undoable)
+  (savepoint)]
  (fn merge-cells [{:keys [db]} [_ area]]
    {:db (update-in db [:sheet] #(grid/merge-cells % area))
     :fx [[:dispatch [::edit-cell (:start area)]]]}))
 
 (rf/reg-event-fx
  ::unmerge-cells
- (undoable)
+ [(undoable)
+  (savepoint)]
  (fn unmerge-cells [{:keys [db]} [_ addresses]]
    {:db (update-in db [:sheet] #(grid/unmerge-cells % addresses))
     :fx [[:dispatch [::edit-cell (first addresses)]]]}))
 
 (rf/reg-event-db
  ::set-cell-backgrounds
- (undoable)
+ [(undoable)
+  (savepoint)]
  (fn set-cell-backgrounds [db [_ addresses background]]
    (update-in db [:sheet] #(grid/set-cell-backgrounds % addresses background))))
 
 (rf/reg-event-db
  ::toggle-cell-bold
- (undoable)
+ [(undoable)
+  (savepoint)]
  (fn toggle-cell-bold [db [_ addresses]]
    (update-in db [:sheet] #(grid/toggle-cell-bolds % addresses))))
 
@@ -216,13 +227,15 @@
 
 (rf/reg-event-db
  ::resize-row
- (undoable)
+ [(undoable)
+  (savepoint)]
  (fn resize-row [db [_ row height]]
    (assoc-in db [:sheet :grid-dimensions :row-heights row] height)))
 
 (rf/reg-event-db
  ::resize-col
- (undoable)
+ [(undoable)
+  (savepoint)]
  (fn resize-col [db [_ col width]]
    (assoc-in db [:sheet :grid-dimensions :col-widths col] width)))
 
@@ -264,7 +277,8 @@
 
 (rf/reg-event-fx
  ::make-frame
- (undoable)
+ [(undoable)
+  (savepoint)]
  (fn make-frame [{:keys [db]} [_ area]]
    (let [frame-number (inc (get-in db [:sheet :last-frame-number]))
          frame-name (str "Frame " frame-number)]
@@ -281,7 +295,7 @@
 
 (rf/reg-event-fx
  ::renaming-frame
- (fn edit-frame [{:keys [db]} [_ frame-name]]
+ (fn renaming-frame [{:keys [db]} [_ frame-name]]
    {:db (assoc-in db [:ui :renaming-frame] frame-name)
     :fx [[:dispatch [::select-frame frame-name]]]}))
 
@@ -295,20 +309,23 @@
 
 (rf/reg-event-db
  ::rename-frame
- (undoable)
+ [(undoable)
+  (savepoint)]
  (fn edit-frame [db [_ old-name new-name]]
    (update db :sheet #(grid/rename-frame % old-name new-name))))
 
 (rf/reg-event-db
  ::add-labels
- (undoable)
+ [(undoable)
+  (savepoint)]
  (fn add-labels [db [_ frame-name addresses dirn]]
    (update-in db [:sheet]
               #(grid/add-frame-labels % frame-name addresses dirn))))
 
 (rf/reg-event-db
  ::remove-labels
- (undoable)
+ [(undoable)
+  (savepoint)]
  (fn remove-labels [db [_ frame-name addresses]]
    (->  db
         (update-in [:sheet] #(frames/unmark-skipped % frame-name addresses))
@@ -316,7 +333,8 @@
 
 (rf/reg-event-db
  ::mark-skip-cells
- (undoable)
+ [(undoable)
+  (savepoint)]
  (fn mark-skip-cells [db [_ frame-name addresses]]
    (update-in db [:sheet]
               #(grid/mark-skip-cells % frame-name addresses))))
@@ -330,6 +348,8 @@
 
 (rf/reg-event-db
  ::resize-frame
+ [(undoable)
+  (savepoint)]
  (fn resize-frame [db [_ frame-name end]]
    (let [start (get-in (:sheet db) [:frames frame-name :start])]
      (when (and (not= (get-in (:sheet db) [:frames frame-name :end]) end)
@@ -340,7 +360,8 @@
 
 (rf/reg-event-db
  ::move-frame
- (undoable)
+ [(undoable)
+  (savepoint)]
  (fn move-frame [db [_ frame-name move-to]]
    (update-in db [:sheet] #(grid/move-frame % frame-name move-to))))
 
