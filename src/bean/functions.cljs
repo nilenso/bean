@@ -124,7 +124,7 @@
       (when (and from-frame to-frame)
         (let [first-match
               (reduce
-               #(if (get %1 %2)
+               #(if (get %1 (:representation (util/get-cell (:grid sheet) %2)))
                   %1
                   (assoc %1 (:representation (util/get-cell (:grid sheet) %2)) %2))
                {}
