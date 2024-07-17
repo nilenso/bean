@@ -457,27 +457,38 @@
                 (area/area->addresses selection) dirn]))
 
 (defn- draw-label-controls [icons frame-name selection]
-  (let [g (new pixi/Graphics)]
+  (let [g (new pixi/Graphics)
+        icon-names [:add-top-label :add-left-label
+                    :add-top-left-label :add-skip-label
+                    :trash-label]
+        redraw-icons (fn []
+                       (.removeChildren g)
+                       (button! (new pixi/Sprite (:add-top-label icons))
+                                g 5 5 20
+                                #(add-label frame-name selection :top))
+                       (button! (new pixi/Sprite (:add-left-label icons))
+                                g 5 30 20
+                                #(add-label frame-name selection :left))
+                       (button! (new pixi/Sprite (:add-top-left-label icons))
+                                g 5 55 20
+                                #(add-label frame-name selection :top-left))
+                       (button! (new pixi/Sprite (:add-skip-label icons))
+                                g 5 80 20
+                                #(mark-skip-cells frame-name selection))
+                       (button! (new pixi/Sprite (:trash-label icons))
+                                g 5 105 20
+                                #(remove-label frame-name selection))
+                       (pixi-repaint))]
     (.lineStyle g 2 0xcccccc 1 0.5)
     (.beginFill g 0xffffff)
     (.drawRoundedRect g 0 0 30 137 5)
     (set! (.-eventMode g) "static")
     (.on g "pointerdown" #(.stopPropagation %))
-    (button! (new pixi/Sprite (:add-top-label icons))
-             g 5 5 20
-             #(add-label frame-name selection :top))
-    (button! (new pixi/Sprite (:add-left-label icons))
-             g 5 30 20
-             #(add-label frame-name selection :left))
-    (button! (new pixi/Sprite (:add-top-left-label icons))
-             g 5 55 20
-             #(add-label frame-name selection :top-left))
-    (button! (new pixi/Sprite (:add-skip-label icons))
-             g 5 80 20
-             #(mark-skip-cells frame-name selection))
-    (button! (new pixi/Sprite (:trash-label icons))
-             g 5 105 20
-             #(remove-label frame-name selection))
+    (doseq [icon-name icon-names]
+      (.once
+       (.-baseTexture (get icons icon-name))
+       "loaded" redraw-icons))
+    (redraw-icons)
     g))
 
 (defn- draw-skipped-cells [^js g textures sheet skipped-cells row-heights col-widths xs ys]
