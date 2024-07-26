@@ -42,7 +42,12 @@
 (defn- remove-nil-rows [matrix]
   (remove #(every? nil? %) matrix))
 
-(defn trim-matrix [matrix]
+(defn minimum-matrix [matrix]
+  (if (zero? (count (first matrix)))
+    [[blank-addr]]
+    matrix))
+
+(defn trim-blank-addrs [matrix]
   (let [rows (count matrix)
         cols (count (first matrix))
 
@@ -56,15 +61,13 @@
         bottom-row (apply max (map first non-blanks))
         leftmost-col (apply min (map second non-blanks))
         rightmost-col (apply max (map second non-blanks))]
-    (->> matrix
-         (drop top-row)
-         (take (inc (- bottom-row top-row)))
-         (mapv #(subvec % leftmost-col (inc rightmost-col))))))
-
-(defn minimum-matrix [matrix]
-  (if (zero? (count (first matrix)))
-    [[blank-addr]]
-    matrix))
+    (if top-row
+      (->> matrix
+           (drop top-row)
+           (take (inc (- bottom-row top-row)))
+           (mapv #(subvec % leftmost-col (inc rightmost-col)))
+           minimum-matrix)
+      (minimum-matrix []))))
 
 (defn bean-transpose [sheet args]
   (if-not (:error (first args))
@@ -83,10 +86,11 @@
           [end-r end-c] (:end frame)
           cols (range start-c (inc end-c))
           rows (map first (mapcat identity selection))
-          new-selection (for [r rows]
-                          (for [col cols]
-                            (if r [r col] blank-addr)))]
-      {:matrix (address-matrix->cells-matrix sheet (minimum-matrix new-selection))
+          new-selection (minimum-matrix
+                         (for [r rows]
+                           (for [col cols]
+                             (if r [r col] blank-addr))))]
+      {:matrix (address-matrix->cells-matrix sheet new-selection)
        :frame (merge frame-result {:selection new-selection})})
     (first args)))
 
@@ -99,10 +103,11 @@
           [end-r end-c] (:end frame)
           cols (map second (mapcat identity selection))
           rows (range start-r (inc end-r))
-          new-selection (for [r rows]
-                          (for [col cols]
-                            (if r [r col] blank-addr)))]
-      {:matrix (address-matrix->cells-matrix sheet (minimum-matrix new-selection))
+          new-selection (minimum-matrix
+                         (for [r rows]
+                           (for [col cols]
+                             (if col [r col] blank-addr))))]
+      {:matrix (address-matrix->cells-matrix sheet new-selection)
        :frame (merge frame-result {:selection new-selection})})
     (first args)))
 
@@ -129,13 +134,12 @@
           f (second args)
           new-selection (->> (:selection frame-result)
                              (util/map-on-matrix
-                              #(when (:scalar
-                                      (interpreter/apply-f-args
-                                       sheet f [(util/get-cell (:grid sheet) %)]))
-                                 %))
-                             remove-nil-columns
-                             remove-nil-rows)]
-      {:matrix (address-matrix->cells-matrix sheet (minimum-matrix new-selection))
+                              #(if (:scalar
+                                    (interpreter/apply-f-args
+                                     sheet f [(util/get-cell (:grid sheet) %)]))
+                                 % blank-addr))
+                             minimum-matrix)]
+      {:matrix (address-matrix->cells-matrix sheet new-selection)
        :frame (merge frame-result {:selection new-selection})})
     (first args)))
 
@@ -185,7 +189,7 @@
                                 ;; instead of a matrix. If we were masking a matrix with another we wouldn't 
                                 ;; have to trim. Trimming can also cause slightly unexpected outputs (blanks at the end
                                 ;; get trimmed) but its alright for now.
-                                 trim-matrix)]
+                                 trim-blank-addrs)]
           {:matrix (address-matrix->cells-matrix sheet (minimum-matrix new-selection))
            :frame (merge frame-result {:selection new-selection})})
         (errors/label-not-found
