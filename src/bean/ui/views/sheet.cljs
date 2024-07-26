@@ -1,6 +1,7 @@
 (ns bean.ui.views.sheet
   (:require [bean.area :as area]
             [bean.grid :as grid]
+            [bean.functions :as functions]
             [bean.frames :as frames]
             [bean.ui.paste :as paste]
             [bean.ui.events :as events]
@@ -672,12 +673,11 @@
 (defn- draw-highlighted-cells
   [^js grid-g highlighted-cells row-heights col-widths]
   (.beginFill grid-g "0xaa0011" 0.25)
-  (doall
-   (map
-    #(let [[x y w h]
-           (area->xywh {:start % :end %} row-heights col-widths)]
-       (.drawRect grid-g x y w h))
-    highlighted-cells)))
+  (doseq [cell highlighted-cells]
+    (when (not (functions/blank-addr? cell))
+      (let [[x y w h]
+            (area->xywh {:start cell :end cell} row-heights col-widths)]
+        (.drawRect grid-g x y w h)))))
 
 (defn- draw-cell-text
   ([] (new pixi/Graphics))

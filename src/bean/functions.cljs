@@ -6,6 +6,9 @@
             [bean.util :as util]
             [clojure.string]))
 
+(def blank-addr [nil nil])
+(defn blank-addr? [c] (= [nil nil] c))
+
 (defn cell-ref? [[_ ast]]
   (let [[expression-type] ast]
     (= expression-type :CellRef)))
@@ -24,9 +27,9 @@
 
 (defn- address-matrix->cells-matrix [sheet matrix]
   (util/map-on-matrix
-   #(if %
-      (util/get-cell (:grid sheet) %)
-      {:scalar "" :representation ""})
+   #(if (blank-addr? %)
+      {:scalar "" :representation ""}
+      (util/get-cell (:grid sheet) %))
    matrix))
 
 (defn- remove-nil-columns [matrix]
@@ -39,9 +42,28 @@
 (defn- remove-nil-rows [matrix]
   (remove #(every? nil? %) matrix))
 
+(defn trim-matrix [matrix]
+  (let [rows (count matrix)
+        cols (count (first matrix))
+
+        non-blanks
+        (for [row (range rows)
+              col (range cols)
+              :when (not (blank-addr? (get-in matrix [row col])))]
+          [row col])
+
+        top-row (apply min (map first non-blanks))
+        bottom-row (apply max (map first non-blanks))
+        leftmost-col (apply min (map second non-blanks))
+        rightmost-col (apply max (map second non-blanks))]
+    (->> matrix
+         (drop top-row)
+         (take (inc (- bottom-row top-row)))
+         (mapv #(subvec % leftmost-col (inc rightmost-col))))))
+
 (defn minimum-matrix [matrix]
   (if (zero? (count (first matrix)))
-    [[nil]]
+    [[blank-addr]]
     matrix))
 
 (defn bean-transpose [sheet args]
@@ -63,7 +85,7 @@
           rows (map first (mapcat identity selection))
           new-selection (for [r rows]
                           (for [col cols]
-                            [r col]))]
+                            (if r [r col] blank-addr)))]
       {:matrix (address-matrix->cells-matrix sheet (minimum-matrix new-selection))
        :frame (merge frame-result {:selection new-selection})})
     (first args)))
@@ -79,7 +101,7 @@
           rows (range start-r (inc end-r))
           new-selection (for [r rows]
                           (for [col cols]
-                            [r col]))]
+                            (if r [r col] blank-addr)))]
       {:matrix (address-matrix->cells-matrix sheet (minimum-matrix new-selection))
        :frame (merge frame-result {:selection new-selection})})
     (first args)))
@@ -133,10 +155,10 @@
               new-selection
               (->> (util/map-on-matrix
                     #(let [value (:representation (util/get-cell (:grid sheet) %))]
-                       (get first-match value))
-                    (:selection from-frame))
-                   remove-nil-columns
-                   remove-nil-rows)]
+                       (if (not-empty value)
+                         (or (get first-match value) blank-addr)
+                         blank-addr))
+                    (:selection from-frame)))]
           {:matrix (address-matrix->cells-matrix sheet (minimum-matrix new-selection))
            :frame {:selection new-selection
                    :name (:name to-frame)}})))
@@ -154,13 +176,16 @@
                                  (util/map-on-matrix
                                   #(when (or (contains? (:cells label-cells) %)
                                              (and (contains? (:skips frame-result) %)
-                                                  (contains? (:skips label-cells) %))) %))
-                                 remove-nil-columns
-                                 remove-nil-rows
-                                ;;  Hack for null references cells
-                                ;;  these come from top left labels
-                                 (util/map-on-matrix
-                                  #(or % [79 15])))]
+                                                  (contains? (:skips label-cells) %))
+                                             (blank-addr? %)) %))
+                                 (util/map-on-matrix #(or % blank-addr))
+                                ;; We can't just drop blanks in a selection
+                                ;; because we want to preserve distances within the original selection, so we trim it.
+                                ;; This might point to some problems with return a set from label-name->cells
+                                ;; instead of a matrix. If we were masking a matrix with another we wouldn't 
+                                ;; have to trim. Trimming can also cause slightly unexpected outputs (blanks at the end
+                                ;; get trimmed) but its alright for now.
+                                 trim-matrix)]
           {:matrix (address-matrix->cells-matrix sheet (minimum-matrix new-selection))
            :frame (merge frame-result {:selection new-selection})})
         (errors/label-not-found
