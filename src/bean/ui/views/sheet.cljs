@@ -118,7 +118,6 @@
       (pixi-repaint))))
 
 (defn- edit-cell [rc sheet]
-  (rf/dispatch-sync [::events/select-frame (frames/cell-frame rc sheet)])
   (rf/dispatch [::events/edit-cell rc]))
 
 (defn- grid-selection-end [area]
