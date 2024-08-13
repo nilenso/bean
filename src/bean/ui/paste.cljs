@@ -1,9 +1,10 @@
 (ns bean.ui.paste
-  (:require [bean.ui.util :as util]
+  (:require [bean.area :as area]
+            [bean.ui.util :as util]
             [clojure.string :as string]
+            [hickory.convert :as hc]
             [hickory.core :as hickory]
             [hickory.render :as hr]
-            [hickory.convert :as hc]
             [hickory.select :as hs]))
 
 (def sample "<html xmlns:v=\"urn:schemas-microsoft-com:vml\"\nxmlns:o=\"urn:schemas-microsoft-com:office:office\"\nxmlns:x=\"urn:schemas-microsoft-com:office:excel\"\nxmlns=\"http://www.w3.org/TR/REC-html40\">\n\n<head>\n<meta http-equiv=Content-Type content=\"text/html; charset=utf-8\">\n<meta name=ProgId content=Excel.Sheet>\n<meta name=Generator content=\"Microsoft Excel 15\">\n<link id=Main-File rel=Main-File\nhref=\"file:////Users/prabhanshu/Library/Group%20Containers/UBF8T346G9.Office/TemporaryItems/msohtmlclip/clip.htm\">\n<link rel=File-List\nhref=\"file:////Users/prabhanshu/Library/Group%20Containers/UBF8T346G9.Office/TemporaryItems/msohtmlclip/clip_filelist.xml\">\n<style>\n<!--table\n\t{mso-displayed-decimal-separator:\"\\.\";\n\tmso-displayed-thousand-separator:\"\\,\";}\n@page\n\t{margin:.75in .7in .75in .7in;\n\tmso-header-margin:.3in;\n\tmso-footer-margin:.3in;}\ntr\n\t{mso-height-source:auto;}\ncol\n\t{mso-width-source:auto;}\nbr\n\t{mso-data-placement:same-cell;}\ntd\n\t{padding-top:1px;\n\tpadding-right:1px;\n\tpadding-left:1px;\n\tmso-ignore:padding;\n\tcolor:black;\n\tfont-size:10.0pt;\n\tfont-weight:400;\n\tfont-style:normal;\n\ttext-decoration:none;\n\tfont-family:Arial;\n\tmso-generic-font-family:auto;\n\tmso-font-charset:0;\n\tmso-number-format:General;\n\ttext-align:general;\n\tvertical-align:bottom;\n\tborder:none;\n\tmso-background-source:auto;\n\tmso-pattern:auto;\n\tmso-protection:locked visible;\n\twhite-space:nowrap;\n\tmso-rotate:0;}\n.xl65\n\t{font-weight:700;\n\tfont-family:Arial, sans-serif;\n\tmso-font-charset:0;}\n.xl66\n\t{color:#1155CC;\n\ttext-decoration:underline;\n\ttext-underline-style:single;\n\tfont-family:Arial, sans-serif;\n\tmso-font-charset:0;}\n.xl67\n\t{font-family:Arial, sans-serif;\n\tmso-font-charset:0;}\n-->\n</style>\n</head>\n\n<div lang=en dir=ltr></div>\n\n<body link=\"#1155CC\" vlink=\"#1155CC\">\n\n<table border=0 cellpadding=0 cellspacing=0 width=174 style='border-collapse:\n collapse;width:130pt'>\n<!--StartFragment-->\n <col width=87 span=2 style='width:65pt'>\n <tr height=17 style='height:13.0pt'>\n  <td height=17 class=xl65 width=87 style='height:13.0pt;width:65pt'>Season\n  name</td>\n  <td class=xl65 width=87 style='width:65pt'>Episodes</td>\n </tr>\n <tr height=17 style='height:13.0pt'>\n  <td height=17 class=xl65 style='height:13.0pt'>Last aired</td>\n  <td></td>\n </tr>\n <tr height=17 style='height:13.0pt'>\n  <td height=17 class=xl66 style='height:13.0pt;padding-bottom:0in;padding-top:\n  0in' scope=col><a\n  href=\"https://en.wikipedia.org/wiki/Pok%C3%A9mon:_Indigo_League\"\n  title=\"Pokémon: Indigo League\">Indigo League</a></td>\n  <td class=xl67 align=right>82</td>\n </tr>\n <tr height=17 style='height:13.0pt'>\n  <td height=17 class=xl66 style='height:13.0pt;padding-bottom:0in;padding-top:\n  0in' scope=col><a\n  href=\"https://en.wikipedia.org/wiki/Pok%C3%A9mon:_Adventures_in_the_Orange_Islands\"\n  title=\"Pokémon: Adventures in the Orange Islands\">Adventures in the Orange\n  Islands</a></td>\n  <td class=xl67 align=right>36</td>\n </tr>\n<!--EndFragment-->\n</table>\n\n</body>\n\n</html>\n")
@@ -139,9 +140,130 @@
        (map #(into [] (remove nil? (into [:tr {}] %))))
        hiccup-matrix->html))
 
+(defn debug [x] (prn x) x)
+
 (defn selection->plain-text
   [{:keys [start end]} sheet]
-  (->> (util/addresses-matrix start end)
+  #rtrace (->> (util/addresses-matrix start end)
        (util/map-on-matrix #(get-in (:grid sheet) (conj % :content)))
        (map #(string/join "\t" %))
        (string/join "\n")))
+
+(defn pad-to-length [string* length]
+  (let [blanks (- length (count string*))]
+    (apply str string* (repeat (inc blanks) " "))))
+
+(defn selection->layout-preserved-text2
+  [{:keys [start end]} sheet]
+  (let [cells (->>
+               (util/addresses-matrix start end)
+               (util/map-on-matrix #(get-in (:grid sheet) %)))
+        column-lengths (apply map (fn [& col] (apply max (map count col))) cells)
+        pad-row (fn [row] (map #(pad-to-length %1 %2) row column-lengths))
+        [start-r start-c] start
+        x (reduce
+           #(let [[r c] %2
+                  cell (get-in cells %2)]
+              (if-let [[mr mc] (:merged-until (:style cell))]
+                (let [center-r (+ (js/Math.floor (/ (- mr r start-r) 2)) r)
+                      center-c (+ (js/Math.floor (/ (- mc c start-c) 2)) c)]
+                  (-> %1
+                      (assoc-in [center-r center-c :content] (:content cell))
+                      (update-in %2 dissoc :content)))
+                %1))
+           cells
+           (mapcat identity
+                   (for [r (range (count cells))]
+                     (for [c (range (count (first cells)))]
+                       [r c]))))]
+    (->> x
+         (util/map-on-matrix :content)
+         (map pad-row)
+         (map #(string/join "\t" %))
+         (string/join "\n"))))
+
+
+(defn selection->layout-preserved-text
+  [{:keys [start end]} sheet]
+  #rtrace
+   (let [[start-r start-c] start
+         cells (->>
+                (util/addresses-matrix start end)
+                (util/map-on-matrix #(get-in (:grid sheet) %)))
+         content-grid (util/map-on-matrix :content cells)
+         max-column-lengths (map #(count (apply max-key count %))
+                                 (apply map vector content-grid))
+         addresses (mapcat identity
+                           (for [r (range (count cells))]
+                             (for [c (range (count (first cells)))]
+                               [r c])))
+
+         vertically-aligned (reduce
+                             (fn [cells* [r c]]
+                               (let [cell (get-in cells [r c])]
+                                 (if-let [[mr mc] (get-in cell [:style :merged-until])]
+                                   (let [center-r (+ (js/Math.floor (/ (- mr start-r r) 2)) r)]
+                                     (-> cells*
+                                         (assoc-in [r c :content] "")
+                                         (update-in [r c :style] dissoc :merged-until)
+                                         (assoc-in [center-r c :content] (:content cell))
+                                         (assoc-in [center-r c :style :merged-until] [mr mc])))
+                                   cells*)))
+                             cells
+                             addresses)]
+     (->> vertically-aligned
+          (util/map-on-matrix-addressed
+           (fn [[_ c] cell]
+             (merge cell
+                    {:content (pad-to-length
+                               (:content cell)
+                               (nth max-column-lengths c))})))
+          (map
+           (fn [row]
+             (reduce
+              (fn [{:keys [row-string index]} cell]
+                      (prn "fjweofij" cell)
+                
+                (cond
+                  ;; top-left of merged cell
+                  (get-in cell [:style :merged-until])
+                  (let [[_ mc] (get-in cell [:style :merged-until])
+                        total-length (reduce +
+                                             (inc (- mc start-c index))
+                                             (subvec (vec max-column-lengths) index (inc (- mc start-c))))
+                        content-length (count (:content cell))
+                        empty (js/Math.floor (/ (-  total-length content-length) 2))]
+                    (do 
+                      {:row-string
+                         (str row-string (string/join (repeat empty " ")) (:content cell) (string/join (repeat empty " ")))
+                         :index (inc index)}))
+
+                  ;; merged and on the same row as top-left
+                  (and (first (get-in cell [:style :merged-with]))
+                       (not (get-in cell [:style :merged-until]))
+                       (= (first (get-in cell [:style :merged-with]))
+                          index))
+                  (do
+                    (prn cell)
+                    {:row-string (str row-string " ")
+                     :index (inc index)})
+
+                  ;; ;; merged but not the top-left
+                  ;; (and (get-in cell [:style :merged-with])
+                  ;;      (not (get-in cell [:style :merged-until])))
+                  ;; {:row-string (str row-string "*")
+                  ;;  :index (inc index)}
+
+                  ;; ;; merged but on a different row from top-left
+                  ;; (not= (first (get-in cell [:style :merged-with]))
+                  ;;       (first (get-in cell [:style :merged-until])))
+                  ;; {:row-string (str row-string (:content cell) "%")
+                  ;;  :index (inc index)}
+
+                  :else
+                  {:row-string (str row-string (:content cell) "#")
+                   :index (inc index)}))
+              {:row-string "" :index 0}
+              row)))
+          (map :row-string)
+          (string/join "\n"))))
