@@ -456,6 +456,11 @@
   (rf/dispatch [::events/add-labels frame-name
                 (area/area->addresses selection) dirn]))
 
+(defn- ask-labels-llm [frame-name selection]
+  (rf/dispatch [::events/clear-edit-cell])
+  (rf/dispatch [::events/ask-labels-llm frame-name 
+                (area/area->addresses selection)]))
+
 (defn- draw-label-controls [icons frame-name selection]
   (let [g (new pixi/Graphics)
         icon-names [:add-top-label :add-left-label
@@ -475,13 +480,16 @@
                        (button! (new pixi/Sprite (:add-skip-label icons))
                                 g 5 80 20
                                 #(mark-skip-cells frame-name selection))
-                       (button! (new pixi/Sprite (:trash-label icons))
+                       (button! (new pixi/Text "𖣯" #js {:fill (:ai-icon styles/colors)})
                                 g 5 105 20
+                                #(ask-labels-llm frame-name selection))
+                       (button! (new pixi/Sprite (:trash-label icons))
+                                g 5 135 20
                                 #(remove-label frame-name selection))
                        (pixi-repaint))]
     (.lineStyle g 2 0xcccccc 1 0.5)
     (.beginFill g 0xffffff)
-    (.drawRoundedRect g 0 0 30 137 5)
+    (.drawRoundedRect g 0 0 30 167 5)
     (set! (.-eventMode g) "static")
     (.on g "pointerdown" #(.stopPropagation %))
     (doseq [icon-name icon-names]
@@ -498,7 +506,7 @@
                   (cell-h r (get-in sheet [:grid r c]) row-heights))]
       (set! (.-x bg) (nth xs c))
       (set! (.-y bg) (nth ys r))
-      (set! (.-alpha bg) 0.05)
+      (set! (.-alpha bg) 0.1)
       (set! (.. bg -tileScale -x) 0.7)
       (set! (.. bg -tileScale -y) 1.7)
       (.addChild g bg))))
@@ -747,7 +755,7 @@
      (.getElementById js/document "grid-container")
      (.-view app))
     (set! (.-__PIXI_APP__ js/globalThis) app)
-    (.addEventListener js/window "wheel" #(.preventDefault %1) #js {:passive false})
+    (.addEventListener (.getElementById js/document "grid-container") "wheel" #(.preventDefault %1) #js {:passive false})
     app))
 
 (defn- make-viewport [app]
@@ -785,7 +793,7 @@
     (draw-cell-text (:cell-text @pixi-app) sheet row-heights col-widths)
     (draw-frames (:frames @pixi-app) (:textures @pixi-app) sheet grid-ui (:grid @pixi-app) row-heights col-widths)
     (draw-selection (:selection @pixi-app) (:selection grid-ui) row-heights col-widths)
-    (when (:editing-cell grid-ui) (draw-highlighted-cells (:grid @pixi-app) (:highlighted-cells grid-ui) row-heights col-widths))
+    (draw-highlighted-cells (:grid @pixi-app) (:highlighted-cells grid-ui) row-heights col-widths)
     (draw-top-heading (:top-heading @pixi-app) col-widths v)
     (draw-left-heading (:left-heading @pixi-app) row-heights v)
     (draw-corner (:corner @pixi-app) v)

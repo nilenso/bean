@@ -16,6 +16,9 @@
                            :skip-cells #{}}))
     sheet))
 
+(defn remove-frame [sheet frame-name]
+  (update-in sheet [:frames] dissoc frame-name))
+
 (defn cell-frame [[r c] sheet]
   (some
    (fn [[frame-name {:keys [start end]}]]
@@ -41,7 +44,7 @@
                       (case dirn
                         :top (util/random-color-hex (str (first %2) dirn))
                         :left (util/random-color-hex (str (second %2) dirn))
-                        (util/random-color-hex))) sheet addresses))
+                        (util/random-color-hex (str %2 dirn)))) sheet addresses))
 
 (defn remove-labels [sheet frame-name addresses]
   (reduce #(update-in % [:frames frame-name :labels] dissoc %2) sheet addresses))
@@ -124,15 +127,14 @@
       (top-blocking-label sheet [r c] labels)
       (left-blocking-label sheet [r c] labels)))
 
-(defn blocking-label [sheet frame-name label]
-  (let [{:keys [labels] :as frame} (get-frame sheet frame-name)
-        {:keys [dirn]} (get-in frame [:labels label])]
+(defn blocking-label [sheet frame-name label dirn]
+  (let [{:keys [labels]} (get-frame sheet frame-name)]
     (case dirn
       :top (top-blocking-label sheet label labels)
       :top-left (top-left-blocking-label sheet label labels)
       :left (left-blocking-label sheet label labels))))
 
-(defn label->cells [sheet frame-name label]
+(defn label->cells [sheet frame-name label & [dirn]]
   (let [{:keys [end] :as frame} (get-frame sheet frame-name)
         [frame-end-r frame-end-c] end
         labels (:labels frame)
@@ -140,12 +142,12 @@
                             #(get-in (util/get-cell (:grid sheet) %)
                                      [:style :merged-addresses])
                             (keys labels))]
-    (when-let [{:keys [dirn]} (get labels label)]
+    (when-let [dirn* (or (:dirn (get labels label)) dirn)]
       (as->
        (area/area->addresses
         {:start label
-         :end (let [[br bc] (blocking-label sheet frame-name label)]
-                (case dirn
+         :end (let [[br bc] (blocking-label sheet frame-name label dirn*)]
+                (case dirn*
                   :top [(if br (dec br) frame-end-r)
                         (min (last-col label sheet) frame-end-c)]
                   :left [(min (last-row label sheet) frame-end-r)

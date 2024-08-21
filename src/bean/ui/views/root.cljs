@@ -1,10 +1,10 @@
 (ns bean.ui.views.root
-  (:require
-   [re-frame.core :as rf]
-   [bean.ui.subs :as subs]
-   [bean.ui.views.sidebar :as sidebar]
-   [bean.ui.views.help :as help]
-   [bean.ui.views.sheet :as sheet]))
+  (:require [bean.ui.subs :as subs]
+            [bean.ui.views.help :as help]
+            [bean.ui.views.popups :as popups]
+            [bean.ui.views.sheet :as sheet]
+            [bean.ui.views.sidebar :as sidebar]
+            [re-frame.core :as rf]))
 
 (defn root-page []
   (let [ui (rf/subscribe [::subs/ui])]
@@ -13,7 +13,8 @@
      [help/help]
      [:div {:class :container}
       [sidebar/sidebar]
-      [sheet/sheet]]]))
+      [sheet/sheet]
+      [popups/popups]]]))
 
 (defn routed []
   (let [route (rf/subscribe [::subs/route])]

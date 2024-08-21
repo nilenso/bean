@@ -31,12 +31,20 @@
              [:img {:src "img/made-frame-icon.png"
                     :class :frame-icon}]
              (when (not= renaming-frame frame-name)
-               [:a {:on-click #(rf/dispatch [::events/renaming-frame frame-name])}
-                frame-name])
+               [:span
+                [:a {:on-click #(rf/dispatch [::events/renaming-frame frame-name])
+                     :style {:vertical-align :middle}}
+                 frame-name]
+                [:a [:img {:src "img/trash-label.png"
+                           :on-click #(rf/dispatch [::events/remove-frame frame-name])
+                           :style {:margin-left "10px"
+                                   :height "0.8rem"
+                              ;;  :margin-top "1px"
+                                   :vertical-align :bottom}}]]])
              [:div {:class :tables-list-item}
               [:form
                {:on-submit #(do (.preventDefault %)
-                                (rf/dispatch [::events/rename-frame
+                                (rf/dispatch [::events/remove-frame
                                               frame-name
                                               (.-value (js/document.getElementById "frame-name-input"))]))
                 :class [:make-frame-form]}
@@ -48,8 +56,6 @@
                           :on-blur #(rf/dispatch [::events/renaming-frame nil])
                           :default-value frame-name
                           :placeholder "Frame name"}])]]]))]]])))
-
-
 
 (defn sidebar []
   [:div {:class :sidebar}

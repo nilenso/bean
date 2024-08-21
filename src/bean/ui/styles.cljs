@@ -12,7 +12,8 @@
                       :selection 0x888888
                       :selection-alpha 0.06
                       :frame-border 0x3b5aa3
-                      :frame-name 0x3b5aa3})
+                      :frame-name 0x3b5aa3
+                      :ai-icon 0x999999})
 
 (def colors light)
 

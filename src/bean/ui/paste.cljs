@@ -65,12 +65,13 @@
     (when-not (merged-with-another? cell)
       [:td
        (merge
-        {:data-bean-content (:content cell)
-         :style (string/join ";"
-                             [(when (get-in cell [:style :bold])
-                                "font-weight: bold")
-                              (when-let [bg (get-in cell [:style :background])]
-                                (str "background: " (.toString bg 16)))])}
+        {:data-addr [r c]}
+        (when-not (empty? (:style cell))
+         {:style (string/join ";"
+                              [(when (get-in cell [:style :bold])
+                                 "font-weight: bold")
+                               (when-let [bg (get-in cell [:style :background])]
+                                 (str "background: " (.toString bg 16)))])})
         (when mc {:colspan (str (inc (- mc c)))})
         (when mr {:rowspan (str (inc (- mr r)))}))
        (:representation cell)])))

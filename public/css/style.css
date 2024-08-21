@@ -55,6 +55,8 @@ body {
     margin: 0;
     background: var(--sheet-background);
     overflow: hidden;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 0.8rem;
 }
 
 a {
@@ -454,4 +456,62 @@ p {
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+.popups {
+    position: absolute;
+    bottom: 40px;
+    right: 10px;
+}
 
+.popup {
+    background: var(--sheet-background);
+    transition: transform 0.5s ease;
+    box-shadow: 0px 1px 1px 0px rgba(122, 118, 118, 0.75);
+    border-radius: 5px;
+    font-family: SpaceGrotesk, sans-serif;
+    background-color: var(--sheet-background);
+    border: 1px solid #ccc;
+    
+    padding: 10px;
+    width: 400px;
+    min-height: 70px;
+    margin: 10px;
+    margin-right: 20px;
+}
+
+.loader-popup {
+    display: flex;
+}
+
+details {
+    color: var(--btn-foreground);   
+    white-space: pre-wrap;
+    max-height: 350px;
+    overflow-y: scroll;
+}
+
+summary {
+    cursor: pointer;
+}
+
+.loader {
+    animation: rotate 2s linear infinite;
+    display: inline-block;
+    font-size: 48px;
+    line-height: 48px;
+    margin: auto;
+    color: #999999;
+    vertical-align: middle;
+}
+  
+@keyframes rotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+} 
+
+.label-suggestion {
+    cursor: pointer;
+}
+
+.label-suggestion:hover {
+    text-decoration: underline;
+}

@@ -5,10 +5,11 @@
             [bean.grid :as grid]
             [bean.ui.db :as db]
             [bean.ui.demos :as demos]
+            [bean.ui.interceptors :refer [savepoint]]
+            [bean.ui.llm :as llm]
             [bean.ui.paste :as paste]
             [bean.ui.provenance :as provenance]
             [bean.ui.util :as util]
-            [bean.ui.interceptors :refer [savepoint]]
             [day8.re-frame.undo :as undo :refer [undoable]]
             [re-frame.core :as rf]
             [reagent.core :as rc]))
@@ -166,7 +167,7 @@
 
 (rf/reg-fx
  ::copy-to-clipboard
- (fn [[plain-text html]]
+ (fn [{:keys [plain-text html]}]
    (.write (.-clipboard js/navigator)
            [(new js/ClipboardItem
                  #js {"text/plain" (new js/Blob [plain-text] {:type "text/plain"})
@@ -176,9 +177,10 @@
  ::copy-selection
  (fn copy-selection [{:keys [db]}]
    (let [selection (get-in db [:ui :grid :selection])]
+     (prn (paste/selection->html selection (:sheet db)))
      {:fx [[::copy-to-clipboard
-            [(paste/selection->plain-text selection (:sheet db))
-             (paste/selection->html selection (:sheet db))]]]})))
+            {:plain-text (paste/selection->plain-text selection (:sheet db))
+             :html (paste/selection->html selection (:sheet db))}]]})))
 
 (rf/reg-event-fx
  ::cut-selection
@@ -288,6 +290,11 @@
       :fx [[:dispatch [::select-frame frame-name]]]})))
 
 (rf/reg-event-fx
+ ::remove-frame
+ (fn renaming-frame [{:keys [db]} [_ frame-name]]
+   {:db (update-in db [:sheet] #(frames/remove-frame % frame-name))}))
+
+(rf/reg-event-fx
  ::select-frame
  (fn select-table [{:keys [db]} [_ frame-name]]
    (let [area (get-in db [:sheet :frames frame-name])]
@@ -298,6 +305,11 @@
  (fn renaming-frame [{:keys [db]} [_ frame-name]]
    {:db (assoc-in db [:ui :renaming-frame] frame-name)
     :fx [[:dispatch [::select-frame frame-name]]]}))
+
+(rf/reg-event-db
+ ::highlight-cells
+ (fn highlight-cells [db [_ addresses]]
+   (assoc-in db [:ui :grid :highlighted-cells] addresses)))
 
 (rf/reg-event-db
  ::highlight-matrix
@@ -318,9 +330,28 @@
  ::add-labels
  [(undoable)
   (savepoint)]
- (fn add-labels [db [_ frame-name addresses dirn]]
+ (fn add-labels [db [_ frame-name addresses dirn]] 
    (update-in db [:sheet]
               #(grid/add-frame-labels % frame-name addresses dirn))))
+
+(rf/reg-event-db
+ ::dismiss-popup
+ (fn dismiss-popup [db [_ popup-type]]
+   (update-in db [:ui :popups] dissoc popup-type)))
+
+(rf/reg-event-db
+ ::popup-add-labels
+ (fn popup-add-labels [db [_ suggestions]]
+   (-> (assoc-in db [:ui :asking-llm] false) 
+       (update-in [:ui :popups] assoc :add-labels suggestions))))
+
+(rf/reg-event-fx
+ ::ask-labels-llm
+ (fn add-labels-llm [{:keys [db]} [_ frame-name addresses]]
+   (.then (llm/suggest-labels (:sheet db) frame-name)
+          #(rf/dispatch [::popup-add-labels %]))
+   {:db (assoc-in db [:ui :asking-llm] true)
+    :fx [[:dispatch [::dismiss-popup :add-labels]]]}))
 
 (rf/reg-event-db
  ::remove-labels
@@ -338,6 +369,16 @@
  (fn mark-skip-cells [db [_ frame-name addresses]]
    (update-in db [:sheet]
               #(grid/mark-skip-cells % frame-name addresses))))
+
+
+(rf/reg-event-db
+ ::unmark-skip-cells
+ [(undoable)
+  (savepoint)]
+ (fn unmark-skip-cells [db [_ frame-name addresses]]
+   (update-in db [:sheet]
+              #(grid/unmark-skip-cells % frame-name addresses))))
+
 
 (rf/reg-event-db
  ::explain
