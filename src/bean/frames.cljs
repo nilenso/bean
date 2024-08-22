@@ -223,10 +223,18 @@
     (get-in sheet [:frames frame-name :labels])
     #(util/offset move-to (util/distance move-from %)))))
 
+(defn- move-skip-cells [sheet frame-name move-from move-to]
+  (assoc-in
+   sheet [:frames frame-name :skip-cells]
+   (map
+    #(util/offset move-to (util/distance move-from %))
+    (get-in sheet [:frames frame-name :skip-cells]))))
+
 (defn move-frame [sheet frame-name area]
   (let [start (get-in sheet [:frames frame-name :start])]
     (-> (update-in sheet [:frames frame-name] merge area)
         (move-labels frame-name start (:start area))
+        (move-skip-cells frame-name start (:start area))
         (remove-outside-labels frame-name))))
 
 (defn expand-frames [sheet [updated-r updated-c]]
