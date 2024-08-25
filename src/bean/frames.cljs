@@ -16,6 +16,9 @@
                            :skip-cells #{}}))
     sheet))
 
+(defn remove-frame [sheet frame-name]
+  (update-in sheet [:frames] dissoc frame-name))
+
 (defn cell-frame [[r c] sheet]
   (some
    (fn [[frame-name {:keys [start end]}]]

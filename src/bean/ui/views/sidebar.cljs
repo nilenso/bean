@@ -31,8 +31,13 @@
              [:img {:src "img/made-frame-icon.png"
                     :class :frame-icon}]
              (when (not= renaming-frame frame-name)
-               [:a {:on-click #(rf/dispatch [::events/renaming-frame frame-name])}
-                frame-name])
+               [:span {:style {:display :inherit}}
+                [:a {:on-click #(rf/dispatch [::events/renaming-frame frame-name])}
+                 frame-name]
+                [:a [:img {:src "img/trash-label.png"
+                           :on-click #(rf/dispatch [::events/remove-frame frame-name])
+                           :style {:margin-left "10px"
+                                   :height "0.8rem"}}]]])
              [:div {:class :tables-list-item}
               [:form
                {:on-submit #(do (.preventDefault %)

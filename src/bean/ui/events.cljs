@@ -288,6 +288,13 @@
       :fx [[:dispatch [::select-frame frame-name]]]})))
 
 (rf/reg-event-fx
+ ::remove-frame
+  [(undoable)
+  (savepoint)]
+ (fn remove-frame [{:keys [db]} [_ frame-name]]
+   {:db (update-in db [:sheet] #(frames/remove-frame % frame-name))}))
+
+(rf/reg-event-fx
  ::select-frame
  (fn select-table [{:keys [db]} [_ frame-name]]
    (let [area (get-in db [:sheet :frames frame-name])]
