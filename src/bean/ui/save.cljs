@@ -30,7 +30,8 @@
                                                                :frames
                                                                :last-frame-number
                                                                :grid-dimensions
-                                                               :code-in-editor]))
+                                                               :code-in-editor
+                                                               :anthropic-api-key]))
                                       store-key)]
                     (set! (.-onsuccess request) resolve))))))))
 

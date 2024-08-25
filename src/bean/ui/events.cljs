@@ -381,3 +381,9 @@
  ::set-route
  (fn set-route [db [_ match]]
    (assoc-in db [:route] match)))
+
+(rf/reg-event-db
+ ::set-anthropic-api-key
+ [(savepoint)]
+ (fn [db [_ api-key]]
+   (assoc-in db [:sheet :anthropic-api-key] api-key)))
