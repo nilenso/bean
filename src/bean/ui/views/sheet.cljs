@@ -733,6 +733,13 @@
      (dorun (->> col-widths (reductions +) (map draw-vertical)))
      g)))
 
+(defn resize-pixi-app [app]
+  (let [container (.getElementById js/document "grid-container")
+        h (.-offsetHeight container)
+        w (.-offsetWidth container)]
+    (.resize app w h)
+    (.resize (:viewport @pixi-app) w h)))
+
 (defn- make-app []
   (let [app (new
              pixi/Application
@@ -747,7 +754,8 @@
      (.getElementById js/document "grid-container")
      (.-view app))
     (set! (.-__PIXI_APP__ js/globalThis) app)
-    (.addEventListener js/window "wheel" #(.preventDefault %1) #js {:passive false})
+    (.addEventListener (.getElementById js/document "grid-container") "wheel" #(.preventDefault %1) #js {:passive false})
+    (.addEventListener js/window "resize" #(resize-pixi-app app))
     app))
 
 (defn- make-viewport [app]
