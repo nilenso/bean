@@ -166,7 +166,7 @@
 
 (rf/reg-fx
  ::copy-to-clipboard
- (fn [[plain-text html]]
+ (fn [{:keys [plain-text html]}]
    (.write (.-clipboard js/navigator)
            [(new js/ClipboardItem
                  #js {"text/plain" (new js/Blob [plain-text] {:type "text/plain"})
@@ -177,8 +177,8 @@
  (fn copy-selection [{:keys [db]}]
    (let [selection (get-in db [:ui :grid :selection])]
      {:fx [[::copy-to-clipboard
-            [(paste/selection->plain-text selection (:sheet db))
-             (paste/selection->html selection (:sheet db))]]]})))
+            {:plain-text (paste/selection->plain-text selection (:sheet db))
+             :html (paste/selection->html selection (:sheet db))}]]})))
 
 (rf/reg-event-fx
  ::cut-selection

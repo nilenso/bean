@@ -44,7 +44,7 @@
                       (case dirn
                         :top (util/random-color-hex (str (first %2) dirn))
                         :left (util/random-color-hex (str (second %2) dirn))
-                        (util/random-color-hex))) sheet addresses))
+                        (util/random-color-hex (str %2 dirn)))) sheet addresses))
 
 (defn remove-labels [sheet frame-name addresses]
   (reduce #(update-in % [:frames frame-name :labels] dissoc %2) sheet addresses))
@@ -117,12 +117,12 @@
        (fn [[[r* c*] {:keys [dirn]}]]
          (when (= dirn :top-left)
            (cond
-             (and (= r* (last-row [r c] sheet))
-                  (> c* (last-col [r c] sheet))) [nil (dec c*)]
-             (and (= c* (last-col [r c] sheet))
-                  (> r* (last-row [r c] sheet))) [(dec r*) nil]
-             (and (> r* (last-row [r c] sheet))
-                  (> c* (last-col [r c] sheet))) [r* c*])))
+             (and (= (last-row [r* c*] sheet) (last-row [r c] sheet))
+                  (> (last-col [r* c*] sheet) (last-col [r c] sheet))) [nil (dec c*)]
+             (and (= (last-col [r* c*] sheet) (last-col [r c] sheet))
+                  (> (last-row [r* c*] sheet) (last-row [r c] sheet))) [(dec r*) nil]
+             (and (> (last-row [r* c*] sheet) (last-row [r c] sheet))
+                  (> (last-col [r* c*] sheet) (last-col [r c] sheet))) [r* c*])))
        (sort-by (fn [[[r _] _]] r) (dissoc labels [r c])))
       (top-blocking-label sheet [r c] labels)
       (left-blocking-label sheet [r c] labels)))
