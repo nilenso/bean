@@ -527,26 +527,39 @@
           skipped-cells (frames/skipped-cells sheet frame-name)
           [fr fc] (:start frame)]
       (doseq [[[label-r label-c :as label] {:keys [color dirn]}] labels]
-        (doseq [[r c] (frames/label->cells sheet frame-name label dirn)] 
-          (if (get skipped-cells [r c])
-            (.beginFill g color 0.2)
-            (.beginFill g color 0.5))
-          (case dirn
-            :top (when (= c label-c)
-                   (.drawRect g
-                              (+ (nth xs c) (* (- label-r fr) 2.5)) (nth ys r)
-                              2 (nth row-heights r)))
-            :left (when (= r label-r)
-                    (.drawRect g
-                               (nth xs c) (+ (nth ys r) (* (- label-c fc) 2.5))
-                               (nth col-widths c) 2))
-            :top-left nil))
+        (let [cells (frames/label->cells sheet frame-name label dirn)
+              any-top-left (some #(= % :top-left) (map :dirn (vals labels)))
+              max-r (when any-top-left (apply max (map first cells)))
+              max-c (when any-top-left (apply max (map second cells)))]
+          (doseq [[r c] cells]
+            (if (get skipped-cells [r c])
+              (.beginFill g color 0.2)
+              (.beginFill g color 0.5))
+            (case dirn
+              :top (when (= c label-c)
+                     (.drawRect g
+                                (+ (nth xs c) (* (- label-r fr) 2.5)) (nth ys r)
+                                2 (nth row-heights r)))
+              :left (when (= r label-r)
+                      (.drawRect g
+                                 (nth xs c) (+ (nth ys r) (* (- label-c fc) 2.5))
+                                 (nth col-widths c) 2))
+              :top-left (do
+                          (when (= c label-c)
+                            (.drawRect g
+                                       (+ (nth xs c) 5) (nth ys r)
+                                       2 (- (nth row-heights r) (when (= r max-r) 5))))
+                          (when (= r max-r)
+                            (.drawRect g
+                                       (+ (nth xs c) 5) (- (nth ys (inc r)) 7)
+                                       (- (nth col-widths c) (when (= c max-c) 5)) 2))))))
         (.beginFill g color 0.25)
         (.drawRect g
                    (nth xs label-c) (nth ys label-r)
                    (cell-w label-c (get-in sheet [:grid label-r label-c]) col-widths)
                    (cell-h label-r (get-in sheet [:grid label-r label-c]) row-heights))
         (when (= dirn :top-left)
+          (.beginFill g color 0.15)
           (draw-top-left-label-indicator g
                                          (+ (nth xs label-c)
                                             (cell-w label-c (get-in sheet [:grid label-r label-c]) col-widths))
