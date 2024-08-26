@@ -1,10 +1,11 @@
 (ns bean.ui.views.sheet
   (:require [bean.area :as area]
-            [bean.grid :as grid]
-            [bean.functions :as functions]
             [bean.frames :as frames]
-            [bean.ui.paste :as paste]
+            [bean.functions :as functions]
+            [bean.grid :as grid]
             [bean.ui.events :as events]
+            [bean.ui.features :as features]
+            [bean.ui.paste :as paste]
             [bean.ui.styles :as styles]
             [bean.ui.subs :as subs]
             [bean.ui.util :as util]
@@ -12,7 +13,8 @@
             [pixi-viewport :as pixi-viewport]
             [pixi.js :as pixi]
             [re-frame.core :as rf]
-            [reagent.core :as rc]))
+            [reagent.core :as rc]
+            [clojure.walk :as w]))
 
 (defonce ^:private pixi-app (atom nil))
 (defonce ^:private pixi-listeners (atom nil))
@@ -456,7 +458,12 @@
   (rf/dispatch [::events/add-labels frame-name
                 (area/area->addresses selection) dirn]))
 
-(defn- draw-label-controls [icons frame-name selection]
+(defn- ask-labels-llm [frame-name selection]
+  (rf/dispatch [::events/clear-edit-cell])
+  (rf/dispatch [::events/ask-labels-llm frame-name
+                (area/area->addresses selection)]))
+
+(defn- draw-label-controls [sheet icons frame-name selection]
   (let [g (new pixi/Graphics)
         icon-names [:add-top-label :add-left-label
                     :add-top-left-label :add-skip-label
@@ -475,13 +482,17 @@
                        (button! (new pixi/Sprite (:add-skip-label icons))
                                 g 5 80 20
                                 #(mark-skip-cells frame-name selection))
+                       (when (features/llm-labelling? sheet)
+                         (button! (new pixi/Text "𖣯" #js {:fill (:llm-icon styles/colors)})
+                                  g 5 105 20
+                                  #(ask-labels-llm frame-name selection)))
                        (button! (new pixi/Sprite (:trash-label icons))
-                                g 5 105 20
+                                g 5 (if (features/llm-labelling? sheet) 135 105) 20
                                 #(remove-label frame-name selection))
                        (pixi-repaint))]
     (.lineStyle g 2 0xcccccc 1 0.5)
     (.beginFill g 0xffffff)
-    (.drawRoundedRect g 0 0 30 137 5)
+    (.drawRoundedRect g 0 0 30 (if (features/llm-labelling? sheet) 167 137) 5)
     (set! (.-eventMode g) "static")
     (.on g "pointerdown" #(.stopPropagation %))
     (doseq [icon-name icon-names]
@@ -516,7 +527,7 @@
           skipped-cells (frames/skipped-cells sheet frame-name)
           [fr fc] (:start frame)]
       (doseq [[[label-r label-c :as label] {:keys [color dirn]}] labels]
-        (doseq [[r c] (frames/label->cells sheet frame-name label)]
+        (doseq [[r c] (frames/label->cells sheet frame-name label dirn)] 
           (if (get skipped-cells [r c])
             (.beginFill g color 0.2)
             (.beginFill g color 0.5))
@@ -558,8 +569,9 @@
        (.drawRect border x y w h)
        (draw-frame-name highlight frame-name frame-data x y grid-g row-heights col-widths)
        (.addChild g (draw-label-bounds textures sheet frame-name (:labels frame-data) row-heights col-widths))
+       (.addChild g (draw-label-bounds textures sheet frame-name (:preview-labels frame-data) row-heights col-widths))
 
-       (let [label-controls (draw-label-controls textures frame-name selection)]
+       (let [label-controls (draw-label-controls sheet textures frame-name selection)]
          (.addChild g label-controls)
          (set! (.-x label-controls) (+ x w 5))
          (set! (.-y label-controls) y))

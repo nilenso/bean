@@ -5,10 +5,11 @@
             [bean.grid :as grid]
             [bean.ui.db :as db]
             [bean.ui.demos :as demos]
+            [bean.ui.interceptors :refer [savepoint]]
+            [bean.ui.llm :as llm]
             [bean.ui.paste :as paste]
             [bean.ui.provenance :as provenance]
             [bean.ui.util :as util]
-            [bean.ui.interceptors :refer [savepoint]]
             [day8.re-frame.undo :as undo :refer [undoable]]
             [re-frame.core :as rf]
             [reagent.core :as rc]))
@@ -330,13 +331,41 @@
               #(grid/add-frame-labels % frame-name addresses dirn))))
 
 (rf/reg-event-db
+ ::add-preview-labels
+ (fn add-preview-labels [db [_ frame-name addresses dirn]]
+   (update-in db [:sheet]
+              #(frames/add-preview-labels % frame-name addresses dirn))))
+
+(rf/reg-event-db
  ::remove-labels
  [(undoable)
   (savepoint)]
  (fn remove-labels [db [_ frame-name addresses]]
-   (->  db
-        (update-in [:sheet] #(frames/unmark-skipped % frame-name addresses))
-        (update-in [:sheet] #(grid/remove-frame-labels % frame-name addresses)))))
+   (update-in db [:sheet] #(grid/remove-frame-labels % frame-name addresses))))
+
+(rf/reg-event-db
+ ::remove-preview-labels
+ (fn remove-preview-labels [db [_ frame-name addresses]]
+   (update-in db [:sheet] #(frames/remove-preview-labels % frame-name addresses))))
+
+(rf/reg-event-db
+ ::dismiss-popup
+ (fn dismiss-popup [db [_ popup-type]]
+   (update-in db [:ui :popups] dissoc popup-type)))
+
+(rf/reg-event-db
+ ::popup-add-labels
+ (fn popup-add-labels [db [_ suggestions]]
+   (-> (assoc-in db [:ui :asking-llm] false)
+       (update-in [:ui :popups] assoc :add-labels suggestions))))
+
+(rf/reg-event-fx
+ ::ask-labels-llm
+ (fn add-labels-llm [{:keys [db]} [_ frame-name addresses]]
+   (.then (llm/suggest-labels (:sheet db) frame-name)
+          #(rf/dispatch [::popup-add-labels %]))
+   {:db (assoc-in db [:ui :asking-llm] true)
+    :fx [[:dispatch [::dismiss-popup :add-labels]]]}))
 
 (rf/reg-event-db
  ::mark-skip-cells
@@ -345,6 +374,14 @@
  (fn mark-skip-cells [db [_ frame-name addresses]]
    (update-in db [:sheet]
               #(grid/mark-skip-cells % frame-name addresses))))
+
+(rf/reg-event-db
+ ::unmark-skip-cells
+ [(undoable)
+  (savepoint)]
+ (fn unmark-skip-cells [db [_ frame-name addresses]]
+   (update-in db [:sheet]
+              #(grid/unmark-skip-cells % frame-name addresses))))
 
 (rf/reg-event-db
  ::explain

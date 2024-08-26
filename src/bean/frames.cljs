@@ -39,6 +39,14 @@
      {:dirn dirn :color color})
     sheet))
 
+(defn add-preview-label [sheet frame-name rc dirn & [color]]
+  (if (= (cell-frame rc sheet) frame-name)
+    (assoc-in
+     sheet
+     [:frames frame-name :preview-labels (util/merged-or-self rc sheet)]
+     {:dirn dirn :color color})
+    sheet))
+
 (defn add-labels [sheet frame-name addresses dirn]
   (reduce #(add-label %1 frame-name %2 dirn
                       (case dirn
@@ -46,8 +54,14 @@
                         :left (util/random-color-hex (str (second %2) dirn))
                         (util/random-color-hex (str %2 dirn)))) sheet addresses))
 
+(defn add-preview-labels [sheet frame-name addresses dirn]
+  (reduce #(add-preview-label %1 frame-name %2 dirn 0xaa0006) sheet addresses))
+
 (defn remove-labels [sheet frame-name addresses]
   (reduce #(update-in % [:frames frame-name :labels] dissoc %2) sheet addresses))
+
+(defn remove-preview-labels [sheet frame-name addresses]
+  (reduce #(update-in % [:frames frame-name :preview-labels] dissoc %2) sheet addresses))
 
 (defn get-frame [sheet frame-name]
   (get-in sheet [:frames frame-name]))
@@ -127,36 +141,40 @@
       (top-blocking-label sheet [r c] labels)
       (left-blocking-label sheet [r c] labels)))
 
-(defn blocking-label [sheet frame-name label]
-  (let [{:keys [labels] :as frame} (get-frame sheet frame-name)
-        {:keys [dirn]} (get-in frame [:labels label])]
+(defn blocking-label [sheet frame-name label dirn]
+  (let [{:keys [labels]} (get-frame sheet frame-name)]
     (case dirn
       :top (top-blocking-label sheet label labels)
       :top-left (top-left-blocking-label sheet label labels)
       :left (left-blocking-label sheet label labels))))
 
-(defn label->cells [sheet frame-name label]
-  (let [{:keys [end] :as frame} (get-frame sheet frame-name)
-        [frame-end-r frame-end-c] end
-        labels (:labels frame)
-        merged-with-labels (mapcat
-                            #(get-in (util/get-cell (:grid sheet) %)
-                                     [:style :merged-addresses])
-                            (keys labels))]
-    (when-let [{:keys [dirn]} (get labels label)]
-      (as->
-       (area/area->addresses
-        {:start label
-         :end (let [[br bc] (blocking-label sheet frame-name label)]
-                (case dirn
-                  :top [(if br (dec br) frame-end-r)
-                        (min (last-col label sheet) frame-end-c)]
-                  :left [(min (last-row label sheet) frame-end-r)
-                         (if bc (dec bc) frame-end-c)]
-                  :top-left [(if br br frame-end-r)
-                             (if bc bc frame-end-c)]))}) cells
-        (disj cells label)
-        (apply disj cells merged-with-labels)))))
+(defn label->cells
+  ([sheet frame-name label]
+   (if-let [dirn (get-in (get-frame sheet frame-name)
+                         [:labels label :dirn])]
+     (label->cells sheet frame-name label dirn)
+     #{}))
+  ([sheet frame-name label dirn]
+   (let [{:keys [end] :as frame} (get-frame sheet frame-name)
+         [frame-end-r frame-end-c] end
+         labels (:labels frame)
+         merged-with-labels (mapcat
+                             #(get-in (util/get-cell (:grid sheet) %)
+                                      [:style :merged-addresses])
+                             (keys labels))]
+     (as->
+      (area/area->addresses
+       {:start label
+        :end (let [[br bc] (blocking-label sheet frame-name label dirn)]
+               (case dirn
+                 :top [(if br (dec br) frame-end-r)
+                       (min (last-col label sheet) frame-end-c)]
+                 :left [(min (last-row label sheet) frame-end-r)
+                        (if bc (dec bc) frame-end-c)]
+                 :top-left [(if br br frame-end-r)
+                            (if bc bc frame-end-c)]))}) cells
+       (disj cells label)
+       (apply disj cells merged-with-labels)))))
 
 (defn skipped-cells [sheet frame-name]
   (let [frame (get-frame sheet frame-name)

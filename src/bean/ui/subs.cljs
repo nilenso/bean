@@ -46,3 +46,18 @@
  ::route
  (fn [db]
    (:route db)))
+
+(re-frame/reg-sub
+ ::popups
+ (fn [db]
+   (get-in db [:ui :popups])))
+
+(re-frame/reg-sub
+ ::anthropic-api-key
+ (fn [db]
+   (get-in db [:sheet :anthropic-api-key])))
+
+(re-frame/reg-sub
+ ::asking-llm
+ (fn [db]
+   (get-in db [:ui :asking-llm])))
