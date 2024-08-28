@@ -825,6 +825,9 @@
     (pixi-repaint)))
 
 (defn setup [sheet ui]
+  (when-let [existing-app (:app @pixi-app)]
+   (.destroy existing-app true))
+
   (make-fonts-then
    #(let [app (make-app)
           v (.addChild (.-stage app) (make-viewport app))
