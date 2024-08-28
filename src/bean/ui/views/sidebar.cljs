@@ -34,7 +34,7 @@
                [:span {:style {:display :inherit}}
                 [:a {:on-click #(rf/dispatch [::events/renaming-frame frame-name])}
                  frame-name]
-                [:a [:img {:src "img/trash-label.png"
+                [:a [:img {:src "img/trash-icon.png"
                            :on-click #(rf/dispatch [::events/remove-frame frame-name])
                            :style {:margin-left "10px"
                                    :height "0.8rem"}}]]])

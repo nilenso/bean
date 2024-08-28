@@ -467,7 +467,7 @@
   (let [g (new pixi/Graphics)
         icon-names [:add-top-label :add-left-label
                     :add-top-left-label :add-skip-label
-                    :trash-label]
+                    :erase-label]
         redraw-icons (fn []
                        (.removeChildren g)
                        (button! (new pixi/Sprite (:add-top-label icons))
@@ -486,7 +486,7 @@
                          (button! (new pixi/Text "𖣯" #js {:fill (:llm-icon styles/colors)})
                                   g 5 105 20
                                   #(ask-labels-llm frame-name selection)))
-                       (button! (new pixi/Sprite (:trash-label icons))
+                       (button! (new pixi/Sprite (:erase-label icons))
                                 g 5 (if (features/llm-labelling? sheet) 135 105) 20
                                 #(remove-label frame-name selection))
                        (pixi-repaint))]
@@ -861,7 +861,7 @@
                           :add-top-left-label (.from pixi/Texture "/img/top-left-label.png")
                           :add-skip-label (.from pixi/Texture "/img/skip-label.png")
                           :stripes (.from pixi/Texture "/img/stripes.jpg")
-                          :trash-label (.from pixi/Texture "/img/trash-label.png")}})
+                          :erase-label (.from pixi/Texture "/img/eraser.png")}})
       (doseq [e ["moved" "zoomed" "moved-end" "zoomed-end"]]
         (.on v e pixi-repaint))
       (repaint sheet ui))))
