@@ -360,7 +360,7 @@
 
 (defn remove-frame-labels [sheet frame-name addresses]
   (-> (reduce #(set-cell-style %1 %2 :bold false) sheet addresses)
-      (frames/unmark-skipped frame-name addresses)
+      ;; (frames/unmark-skipped frame-name addresses)
       (frames/remove-labels frame-name addresses)
       eval-sheet-a-few-times))
 
