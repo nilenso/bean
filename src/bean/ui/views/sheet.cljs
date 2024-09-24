@@ -160,6 +160,7 @@
   (grid-selection-start rc grid-g row-heights col-widths))
 
 (defn- grid-pointer-down [i grid-g sheet row-heights col-widths]
+  (rf/dispatch [::events/highlight-matrix ""])
   (let [rc (i->rc i grid-g row-heights col-widths)]
     (cell-pointer-down rc grid-g sheet row-heights col-widths)))
 
@@ -695,13 +696,16 @@
      (selection->rect g selection row-heights col-widths))))
 
 (defn- draw-highlighted-cells
-  [^js grid-g highlighted-cells row-heights col-widths]
-  (.beginFill grid-g "0xaa0011" 0.25)
-  (doseq [cell highlighted-cells]
-    (when (not (functions/blank-addr? cell))
-      (let [[x y w h]
-            (area->xywh {:start cell :end cell} row-heights col-widths)]
-        (.drawRect grid-g x y w h)))))
+  ([]
+   (new pixi/Graphics))
+  ([^js g highlighted-cells row-heights col-widths]
+   (.clear g)
+   (.beginFill g "0xaa0011" 0.25)
+   (doseq [cell highlighted-cells]
+     (when (not (functions/blank-addr? cell))
+       (let [[x y w h]
+             (area->xywh {:start cell :end cell} row-heights col-widths)]
+         (.drawRect g x y w h))))))
 
 (defn- draw-cell-text
   ([] (new pixi/Graphics))
@@ -815,10 +819,10 @@
     (draw-spills (:spills @pixi-app) sheet row-heights col-widths)
     (draw-cell-backgrounds (:cell-backgrounds @pixi-app) sheet row-heights col-widths)
     (draw-cell-text (:cell-text @pixi-app) sheet row-heights col-widths)
-    (draw-frames (:frames @pixi-app) (:textures @pixi-app) sheet grid-ui (:grid @pixi-app) row-heights col-widths)
+    (draw-frames (:frames @pixi-app) (:textures @pixi-app) sheet grid-ui (:grid @pixi-app) row-heights col-widths) 
     (draw-selection (:selection @pixi-app) (:selection grid-ui) row-heights col-widths)
-    (when (:editing-cell grid-ui) (draw-highlighted-cells (:grid @pixi-app) (:highlighted-cells grid-ui) row-heights col-widths))
     (draw-merged-cells (:merged-cells @pixi-app) sheet row-heights col-widths)
+    (draw-highlighted-cells (:highlighted-cells @pixi-app) (:highlighted-cells grid-ui) row-heights col-widths)
     (draw-top-heading (:top-heading @pixi-app) col-widths v)
     (draw-left-heading (:left-heading @pixi-app) row-heights v)
     (draw-corner (:corner @pixi-app) v)
@@ -836,6 +840,7 @@
           grid (.addChild c (draw-grid))
           spills (.addChild grid (draw-spills))
           merged-cells (.addChild grid (draw-merged-cells))
+          highlighted-cells (.addChild grid (draw-highlighted-cells))
           cell-text (.addChild grid (draw-cell-text))
           selection (.addChild grid (draw-selection))
           frames (.addChild grid (draw-frames))
@@ -851,6 +856,7 @@
                :selection selection
                :frames frames
                :merged-cells merged-cells
+               :highlighted-cells highlighted-cells
                :cell-backgrounds cell-background
                :cell-text cell-text
                :top-heading top-heading
