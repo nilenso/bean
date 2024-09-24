@@ -813,12 +813,12 @@
         v (:viewport @pixi-app)]
     (draw-grid (:grid @pixi-app) sheet row-heights col-widths)
     (draw-spills (:spills @pixi-app) sheet row-heights col-widths)
-    (draw-merged-cells (:merged-cells @pixi-app) sheet row-heights col-widths)
     (draw-cell-backgrounds (:cell-backgrounds @pixi-app) sheet row-heights col-widths)
     (draw-cell-text (:cell-text @pixi-app) sheet row-heights col-widths)
     (draw-frames (:frames @pixi-app) (:textures @pixi-app) sheet grid-ui (:grid @pixi-app) row-heights col-widths)
     (draw-selection (:selection @pixi-app) (:selection grid-ui) row-heights col-widths)
     (when (:editing-cell grid-ui) (draw-highlighted-cells (:grid @pixi-app) (:highlighted-cells grid-ui) row-heights col-widths))
+    (draw-merged-cells (:merged-cells @pixi-app) sheet row-heights col-widths)
     (draw-top-heading (:top-heading @pixi-app) col-widths v)
     (draw-left-heading (:left-heading @pixi-app) row-heights v)
     (draw-corner (:corner @pixi-app) v)
