@@ -10,7 +10,11 @@ This involves looking at spreadsheets as a programming environment from the grou
 
 ## State of affairs
 
-**Updated on:** 31-Oct-2023
+23-Jun-2025
+
+This project is no longer being actively maintained.
+
+31-Oct-2023
 
 Bean has these basics in place: a grid, a parser, an interpreter for a small formula language and reactive recalculation (with dynamic arrays).
 
